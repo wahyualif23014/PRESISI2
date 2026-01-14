@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sdmapp/features/admin/land_management/page_lahan.dart';
 import 'package:sdmapp/features/admin/main_data/page_data.dart';
 import 'package:sdmapp/features/admin/personnel/presentation/personel_page.dart';
 import 'route_names.dart';
@@ -13,6 +14,7 @@ import '../../auth/pages/register_screen.dart';
 // Pastikan path ini sesuai dengan folder Anda
 import '../features/admin/dashboard/presentation/dashboard_page.dart';
 import '../../presentation/main_layout.dart';
+import '../../features/admin/recap/page_recap.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -105,14 +107,14 @@ class AppRouter {
             path: RouteNames.landManagement,
             pageBuilder:
                 (_, __) => const NoTransitionPage(
-                  child: Scaffold(body: Center(child: Text("Land Management"))),
+                  child: Scaffold(body: Center(child: KelolaLahan())),
                 ),
           ),
           GoRoute(
             path: RouteNames.recap,
             pageBuilder:
                 (_, __) => const NoTransitionPage(
-                  child: Scaffold(body: Center(child: Text("recap"))),
+                  child: Scaffold(body: Center(child: Datarecap())),
                 ),
           ),
           GoRoute(
