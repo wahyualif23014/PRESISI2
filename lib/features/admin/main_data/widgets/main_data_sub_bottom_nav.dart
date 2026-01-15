@@ -1,0 +1,156 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../router/route_names.dart';
+
+class MainDataSubBottomNav extends StatelessWidget {
+  final VoidCallback onClose;
+
+  const MainDataSubBottomNav({super.key, required this.onClose});
+
+  void _handleNavigation(BuildContext context, String route) {
+    // KUNCI 1: Ambil referensi router saat widget PASTI masih aktif (mounted)
+    // Kita simpan ke variabel lokal agar tidak butuh context lagi nanti
+    final GoRouter router = GoRouter.of(context);
+    
+    // KUNCI 2: Ambil referensi NavigatorState jika perlu, 
+    // tapi untuk GoRouter, variabel 'router' di atas sudah cukup.
+
+    // Panggil fungsi untuk menutup UI Popup
+    onClose(); 
+
+    // Jalankan delay animasi
+    Future.delayed(const Duration(milliseconds: 200), () {
+      // KUNCI 3: Gunakan variabel 'router' yang sudah kita amankan tadi.
+      // Jangan gunakan context.go(route) karena context sudah 'deactivated'.
+      router.go(route);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF7C6FDE);
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        constraints: const BoxConstraints(maxWidth: 340),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+              spreadRadius: -4,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // HEADER
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.08),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.storage_rounded, size: 20, color: Colors.white),
+                  ),
+                  const SizedBox(width: 14),
+                  const Text(
+                    'Menu Data Utama',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // MENU ITEMS
+            _PopupItem(
+              icon: Icons.account_tree_rounded,
+              label: 'Tingkat Kesatuan',
+              onTap: () => _handleNavigation(context, RouteNames.dataUnits),
+            ),
+            _PopupItem(
+              icon: Icons.badge_rounded,
+              label: 'Jabatan',
+              onTap: () => _handleNavigation(context, RouteNames.dataPositions),
+            ),
+            _PopupItem(
+              icon: Icons.map_rounded,
+              label: 'Wilayah',
+              onTap: () => _handleNavigation(context, RouteNames.dataRegions),
+            ),
+            _PopupItem(
+              icon: Icons.local_florist_rounded,
+              label: 'Komoditi Lahan',
+              isLast: true,
+              onTap: () => _handleNavigation(context, RouteNames.dataCommodities),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Widget _PopupItem tetap sama (pastikan tidak ada penggunaan context di dalamnya setelah delay)
+class _PopupItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isLast;
+
+  const _PopupItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          border: isLast ? null : Border(bottom: BorderSide(color: Colors.grey.shade100, width: 1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7C6FDE).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 22, color: const Color(0xFF7C6FDE)),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, size: 22, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+}

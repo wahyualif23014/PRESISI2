@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sdmapp/features/admin/land_management/page_lahan.dart';
-import 'package:sdmapp/features/admin/main_data/page_data.dart';
-import 'package:sdmapp/features/admin/personnel/presentation/personel_page.dart';
+
 import 'route_names.dart';
 
-// Import Auth
+// ===== AUTH =====
 import '../../auth/provider/auth_provider.dart';
 import '../../auth/pages/login_screen.dart';
 import '../../auth/pages/register_screen.dart';
 
-// Import Dashboard & Layout
-// Pastikan path ini sesuai dengan folder Anda
-import '../features/admin/dashboard/presentation/dashboard_page.dart';
+// ===== LAYOUT =====
 import '../../presentation/main_layout.dart';
-import '../../features/admin/recap/page_recap.dart';
+
+// ===== DASHBOARD & MENU UTAMA =====
+import '../features/admin/dashboard/presentation/dashboard_page.dart';
+import '../features/admin/personnel/presentation/personel_page.dart';
+import '../features/admin/recap/page_recap.dart';
+
+// ===== MAIN DATA =====
+import '../features/admin/main_data/main_data_shell_page.dart';
+import '../features/admin/main_data/units/units.dart';
+import '../features/admin/main_data/positions/position_page.dart';
+import '../features/admin/main_data/regions/regions_page.dart';
+import '../features/admin/main_data/commodities/comodities.dart';
+
+// ===== LAND MANAGEMENT =====
+import '../features/admin/land_management/land_shell_page.dart';
+import '../features/admin/land_management/overview/overview_page.dart';
+import '../features/admin/land_management/plots/plots_page.dart';
+import '../features/admin/land_management/crops/crops_page.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -24,6 +37,7 @@ class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>(
     debugLabel: 'root',
   );
+
   static final _shellNavigatorKey = GlobalKey<NavigatorState>(
     debugLabel: 'shell',
   );
@@ -33,24 +47,23 @@ class AppRouter {
     initialLocation: RouteNames.dashboard,
     refreshListenable: authProvider,
 
-    // --- Logic Redirect ---
+    // =========================
+    // AUTH REDIRECT
+    // =========================
     redirect: (context, state) {
-      final bool isLoggedIn = authProvider.isAuth;
-      final bool isLoading = authProvider.isLoading;
+      final isLoggedIn = authProvider.isAuth;
+      final isLoading = authProvider.isLoading;
 
-      // Tunggu loading selesai
       if (isLoading) return null;
 
-      final String location = state.matchedLocation;
-      final bool isAuthRoute =
+      final location = state.matchedLocation;
+      final isAuthRoute =
           location == RouteNames.login || location == RouteNames.register;
 
-      // Belum Login -> Arahkan ke Login (kecuali sedang di halaman auth)
       if (!isLoggedIn) {
         return isAuthRoute ? null : RouteNames.login;
       }
 
-      // Sudah Login -> Jika buka halaman auth, lempar ke Dashboard
       if (isLoggedIn && isAuthRoute) {
         return RouteNames.dashboard;
       }
@@ -59,70 +72,113 @@ class AppRouter {
     },
 
     routes: [
-      // 1. Login
+      // =========================
+      // AUTH ROUTES
+      // =========================
       GoRoute(
         path: RouteNames.login,
-        name: 'login',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const LoginScreen(),
+        builder: (_, __) => const LoginScreen(),
       ),
-
-      // 2. Register
       GoRoute(
         path: RouteNames.register,
-        name: 'register',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const RegisterScreen(),
+        builder: (_, __) => const RegisterScreen(),
       ),
 
-      // 3. Shell Route (Halaman dalam Layout)
+      // =========================
+      // MAIN SHELL (BOTTOM NAV)
+      // =========================
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
           return MainLayout(child: child);
         },
         routes: [
+          // ===== DASHBOARD =====
           GoRoute(
             path: RouteNames.dashboard,
-            name: 'dashboard',
             pageBuilder:
-                (context, state) => const NoTransitionPage(
-                  child: DashboardPage(), // Memanggil Dashboard asli
-                ),
+                (_, __) => const NoTransitionPage(child: DashboardPage()),
           ),
 
-          GoRoute(
-            path: RouteNames.units,
-            pageBuilder:
-                (_, __) => const NoTransitionPage(
-                  child: Scaffold(body: Center(child: Text("Units"))),
-                ),
-          ),
+          // ===== PERSONNEL =====
           GoRoute(
             path: RouteNames.personnel,
             pageBuilder:
                 (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
-          GoRoute(
-            path: RouteNames.landManagement,
-            pageBuilder:
-                (_, __) => const NoTransitionPage(
-                  child: Scaffold(body: Center(child: KelolaLahan())),
-                ),
+
+          // =====================================================
+          // MAIN DATA SHELL
+          // =====================================================
+          ShellRoute(
+            builder: (context, state, child) {
+              return MainDataShellPage(child: child);
+            },
+            routes: [
+              GoRoute(
+                path: RouteNames.data,
+                redirect: (_, __) => RouteNames.dataUnits,
+              ),
+              GoRoute(
+                path: RouteNames.dataUnits,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: UnitsPage()),
+              ),
+              GoRoute(
+                path: RouteNames.dataPositions,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: PositionPage()),
+              ),
+              GoRoute(
+                path: RouteNames.dataRegions,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: RegionsPage()),
+              ),
+              GoRoute(
+                path: RouteNames.dataCommodities,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: ComoditiesPage()),
+              ),
+            ],
           ),
+
+          // =====================================================
+          // LAND MANAGEMENT SHELL
+          // =====================================================
+          ShellRoute(
+            builder: (context, state, child) {
+              return LandShellPage(child: child);
+            },
+            routes: [
+              GoRoute(
+                path: RouteNames.landManagement,
+                redirect: (_, __) => RouteNames.landOverview,
+              ),
+              GoRoute(
+                path: RouteNames.landOverview,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: OverviewPage()),
+              ),
+              GoRoute(
+                path: RouteNames.landPlots,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: PlotsPage()),
+              ),
+              GoRoute(
+                path: RouteNames.landCrops,
+                pageBuilder:
+                    (_, __) => NoTransitionPage(child: CropsPage()),
+              ),
+            ],
+          ),
+
+          // ===== RECAP =====
           GoRoute(
             path: RouteNames.recap,
             pageBuilder:
-                (_, __) => const NoTransitionPage(
-                  child: Scaffold(body: Center(child: Datarecap())),
-                ),
-          ),
-          GoRoute(
-            path: RouteNames.data,
-            pageBuilder:
-                (_, __) => const NoTransitionPage(
-                  child: Scaffold(body: Center(child: DataPage())),
-                ),
+                (_, __) => const NoTransitionPage(child: Datarecap()),
           ),
         ],
       ),

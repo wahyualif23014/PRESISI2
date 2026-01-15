@@ -5,29 +5,57 @@ import 'package:go_router/go_router.dart';
 import '../auth/provider/auth_provider.dart';
 import '../shared/widgets/CustomBottomNavBar.dart';
 
+import 'package:flutter/material.dart';
+import '../shared/widgets/CustomBottomNavBar.dart';
+// import '../shared/widgets/top_bar.dart';
+
 class MainLayout extends StatelessWidget {
   final Widget child;
   const MainLayout({super.key, required this.child});
 
+  static const double _bottomNavHeight = 80;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // ⬅️ PENTING (BIAR CURVE KEPAKE)
       backgroundColor: const Color(0xFFF4F6F9),
-      
-      // 1. App Bar di Atas
+
+      // ======================
+      // TOP BAR
+      // ======================
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: _TopBar(),
       ),
 
-      // 2. Body (Konten Halaman)
-      body: child,
+      // ======================
+      // BODY + NAVBAR
+      // ======================
+      body: Stack(
+        children: [
+          // ===== CONTENT =====
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: _bottomNavHeight),
+              child: child,
+            ),
+          ),
 
-      // 3. Custom Bottom Navigation Bar
-      bottomNavigationBar: const CustomBottomNavBar(),
+          // ===== BOTTOM NAV =====
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: CustomBottomNavBar(),
+          ),
+        ],
+      ),
     );
   }
 }
+
+
 
 // --- WIDGET TOPBAR YANG DIPERBAIKI ---
 class _TopBar extends StatelessWidget {
