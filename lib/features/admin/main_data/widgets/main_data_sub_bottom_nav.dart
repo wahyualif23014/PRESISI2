@@ -8,20 +8,11 @@ class MainDataSubBottomNav extends StatelessWidget {
   const MainDataSubBottomNav({super.key, required this.onClose});
 
   void _handleNavigation(BuildContext context, String route) {
-    // KUNCI 1: Ambil referensi router saat widget PASTI masih aktif (mounted)
-    // Kita simpan ke variabel lokal agar tidak butuh context lagi nanti
     final GoRouter router = GoRouter.of(context);
-    
-    // KUNCI 2: Ambil referensi NavigatorState jika perlu, 
-    // tapi untuk GoRouter, variabel 'router' di atas sudah cukup.
-
-    // Panggil fungsi untuk menutup UI Popup
     onClose(); 
 
     // Jalankan delay animasi
     Future.delayed(const Duration(milliseconds: 200), () {
-      // KUNCI 3: Gunakan variabel 'router' yang sudah kita amankan tadi.
-      // Jangan gunakan context.go(route) karena context sudah 'deactivated'.
       router.go(route);
     });
   }

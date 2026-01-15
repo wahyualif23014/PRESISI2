@@ -109,9 +109,7 @@ class AppRouter {
                 (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
 
-          // =====================================================
           // MAIN DATA SHELL
-          // =====================================================
           ShellRoute(
             builder: (context, state, child) {
               return MainDataShellPage(child: child);
@@ -144,9 +142,7 @@ class AppRouter {
             ],
           ),
 
-          // =====================================================
           // LAND MANAGEMENT SHELL
-          // =====================================================
           ShellRoute(
             builder: (context, state, child) {
               return LandShellPage(child: child);
@@ -178,7 +174,7 @@ class AppRouter {
           GoRoute(
             path: RouteNames.recap,
             pageBuilder:
-                (_, __) => const NoTransitionPage(child: Datarecap()),
+                (_, __) => NoTransitionPage(child: PageRecap()),
           ),
         ],
       ),
