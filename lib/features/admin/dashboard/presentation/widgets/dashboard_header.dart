@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 import 'dart:async';
 
-// Import Model untuk mengambil data dummy (jumlahPersonel)
-import '../../data/model/dasboard_model.dart'; 
+import '../../data/model/dasboard_model.dart';
 
 class DashboardHeader extends StatefulWidget {
   final String userName;
@@ -22,7 +21,6 @@ class DashboardHeader extends StatefulWidget {
 }
 
 class _DashboardHeaderState extends State<DashboardHeader> {
-  late String _currentTime;
   late String _currentDate;
   late String _greeting;
   Timer? _timer;
@@ -48,20 +46,21 @@ class _DashboardHeaderState extends State<DashboardHeader> {
 
   void _updateDateTime() {
     final now = DateTime.now();
-    _currentTime = DateFormat('HH:mm').format(now);
-    // Pastikan locale id_ID sudah diinitialize di main.dart atau gunakan string biasa
     try {
       _currentDate = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(now);
     } catch (e) {
-      // Fallback jika locale belum siap
       _currentDate = DateFormat('EEEE, d MMMM yyyy').format(now);
     }
-    
+
     final hour = now.hour;
-    if (hour < 11) _greeting = 'Selamat Pagi';
-    else if (hour < 15) _greeting = 'Selamat Siang';
-    else if (hour < 18) _greeting = 'Selamat Sore';
-    else _greeting = 'Selamat Malam';
+    if (hour < 11)
+      _greeting = 'Selamat Pagi🙌';
+    else if (hour < 15)
+      _greeting = 'Selamat Siang🙌';
+    else if (hour < 18)
+      _greeting = 'Selamat Sore🙌';
+    else
+      _greeting = 'Selamat Malam🙌';
   }
 
   @override
@@ -85,9 +84,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
           ),
         ],
       ),
-      child: isMobile 
-        ? _buildMobileLayout() 
-        : _buildDesktopLayout(isTablet),
+      child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(isTablet),
     );
   }
 
@@ -107,12 +104,21 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                 children: [
                   Text(
                     _greeting,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   Text(
                     widget.userName,
-                    style: const TextStyle(fontSize: 18, color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF1E293B),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -120,25 +126,9 @@ class _DashboardHeaderState extends State<DashboardHeader> {
           ],
         ),
         const SizedBox(height: 16),
-        // Baris Badge: Role & Personel (Data Dummy)
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _buildRoleBadge(),
-            if (widget.data != null) _buildPersonelBadge(), // Tampilkan jika data ada
-          ],
-        ),
-        const SizedBox(height: 20),
+        Wrap(alignment: WrapAlignment.center, children: [_buildRoleBadge()]),
+        const SizedBox(height: 14),
         Divider(height: 1, color: Colors.grey.shade100),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildDateWidget(isSmall: true),
-            _buildTimeWidget(isSmall: true),
-          ],
-        ),
       ],
     );
   }
@@ -148,7 +138,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // KIRI: Icon, Nama, Role, Personel
         Expanded(
           child: Row(
             children: [
@@ -161,13 +150,21 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                   children: [
                     Row(
                       children: [
-                        Text("$_greeting,", style: TextStyle(color: Colors.grey[600])),
+                        Text(
+                          "$_greeting,",
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             widget.userName,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -176,10 +173,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                     Row(
                       children: [
                         _buildRoleBadge(),
-                        if (widget.data != null) ...[
-                          const SizedBox(width: 8),
-                          _buildPersonelBadge(), // Mengambil dari Dummy
-                        ],
+                        if (widget.data != null) ...[const SizedBox(width: 8)],
                       ],
                     ),
                   ],
@@ -190,7 +184,12 @@ class _DashboardHeaderState extends State<DashboardHeader> {
         ),
 
         if (!isTablet) ...[
-          Container(height: 50, width: 1, color: Colors.grey.shade200, margin: const EdgeInsets.symmetric(horizontal: 24)),
+          Container(
+            height: 50,
+            width: 1,
+            color: Colors.grey.shade200,
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+          ),
         ],
 
         // KANAN: Waktu
@@ -198,7 +197,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildTimeWidget(isSmall: false),
             const SizedBox(height: 4),
             _buildDateWidget(isSmall: false),
           ],
@@ -211,13 +209,18 @@ class _DashboardHeaderState extends State<DashboardHeader> {
 
   Widget _buildGreetingIcon({required double size, required double iconSize}) {
     return Container(
-      width: size, height: size,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF), 
+        color: const Color(0xFFEFF6FF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFDBEAFE)),
       ),
-      child: Icon(_getGreetingIcon(), color: const Color(0xFF2563EB), size: iconSize),
+      child: Icon(
+        _getGreetingIcon(),
+        color: const Color(0xFF2563EB),
+        size: iconSize,
+      ),
     );
   }
 
@@ -231,22 +234,11 @@ class _DashboardHeaderState extends State<DashboardHeader> {
     );
   }
 
-  // Widget baru untuk menampilkan Data Personel dari Dummy
-  Widget _buildPersonelBadge() {
-    return _baseBadge(
-      text: "${widget.data!.jumlahPersonel} PERSONEL", // Ambil dari Model
-      textColor: const Color(0xFF0369A1), // Sky Blue
-      bgColor: const Color(0xFFF0F9FF),
-      borderColor: const Color(0xFFBAE6FD),
-      icon: Icons.people_outline,
-    );
-  }
-
   // Template Badge agar konsisten
   Widget _baseBadge({
-    required String text, 
-    required Color textColor, 
-    required Color bgColor, 
+    required String text,
+    required Color textColor,
+    required Color bgColor,
     required Color borderColor,
     required IconData icon,
   }) {
@@ -264,7 +256,12 @@ class _DashboardHeaderState extends State<DashboardHeader> {
           const SizedBox(width: 6),
           Text(
             text,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textColor, letterSpacing: 0.5),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),
@@ -275,22 +272,22 @@ class _DashboardHeaderState extends State<DashboardHeader> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!isSmall) Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[400])),
-        Text(_currentDate, style: TextStyle(fontSize: isSmall ? 13 : 14, fontWeight: FontWeight.w500, color: Colors.grey[500])),
-      ],
-    );
-  }
-
-  Widget _buildTimeWidget({required bool isSmall}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(_currentTime, style: TextStyle(fontSize: isSmall ? 20 : 28, fontWeight: FontWeight.w800, color: const Color(0xFF1E293B), height: 1)),
-        const SizedBox(width: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(4)),
-          child: Text('WIB', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+        if (!isSmall)
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Icon(
+              Icons.calendar_today_rounded,
+              size: 14,
+              color: Colors.grey[400],
+            ),
+          ),
+        Text(
+          _currentDate,
+          style: TextStyle(
+            fontSize: isSmall ? 13 : 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[500],
+          ),
         ),
       ],
     );

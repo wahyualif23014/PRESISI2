@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../auth/provider/auth_provider.dart';
 import '../shared/widgets/CustomBottomNavBar.dart';
 
-import 'package:flutter/material.dart';
-import '../shared/widgets/CustomBottomNavBar.dart';
+// import 'package:flutter/material.dart';
+// import '../shared/widgets/CustomBottomNavBar.dart';
 // import '../shared/widgets/top_bar.dart';
 
 class MainLayout extends StatelessWidget {
@@ -31,7 +31,6 @@ class MainLayout extends StatelessWidget {
 
       // ======================
       // BODY + NAVBAR
-      // ======================
       body: Stack(
         children: [
           // ===== CONTENT =====
