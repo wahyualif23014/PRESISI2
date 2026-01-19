@@ -89,11 +89,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   // A. HEADER SECTION
                   DashboardHeader(userName: userName, data: dashboard.data!),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 30),
 
                   // B. CAROUSEL SECTION
                   SizedBox(
-                    height: 280,
+                    height: 240,
                     child: PromoCarousel(
                       items: dummyCarouselData,
                       onTap: (item) {
@@ -117,23 +117,23 @@ class _DashboardPageState extends State<DashboardPage> {
                         return Column(
                           children: [
                             LahanStatCard(
-                              title: "Total Lahan Tanam Tahun 2026",
+                              title: "Total Lahan Tahun 2026",
                               data: data.totalLuasTanam,
-                              backgroundColor: const Color(0xFFFBBF24),
+                              backgroundColor: const Color(0xFF315FA4),
                               layoutType: CardLayoutType.list,
                             ),
                             const SizedBox(height: 16),
                             LahanStatCard(
-                              title: "Potensi Lahan Tahun 2026",
+                              title: "Potensi Lahan Tanam Tahun 2026",
                               data: data.potensiLahan,
-                              backgroundColor: const Color(0xFFFB923C),
+                              backgroundColor: const Color(0xFF1BB555),
                               layoutType: CardLayoutType.grid,
                             ),
                             const SizedBox(height: 16),
                             LahanStatCard(
                               title: "Total Lahan Panen Tahun 2026",
                               data: data.totalLuasPanen,
-                              backgroundColor: const Color(0xFF8B5CF6),
+                              backgroundColor: const Color(0xFFD42525),
                               layoutType: CardLayoutType.grid,
                             ),
                           ],
@@ -148,7 +148,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               child: LahanStatCard(
                                 title: "Total Lahan Tanam Tahun 2026",
                                 data: data.totalLuasTanam,
-                                backgroundColor: const Color(0xFFFBBF24),
+                                backgroundColor: const Color(0xFF315FA4),
                                 layoutType: CardLayoutType.list,
                               ),
                             ),
@@ -160,14 +160,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                   LahanStatCard(
                                     title: "Potensi Lahan Tahun 2026",
                                     data: data.potensiLahan,
-                                    backgroundColor: const Color(0xFFFB923C),
+                                    backgroundColor: const Color(0xFF05CD99),
                                     layoutType: CardLayoutType.grid,
                                   ),
                                   const SizedBox(height: 16),
                                   LahanStatCard(
                                     title: "Total Lahan Panen Tahun 2026",
                                     data: data.totalLuasPanen,
-                                    backgroundColor: const Color(0xFF8B5CF6),
+                                    backgroundColor: const Color(0xFF05CD99),
                                     layoutType: CardLayoutType.grid,
                                   ),
                                 ],

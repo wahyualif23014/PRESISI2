@@ -24,14 +24,20 @@ final List<CarouselItemModel> dummyCarouselData = [
   ),
   CarouselItemModel(
     id: '2',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSBmBQ6PnbfbWgg3qD7rWH7scRIY8TN8welw&s', // Gambar ladang hijau
+    imageUrl: 'https://www.suaramuhammadiyah.id/storage/posts/image/Polda_Jatim_dan_UMM-20241004134811.jpeg', // Gambar ladang hijau
     title: 'Lahan Subur',
     subtitle: 'Optimalkan potensi tanah',
   ),
   CarouselItemModel(
     id: '3',
-    imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTlaIYRdTy7qJ7JHBL1ftRiPq3zYQ_3qVfhhw&s', // Gambar teknologi tani
+    imageUrl: 'https://memorandum.disway.id/upload/740da7d86f13e02e4c17e6a89756364f.jpeg', // Gambar teknologi tani
     title: 'Teknologi Tani',
     subtitle: 'Modernisasi alat pertanian',
+  ),
+  CarouselItemModel(
+    id: '4',
+    imageUrl: 'https://cdn.antaranews.com/cache/1200x800/2023/08/01/IMG-20230801-WA0082_1.jpg', // Gambar teknologi tani
+    title: 'SDM Polda',
+    subtitle: 'Melakukan pengawasan dalam genggaman',
   ),
 ];

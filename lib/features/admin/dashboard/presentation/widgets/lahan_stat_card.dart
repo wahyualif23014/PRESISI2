@@ -57,7 +57,7 @@ class LahanStatCard extends StatelessWidget {
                     "Total Keseluruhan",
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -122,8 +122,8 @@ class LahanStatCard extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2), // Transparan putih
-            borderRadius: BorderRadius.circular(50), // Capsule shape full
+            color: Colors.white, // Transparan putih
+            borderRadius: BorderRadius.circular(50),
           ),
           child: Row(
             children: [
@@ -175,18 +175,15 @@ class LahanStatCard extends StatelessWidget {
         // Karena pakai Wrap, kita batasi lebar item agar jadi 2 kolom (approx)
         return LayoutBuilder(
           builder: (context, constraints) {
-             // Hack sedikit agar terlihat 2 kolom rapi, tapi tetap flexible
-             // Jika dipakai di parent column width terbatas, ini akan menyesuaikan
              return Container(
               width: (constraints.maxWidth > 300) ? 140 : 120, // Lebar fixed chip
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: [
-                  // Icon bulat kecil + Value
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -207,9 +204,7 @@ class LahanStatCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                  // Opsional: Tampilkan Label kecil di bawah angka jika perlu
-                  // Text(item.label, style: TextStyle(fontSize: 10, color: Colors.black54)), 
+                  ), 
                 ],
               ),
             );
