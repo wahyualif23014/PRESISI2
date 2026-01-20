@@ -29,13 +29,12 @@ class JabatanListItem extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: onToggleSelection, // Klik baris = centang checkbox
+        onTap: onToggleSelection,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Checkbox (Hanya indikator visual, logic di parent)
               Transform.scale(
                 scale: 1.1,
                 child: Checkbox(
@@ -120,11 +119,7 @@ class JabatanListItem extends StatelessWidget {
           border: Border.all(color: color.withOpacity(0.5)),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Icon(
-          icon,
-          size: 14,
-          color: color,
-        ),
+        child: Icon(icon, size: 14, color: color),
       ),
     );
   }

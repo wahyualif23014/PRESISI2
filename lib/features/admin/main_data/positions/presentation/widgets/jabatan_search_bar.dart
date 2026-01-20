@@ -41,7 +41,7 @@ class JabatanSearchBar extends StatelessWidget {
             size: 24,
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 9),
+          contentPadding: EdgeInsets.symmetric(vertical: 6),
         ),
       ),
     );
