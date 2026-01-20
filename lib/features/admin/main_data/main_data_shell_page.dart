@@ -16,7 +16,6 @@ class MainDataShellPage extends StatefulWidget {
 }
 
 class _MainDataShellPageState extends State<MainDataShellPage> {
-  // Status visibilitas menu, default true agar muncul saat pertama masuk
   bool _showDataMenu = true;
 
   // Fungsi untuk mengecek apakah router saat ini termasuk dalam modul data utama
@@ -34,7 +33,6 @@ class _MainDataShellPageState extends State<MainDataShellPage> {
       body: Stack(
         children: [
           // ================= CONTENT =================
-          // Konten halaman akan bergeser ke atas jika menu muncul
           Padding(
             padding: EdgeInsets.only(
               bottom: isDataRoute && _showDataMenu ? 140 : 0,
