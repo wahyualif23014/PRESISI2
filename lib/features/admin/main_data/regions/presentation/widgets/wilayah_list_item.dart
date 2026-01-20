@@ -40,7 +40,7 @@ class WilayahListItem extends StatelessWidget {
                         child: Text(
                           item.namaDesa,
                           style: const TextStyle(
-                            fontSize: 12, // Font sedikit diperbesar karena ruang luas
+                            fontSize: 10, // Font sedikit diperbesar karena ruang luas
                             color: Colors.black87,
                             fontWeight: FontWeight.w500,
                             decoration: TextDecoration.underline, // Visual cue bahwa ini bisa diklik
