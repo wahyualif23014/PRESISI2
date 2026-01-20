@@ -14,9 +14,7 @@ class UnitItemCard extends StatelessWidget {
         unit.title.isNotEmpty ? unit.title[0].toUpperCase() : "?";
 
     return Container(
-      // Indentasi Hierarki
       margin: EdgeInsets.only(left: unit.isPolres ? 0 : 20, bottom: 0),
-      // Padding vertikal ditambah sedikit (16) agar lebih "lega"
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
 
       decoration: BoxDecoration(
@@ -32,14 +30,13 @@ class UnitItemCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // --- 1. AVATAR INISIAL (Dengan Ring Border) ---
           Container(
             width: 42, // Ukuran sedikit diperbesar
             height: 42,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: unit.isPolres
-                  ? const Color(0xFF1E3A8A) // Blue 900 (Navy Premium)
+                  ? const Color(0xFF1E3A8A) 
                   : const Color(0xFFEFF6FF), // Blue 50
               shape: BoxShape.circle,
               border: Border.all(
@@ -127,7 +124,6 @@ class UnitItemCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Ikon kecil di dalam badge
                 Icon(
                   unit.isPolres ? Icons.business : Icons.store_mall_directory,
                   size: 10,
