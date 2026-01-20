@@ -1,150 +1,231 @@
 // Lokasi: lib/features/admin/main_data/units/widgets/unit_item_card.dart
 
 import 'package:flutter/material.dart';
+// Pastikan import ini mengarah ke file UnitModel yang baru (yang ada class UnitModel-nya)
 import 'package:sdmapp/features/admin/main_data/units/data/unit_model.dart';
 
 class UnitItemCard extends StatelessWidget {
   final UnitModel unit;
+  final bool isExpanded;          // Diterima dari UnitRegion.isExpanded di halaman utama
+  final VoidCallback? onExpandTap; // Callback untuk mengubah state UnitRegion
 
-  const UnitItemCard({super.key, required this.unit});
+  const UnitItemCard({
+    super.key,
+    required this.unit,
+    this.isExpanded = false,
+    this.onExpandTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final String initial =
-        unit.title.isNotEmpty ? unit.title[0].toUpperCase() : "?";
+    // -------------------------------------------------------------------------
+    // KONFIGURASI TEMA (Tetap Sesuai Desain Professional)
+    // -------------------------------------------------------------------------
+    const primaryBlue = Color(0xFF1E40AF); // Blue 800
+    const bgParent = Colors.white;
+    const bgChild = Color(0xFFF9FAFB); // Cool Gray 50
+    
+    // Logika styling berdasarkan apakah ini Polres (Parent) atau Polsek (Child)
+    final isParent = unit.isPolres;
 
-    return Container(
-      margin: EdgeInsets.only(left: unit.isPolres ? 0 : 20, bottom: 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-
-      decoration: BoxDecoration(
-        color: unit.isPolres ? Colors.white : const Color(0xFFF8F9FC), // Background Cool Grey tipis
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200, width: 1), // Garis pemisah lebih halus
-          left: unit.isPolres
-              ? BorderSide.none
-              : const BorderSide(color: Color(0xFFD1D5DB), width: 3), // Garis indikator abu-abu modern
-        ),
-      ),
-
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 42, // Ukuran sedikit diperbesar
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: unit.isPolres
-                  ? const Color(0xFF1E3A8A) 
-                  : const Color(0xFFEFF6FF), // Blue 50
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: unit.isPolres 
-                    ? Colors.transparent 
-                    : const Color(0xFFBFDBFE), // Blue 200 border untuk Polsek
-                width: 1.5,
-              ),
-              boxShadow: unit.isPolres 
-                ? [BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))] 
-                : null,
-            ),
-            child: Text(
-              initial,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: unit.isPolres ? Colors.white : const Color(0xFF1E3A8A),
-                fontSize: 18,
-              ),
+    return Material(
+      color: isParent ? bgParent : bgChild,
+      child: InkWell(
+        // Hanya Parent (Polres) yang bisa diklik untuk expand/collapse
+        onTap: isParent ? onExpandTap : null, 
+        child: Container(
+          // Dekorasi Border
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade200),
+              // Marker kiri: Tebal Biru jika Parent, Tipis Abu jika Child
+              left: isParent
+                  ? const BorderSide(color: primaryBlue, width: 4) 
+                  : BorderSide(color: Colors.grey.shade300, width: 1), 
             ),
           ),
-
-          const SizedBox(width: 16),
-
-          // --- 2. KONTEN TEKS ---
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  unit.title, // Tidak perlu uppercase semua agar lebih humanis (opsional)
-                  style: TextStyle(
-                    fontWeight: unit.isPolres ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: unit.isPolres ? 15 : 14,
-                    color: const Color(0xFF1F2937), // Cool Grey 800
-                    height: 1.2,
-                  ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ---------------------------------------------------------------
+              // 1. VISUAL HIERARCHY (POHON)
+              // ---------------------------------------------------------------
+              // Jika ini Child (Polsek), tampilkan garis konektor "L"
+              if (!isParent) ...[
+                SizedBox(
+                  width: 24, 
+                  height: 24,
+                  child: CustomPaint(painter: _TreeConnectorPainter()),
                 ),
-                const SizedBox(height: 4),
-                Row(
+                const SizedBox(width: 8),
+              ],
+
+              // ---------------------------------------------------------------
+              // 2. AVATAR / INITIAL
+              // ---------------------------------------------------------------
+              _buildAvatar(unit.title, isParent),
+
+              const SizedBox(width: 16),
+
+              // ---------------------------------------------------------------
+              // 3. KONTEN TEKS (Title & Subtitle)
+              // ---------------------------------------------------------------
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Ikon kecil untuk subtitle (opsional, menambah konteks)
-                    Icon(
-                      unit.isPolres ? Icons.person_outline : Icons.location_on_outlined,
-                      size: 12,
-                      color: const Color(0xFF6B7280), // Cool Grey 500
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        unit.subtitle,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280), // Cool Grey 500
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      unit.title,
+                      style: TextStyle(
+                        fontWeight: isParent ? FontWeight.w700 : FontWeight.w600,
+                        fontSize: isParent ? 15 : 14,
+                        color: const Color(0xFF111827), // Gray 900
+                        height: 1.2,
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          size: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            unit.subtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // --- 3. BADGE STATUS (Dengan Ikon) ---
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: unit.isPolres 
-                  ? const Color(0xFFDBEAFE) // Blue 100
-                  : const Color(0xFFF3F4F6), // Cool Grey 100
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: unit.isPolres 
-                    ? const Color(0xFF93C5FD) 
-                    : const Color(0xFFE5E7EB),
-                width: 0.5,
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  unit.isPolres ? Icons.business : Icons.store_mall_directory,
-                  size: 10,
-                  color: unit.isPolres ? const Color(0xFF1E40AF) : const Color(0xFF4B5563),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  unit.count,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: unit.isPolres 
-                        ? const Color(0xFF1E40AF) // Blue 800
-                        : const Color(0xFF4B5563), // Grey 700
-                    fontSize: 10,
+
+              const SizedBox(width: 12),
+
+              // ---------------------------------------------------------------
+              // 4. BADGE STATUS & INDICATOR
+              // ---------------------------------------------------------------
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Badge Label Wilayah
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isParent 
+                          ? const Color(0xFFEFF6FF) // Blue 50
+                          : const Color(0xFFF3F4F6), // Gray 100
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isParent 
+                            ? const Color(0xFFBFDBFE) // Blue 200
+                            : const Color(0xFFE5E7EB), // Gray 200
+                      ),
+                    ),
+                    child: Text(
+                      unit.count, 
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: isParent ? primaryBlue : Colors.grey.shade700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  
+                  // Panah Rotasi (Hanya muncul jika Parent)
+                  if (isParent) ...[
+                    const SizedBox(height: 8),
+                    AnimatedRotation(
+                      turns: isExpanded ? 0.5 : 0.0, // 0.0 = Bawah, 0.5 = Atas
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                    ),
+                  ]
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+
+  // Helper untuk membuat Avatar Lingkaran
+  Widget _buildAvatar(String title, bool isActive) {
+    final String initial = title.isNotEmpty ? title[0].toUpperCase() : "?";
+
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isActive ? const Color(0xFF1E40AF) : Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isActive ? Colors.transparent : Colors.grey.shade300,
+          width: 1,
+        ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : null,
+      ),
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: isActive ? Colors.white : const Color(0xFF1E40AF),
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// PAINTER: MENGGAMBAR GARIS POHON (TREE CONNECTOR)
+// -----------------------------------------------------------------------------
+class _TreeConnectorPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey.shade300
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    // 1. Mulai dari atas (seolah nyambung dari item sebelumnya)
+    path.moveTo(0, -size.height); 
+    // 2. Garis vertikal ke tengah
+    path.lineTo(0, size.height / 2); 
+    // 3. Garis horizontal ke kanan (ke arah Avatar)
+    path.lineTo(size.width, size.height / 2);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

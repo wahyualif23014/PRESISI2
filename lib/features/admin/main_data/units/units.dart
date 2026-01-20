@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-// 1. IMPORT DATA & MODEL
-import 'package:sdmapp/features/admin/main_data/units/data/unit_model.dart';
-import 'package:sdmapp/features/admin/main_data/units/data/unit_repository.dart'; // Pastikan path ini benar
+// Lokasi: lib/features/admin/main_data/units/pages/units_page.dart
 
-// 2. IMPORT WIDGETS
+import 'package:flutter/material.dart';
+import 'package:sdmapp/features/admin/main_data/units/data/unit_model.dart';
+import 'package:sdmapp/features/admin/main_data/units/data/unit_repository.dart';
+
 import '../widgets/unit_search_bar.dart';
 import '../widgets/action_buttons.dart';
 import '../widgets/unit_item_card.dart';
@@ -17,31 +17,64 @@ class UnitsPage extends StatefulWidget {
 
 class _UnitsPageState extends State<UnitsPage> {
   final TextEditingController _searchController = TextEditingController();
-
-  List<UnitModel> _sortedData = [];
-  
-  bool _isExpanded = true; // Default terbuka agar data terlihat semua
+  late List<UnitRegion> _allData;
+  late List<UnitRegion> _filteredList;
 
   @override
   void initState() {
     super.initState();
-    _prepareData();
+    // Inisialisasi data
+    _allData = allRegionsData;
+    _filteredList = _allData;
   }
 
-  // Fungsi untuk mengurutkan data: Polres paling atas, sisanya Polsek urut A-Z
-  void _prepareData() {
-    List<UnitModel> allData = List.from(dummyGresikUnits);
-    
-    // Ambil Polres (Induk)
-    final polres = allData.where((u) => u.isPolres).toList();
-    // Ambil Polsek (Anak) dan urutkan A-Z
-    final polsek = allData.where((u) => !u.isPolres).toList();
-    polsek.sort((a, b) => a.title.compareTo(b.title));
-
-    // Gabungkan kembali
+  // ==========================================================
+  // LOGIKA PENCARIAN HIERARKI (The Magic Happens Here)
+  // ==========================================================
+  void _runSearch(String keyword) {
     setState(() {
-      _sortedData = [...polres, ...polsek];
+      if (keyword.isEmpty) {
+        _filteredList = _allData;
+      } else {
+        List<UnitRegion> results = [];
+
+        for (var region in _allData) {
+          bool parentMatches = region.polres.title.toLowerCase().contains(
+            keyword.toLowerCase(),
+          );
+
+          List<UnitModel> matchingChildren =
+              region.polseks.where((child) {
+                return child.title.toLowerCase().contains(
+                  keyword.toLowerCase(),
+                );
+              }).toList();
+
+          if (parentMatches) {
+            results.add(region);
+          } else if (matchingChildren.isNotEmpty) {
+            results.add(
+              UnitRegion(
+                polres: region.polres,
+                polseks: matchingChildren,
+                isExpanded: true,
+              ),
+            );
+          }
+        }
+
+        _filteredList = results;
+      }
     });
+  }
+
+  int _calculateTotalUnits() {
+    int total = 0;
+    for (var region in _filteredList) {
+      total += 1; // Polres
+      total += region.polseks.length; // Polsek
+    }
+    return total;
   }
 
   @override
@@ -52,9 +85,6 @@ class _UnitsPageState extends State<UnitsPage> {
 
   @override
   Widget build(BuildContext context) {
-
-    final displayList = _isExpanded ? _sortedData : [_sortedData.first];
-
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: Column(
@@ -68,9 +98,7 @@ class _UnitsPageState extends State<UnitsPage> {
               children: [
                 UnitSearchBar(
                   controller: _searchController,
-                  onChanged: (value) {
-                    // TODO: Implementasi search nanti
-                  },
+                  onChanged: (value) => _runSearch(value),
                 ),
                 const SizedBox(height: 12),
                 ActionButtons(onFilter: () {}),
@@ -84,62 +112,80 @@ class _UnitsPageState extends State<UnitsPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8),
-            color: Colors.grey.shade200,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+            ),
             child: Text(
-              // Tampilkan jumlah data asli
-              "TERDAPAT ${_sortedData.length} UNIT KESATUAN TERDATA", 
+              "DITEMUKAN ${_calculateTotalUnits()} UNIT KESATUAN",
               textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                color: Colors.grey.shade700,
+              ),
             ),
           ),
 
           // ---------------------------------------
-          // 3. BAGIAN LIST (DATA IMPLEMENTED)
+          // 3. BAGIAN LIST
           // ---------------------------------------
           Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: displayList.length, 
-              separatorBuilder: (context, index) => 
-                  Divider(height: 1, color: Colors.grey.shade200),
-              itemBuilder: (context, index) {
-                final unit = displayList[index];
+            child:
+                _filteredList.isEmpty
+                    ? _buildEmptyState() 
+                    : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: _filteredList.length,
+                      separatorBuilder:
+                          (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final region = _filteredList[index];
 
-                // Panggil Widget Item Card yang sudah kita buat
-                Widget card = UnitItemCard(unit: unit);
-
-
-                if (unit.isPolres) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isExpanded = !_isExpanded;
-                      });
-                    },
-                    child: Stack(
-                      children: [
-                        card,
-                        // Ikon panah kecil di kanan sebagai indikator
-                        Positioned(
-                          right: 16,
-                          top: 0,
-                          bottom: 0,
-                          child: Icon(
-                            _isExpanded 
-                                ? Icons.keyboard_arrow_up 
-                                : Icons.keyboard_arrow_down,
-                            color: Colors.grey,
-                          ),
-                        )
-                      ],
+                        return Column(
+                          children: [
+                            // A. Parent (Polres)
+                            UnitItemCard(
+                              unit: region.polres,
+                              isExpanded: region.isExpanded,
+                              onExpandTap: () {
+                                setState(() {
+                                  region.isExpanded = !region.isExpanded;
+                                });
+                              },
+                            ),
+                            // B. Children (Polsek) - Loop List yang sudah difilter
+                            if (region.isExpanded)
+                              Column(
+                                children:
+                                    region.polseks.map((polsek) {
+                                      return UnitItemCard(
+                                        unit: polsek,
+                                        isExpanded: false,
+                                      );
+                                    }).toList(),
+                              ),
+                          ],
+                        );
+                      },
                     ),
-                  );
-                }
+          ),
+        ],
+      ),
+    );
+  }
 
-                // Jika Polsek, tampilkan card biasa
-                return card;
-              },
-            ),
+  // Widget tambahan jika pencarian 0 hasil
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            "Data tidak ditemukan",
+            style: TextStyle(color: Colors.grey.shade500),
           ),
         ],
       ),
