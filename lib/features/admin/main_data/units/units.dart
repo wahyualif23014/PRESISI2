@@ -23,7 +23,6 @@ class _UnitsPageState extends State<UnitsPage> {
   @override
   void initState() {
     super.initState();
-    // Inisialisasi data
     _allData = allRegionsData;
     _filteredList = _allData;
   }
