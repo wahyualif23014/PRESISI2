@@ -24,7 +24,6 @@ class DashboardHeaderRepository {
 
   String _getFormattedDate(DateTime date) {
     try {
-      // Coba format Indonesia (pastikan initializeDateFormatting sudah dipanggil di main jika error)
       return DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
     } catch (e) {
       // Fallback default jika locale id_ID belum siap

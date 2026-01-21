@@ -43,7 +43,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   }
 
   void _setupTimer() {
-    // Update setiap 30 detik agar jam/salam tetap akurat
     _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) _refreshData();
     });
@@ -60,7 +59,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
 
   @override
   Widget build(BuildContext context) {
-    // Responsive Logic
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 768;
     final isTablet = width >= 768 && width < 1200;
@@ -98,7 +96,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _headerData.greetingText, // Data dari Model
+                    _headerData.greetingText, 
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -106,7 +104,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                     ),
                   ),
                   Text(
-                    _headerData.userName, // Data dari Model
+                    _headerData.userName, 
                     style: const TextStyle(
                       fontSize: 18,
                       color: Color(0xFF1E293B),
@@ -120,10 +118,11 @@ class _DashboardHeaderState extends State<DashboardHeader> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        Divider(height: 3, color: Colors.grey.shade100),
         Wrap(alignment: WrapAlignment.center, children: [_buildRoleBadge()]),
-        const SizedBox(height: 14),
-        Divider(height: 1, color: Colors.grey.shade100),
+        // const SizedBox(height: 14),
+        
       ],
     );
   }

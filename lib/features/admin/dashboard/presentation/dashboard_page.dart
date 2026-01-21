@@ -58,7 +58,7 @@ class _DashboardPageState extends State<DashboardPage> {
             // A. HEADER SECTION
             const DashboardHeader(userName: userName, userRole: userRole),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             // B. CAROUSEL SECTION
             SizedBox(
@@ -66,7 +66,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: PromoCarousel(items: dummyCarouselData),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // C. STATISTICS SECTION (LAHAN)
             _buildSectionTitle("Ringkasan Area Lahan"),
@@ -88,13 +88,13 @@ class _DashboardPageState extends State<DashboardPage> {
                         backgroundColor: totalLahan.backgroundColor,
                         layoutType: CardLayoutType.list,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       LahanStatCard(
                         data: potensiLahan,
                         backgroundColor: potensiLahan.backgroundColor,
                         layoutType: CardLayoutType.grid,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       LahanStatCard(
                         data: panenLahan,
                         backgroundColor: panenLahan.backgroundColor,
@@ -114,7 +114,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           layoutType: CardLayoutType.list,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 10),
                       Expanded(
                         flex: 6,
                         child: Column(
@@ -124,7 +124,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               backgroundColor: potensiLahan.backgroundColor,
                               layoutType: CardLayoutType.grid,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             LahanStatCard(
                               data: panenLahan,
                               backgroundColor: panenLahan.backgroundColor,
