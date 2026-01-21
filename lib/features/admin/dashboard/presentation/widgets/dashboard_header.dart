@@ -1,19 +1,20 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
 
-import '../../data/model/dasboard_model.dart';
+// Import Model & Repo Baru
+import '../../data/model/dashboard_header_model.dart';
+import '../../data/repo/dashboard_header_repository.dart';
 
 class DashboardHeader extends StatefulWidget {
   final String userName;
   final String userRole;
-  final DashboardModel? data; // Tambahkan ini untuk menerima data dummy
+  final DashboardHeaderModel? data; 
 
   const DashboardHeader({
     super.key,
     required this.userName,
     this.userRole = 'Polda Jatim',
-    this.data, // Optional, karena saat loading data mungkin null
+    this.data, 
   });
 
   @override
@@ -21,14 +22,19 @@ class DashboardHeader extends StatefulWidget {
 }
 
 class _DashboardHeaderState extends State<DashboardHeader> {
-  late String _currentDate;
-  late String _greeting;
+  // Inisialisasi Repository
+  final DashboardHeaderRepository _repo = DashboardHeaderRepository();
+  
+  // Data State (Model Baru)
+  late DashboardHeaderModel _headerData;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _updateDateTime();
+    // Load data pertama kali
+    _refreshData();
+    // Setup timer untuk update waktu real-time
     _setupTimer();
   }
 
@@ -39,28 +45,20 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   }
 
   void _setupTimer() {
+    // Update setiap 30 detik agar jam/salam tetap akurat
     _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (mounted) setState(() => _updateDateTime());
+      if (mounted) _refreshData();
     });
   }
 
-  void _updateDateTime() {
-    final now = DateTime.now();
-    try {
-      _currentDate = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(now);
-    } catch (e) {
-      _currentDate = DateFormat('EEEE, d MMMM yyyy').format(now);
-    }
-
-    final hour = now.hour;
-    if (hour < 11)
-      _greeting = 'Selamat Pagi🙌';
-    else if (hour < 15)
-      _greeting = 'Selamat Siang🙌';
-    else if (hour < 18)
-      _greeting = 'Selamat Sore🙌';
-    else
-      _greeting = 'Selamat Malam🙌';
+  void _refreshData() {
+    setState(() {
+      // Ambil data terbaru dari repository (Logic ada di sana)
+      _headerData = _repo.getHeaderData(
+        userName: widget.userName,
+        userRole: widget.userRole,
+      );
+    });
   }
 
   @override
@@ -75,7 +73,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
       padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20), // Sedikit lebih bulat
+        borderRadius: BorderRadius.circular(20), 
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF64748B).withOpacity(0.08),
@@ -103,7 +101,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _greeting,
+                    _headerData.greetingText, // Data dari Model
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -111,7 +109,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                     ),
                   ),
                   Text(
-                    widget.userName,
+                    _headerData.userName, // Data dari Model
                     style: const TextStyle(
                       fontSize: 18,
                       color: Color(0xFF1E293B),
@@ -151,13 +149,13 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                     Row(
                       children: [
                         Text(
-                          "$_greeting,",
+                          "${_headerData.greetingText},", // Data dari Model
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            widget.userName,
+                            _headerData.userName, // Data dari Model
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
@@ -217,7 +215,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
         border: Border.all(color: const Color(0xFFDBEAFE)),
       ),
       child: Icon(
-        _getGreetingIcon(),
+        _headerData.greetingIcon, // Icon dari Model
         color: const Color(0xFF2563EB),
         size: iconSize,
       ),
@@ -226,7 +224,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
 
   Widget _buildRoleBadge() {
     return _baseBadge(
-      text: widget.userRole.toUpperCase(),
+      text: _headerData.userRole.toUpperCase(), // Role dari Model
       textColor: const Color(0xFF15803D), // Green
       bgColor: const Color(0xFFF0FDF4),
       borderColor: const Color(0xFFBBF7D0),
@@ -234,7 +232,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
     );
   }
 
-  // Template Badge agar konsisten
   Widget _baseBadge({
     required String text,
     required Color textColor,
@@ -282,7 +279,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
             ),
           ),
         Text(
-          _currentDate,
+          _headerData.formattedDate, // Tanggal dari Model
           style: TextStyle(
             fontSize: isSmall ? 13 : 14,
             fontWeight: FontWeight.w500,
@@ -291,13 +288,5 @@ class _DashboardHeaderState extends State<DashboardHeader> {
         ),
       ],
     );
-  }
-
-  IconData _getGreetingIcon() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 11) return Icons.wb_sunny_rounded;
-    if (hour >= 11 && hour < 15) return Icons.wb_sunny_outlined;
-    if (hour >= 15 && hour < 18) return Icons.wb_twilight_rounded;
-    return Icons.nightlight_round_rounded;
   }
 }

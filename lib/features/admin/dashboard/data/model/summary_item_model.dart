@@ -1,22 +1,22 @@
-class SummaryItem {
-  final String label; // Contoh: "Berhasil"
-  final double value; // Contoh: 90
-  final String unit;  // Contoh: "HA"
-  final String type;  
 
-  SummaryItem({
+// Enum untuk menentukan Tipe Icon & Warna (agar tidak pakai String hardcode)
+enum SummaryType {
+  success,  // Berhasil -> Icon Traktor/Agriculture
+  failed,   // Gagal -> Icon Warning
+  plant,    // Tanam -> Icon Eco/Leaf
+  process,  // Proses -> Icon Hourglass
+}
+
+class SummaryItemModel {
+  final String label;    // Contoh: "Berhasil", "Gagal"
+  final double value;    // Contoh: 90
+  final String unit;     // Contoh: "HA"
+  final SummaryType type; // Enum tipe untuk menentukan Icon
+
+  const SummaryItemModel({
     required this.label,
     required this.value,
     required this.unit,
     required this.type,
   });
-
-  factory SummaryItem.fromJson(Map<String, dynamic> json) {
-    return SummaryItem(
-      label: json['label'] ?? '',
-      value: (json['value'] as num?)?.toDouble() ?? 0.0,
-      unit: json['unit'] ?? 'HA',
-      type: json['type'] ?? 'process',
-    );
-  }
 }

@@ -20,7 +20,7 @@ class _PromoCarouselState extends State<PromoCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.90, initialPage: 0);
+    _pageController = PageController(viewportFraction: 0.95, initialPage: 0);
 
     _timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       if (_pageController.hasClients) {
@@ -83,7 +83,7 @@ class _PromoCarouselState extends State<PromoCarousel> {
         ),
         const SizedBox(height: 12),
         _buildIndicator(),
-        const SizedBox(height: 8), 
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -97,12 +97,12 @@ class _PromoCarouselState extends State<PromoCarousel> {
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           height: 6,
-          // Indicator yang aktif lebih panjang
-          width: _currentPage == index ? 24 : 6, 
+          width: _currentPage == index ? 24 : 6,
           decoration: BoxDecoration(
-            color: _currentPage == index
-                ? Theme.of(context).primaryColor
-                : Colors.grey.withOpacity(0.3),
+            color:
+                _currentPage == index
+                    ? Theme.of(context).primaryColor
+                    : Colors.grey.withOpacity(0.3),
             borderRadius: BorderRadius.circular(10),
           ),
         ),
@@ -121,7 +121,7 @@ class _CarouselBannerItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       // Margin horizontal antar item
-      margin: const EdgeInsets.symmetric(horizontal: 5), 
+      margin: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -139,11 +139,16 @@ class _CarouselBannerItem extends StatelessWidget {
             // 1. Background Image
             Positioned.fill(
               child: Container(
-                color: const Color(0xFF1C1C1C), // Pengganti Abu-abu (Dark Placeholder)
+                color: const Color(0xFF1C1C1C),
                 child: Image.network(
                   item.imageUrl,
                   fit: BoxFit.cover,
-                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                  frameBuilder: (
+                    context,
+                    child,
+                    frame,
+                    wasSynchronouslyLoaded,
+                  ) {
                     if (wasSynchronouslyLoaded) return child;
                     return AnimatedOpacity(
                       opacity: frame == null ? 0 : 1,
@@ -152,17 +157,17 @@ class _CarouselBannerItem extends StatelessWidget {
                       child: child,
                     );
                   },
-                  // Error Builder Tanpa Abu-abu Terang
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: const Color(0xFF1C1C1C), 
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image_rounded,
-                        color: Colors.white.withOpacity(0.1),
-                        size: 40,
+                  errorBuilder:
+                      (context, error, stackTrace) => Container(
+                        color: const Color(0xFF1C1C1C),
+                        child: Center(
+                          child: Icon(
+                            Icons.broken_image_rounded,
+                            color: Colors.white.withOpacity(0.1),
+                            size: 40,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ),
               ),
             ),
@@ -197,11 +202,11 @@ class _CarouselBannerItem extends StatelessWidget {
                 children: [
                   Text(
                     item.title,
-                    maxLines: 1, // Dibatasi 1 baris agar fit di tinggi 240
+                    maxLines: 2, // Dibatasi 1 baris agar fit di tinggi 240
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18, 
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

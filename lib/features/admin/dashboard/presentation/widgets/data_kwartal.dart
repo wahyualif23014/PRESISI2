@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../data/model/quarterly_item_model.dart';
+import 'package:sdmapp/features/admin/dashboard/data/model/kwartal_item_model.dart';
+// Pastikan import ini mengarah ke file model QuarterlyItem Anda yang benar
 
 class QuarterlyStatsSection extends StatefulWidget {
-  final List<QuarterlyItem> items;
+  final List<QuarterlyItem> items; 
 
   const QuarterlyStatsSection({super.key, required this.items});
 
@@ -15,18 +16,20 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
 
   List<String> get _availablePeriods {
     final periods = widget.items.map((e) => e.period).toSet().toList();
-    periods.sort(); 
+    periods.sort();
     return periods.isNotEmpty ? periods : ['Kwartal 1'];
   }
 
   List<QuarterlyItem> get _filteredItems {
-    return widget.items.where((item) => item.period == _selectedPeriod).toList();
+    return widget.items
+        .where((item) => item.period == _selectedPeriod)
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Safety check: Pastikan pilihan saat ini ada di daftar periode yang tersedia
-    if (!_availablePeriods.contains(_selectedPeriod) && _availablePeriods.isNotEmpty) {
+    if (!_availablePeriods.contains(_selectedPeriod) &&
+        _availablePeriods.isNotEmpty) {
       _selectedPeriod = _availablePeriods.first;
     }
 
@@ -47,7 +50,7 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header & Dropdown
+          // --- HEADER & DROPDOWN ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -67,25 +70,32 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
 
           const SizedBox(height: 20),
 
-          // Content Grid
+          // --- CONTENT GRID ---
           if (_filteredItems.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text("Data tidak tersedia untuk periode ini")),
+              child: Center(
+                child: Text("Data tidak tersedia untuk periode ini"),
+              ),
             )
           else
             LayoutBuilder(
               builder: (context, constraints) {
                 final double itemWidth = (constraints.maxWidth - 16) / 2;
+
                 return Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  children: _filteredItems.map((item) {
-                    return SizedBox(
-                      width: constraints.maxWidth < 600 ? constraints.maxWidth : itemWidth,
-                      child: _buildItemCard(item),
-                    );
-                  }).toList(),
+                  children:
+                      _filteredItems.map((item) {
+                        return SizedBox(
+                          width:
+                              constraints.maxWidth < 400
+                                  ? constraints.maxWidth
+                                  : itemWidth,
+                          child: _buildItemCard(item),
+                        );
+                      }).toList(),
                 );
               },
             ),
@@ -94,6 +104,7 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
     );
   }
 
+  // --- WIDGET DROPDOWN ---
   Widget _buildDropdown() {
     return Container(
       height: 36,
@@ -106,14 +117,23 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedPeriod,
-          icon: Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[600]),
-          style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.w500),
-          items: _availablePeriods.map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Colors.grey[600],
+          ),
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          items:
+              _availablePeriods.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
           onChanged: (String? newValue) {
             if (newValue != null) {
               setState(() {
@@ -126,6 +146,7 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
     );
   }
 
+  // --- WIDGET ITEM CARD ---
   Widget _buildItemCard(QuarterlyItem item) {
     return Container(
       decoration: BoxDecoration(
@@ -141,7 +162,6 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Value & Unit
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -159,12 +179,15 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
                         item.unit,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                // Period Badge
+                // Period Badge Kecil (Opsional jika sudah ada dropdown, tapi bagus untuk visual)
                 Row(
                   children: [
                     const Icon(Icons.access_time, size: 14, color: Colors.red),
@@ -182,19 +205,19 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
               ],
             ),
           ),
-          
-          // Bottom Label
+
+          // Bagian Bawah: Label Ungu
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             decoration: const BoxDecoration(
-              color: Color(0xFFF3E8FF),
+              color: Color(0xFFF3E8FF), // Background Ungu Muda
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
             ),
             child: Text(
               item.label,
               style: const TextStyle(
-                color: Color(0xFF9333EA),
+                color: Color(0xFF9333EA), // Teks Ungu Tua
                 fontWeight: FontWeight.w500,
                 fontSize: 12,
               ),
@@ -209,6 +232,7 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
   }
 
   String _formatNumber(double number) {
+    // Jika bulat (90.0), tampilkan 90. Jika desimal (90.5), tampilkan 90.5
     return number % 1 == 0 ? number.toInt().toString() : number.toString();
   }
 }

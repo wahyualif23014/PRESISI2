@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
-import '../../../dashboard/data/model/lahan_group_model.dart';
-import '../../data/model/dasboard_model.dart'; // Sesuaikan path model
+import '../../data/model/ringkasan_area_model.dart'; 
 
 enum CardLayoutType { list, grid }
 
 class LahanStatCard extends StatelessWidget {
-  final String title;
-  final LahanGroup data;
+  final RingkasanAreaModel data; 
   final Color backgroundColor;
-  final CardLayoutType layoutType; 
+  final CardLayoutType layoutType;
 
   const LahanStatCard({
     super.key,
-    required this.title,
     required this.data,
     required this.backgroundColor,
-    this.layoutType = CardLayoutType.grid, // Default Grid (kecil)
+    this.layoutType = CardLayoutType.grid, // Default grid
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -35,13 +33,13 @@ class LahanStatCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- HEADER SECTION ---
+          // --- 1. HEADER SECTION ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Kiri: Label Data
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -49,38 +47,40 @@ class LahanStatCard extends StatelessWidget {
                     "Data",
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  SizedBox(height: 2),
                   Text(
                     "Total Keseluruhan",
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
+              // Kanan: Angka Besar
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    _formatNumber(data.total),
+                    _formatNumber(data.totalValue), // <-- Menggunakan totalValue sesuai Model
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 28, // Ukuran font besar
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                       height: 1.0,
                     ),
                   ),
                   const Padding(
-                    padding: EdgeInsets.only(left: 4, bottom: 4),
+                    padding: EdgeInsets.only(left: 4, bottom: 5),
                     child: Text(
                       "HA",
                       style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                        color: Colors.white,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -90,23 +90,23 @@ class LahanStatCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // --- BODY SECTION (List atau Grid) ---
-          if (layoutType == CardLayoutType.list)
-            _buildVerticalListLayout()
-          else
-            _buildGridLayout(),
+          // --- 2. BODY SECTION (List / Grid) ---
+          layoutType == CardLayoutType.list
+              ? _buildVerticalListLayout()
+              : _buildGridLayout(context),
 
-          const SizedBox(height: 20),
-          
-          // --- FOOTER TITLE ---
+          const SizedBox(height: 24),
+
+          // --- 3. FOOTER TITLE ---
           Text(
-            title,
+            data.title, 
+            textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -114,49 +114,46 @@ class LahanStatCard extends StatelessWidget {
     );
   }
 
-  // Layout 1: Vertikal List (Seperti Kartu Kuning)
+  // --- Layout 1: Vertikal List (Detail - Kartu Biru) ---
   Widget _buildVerticalListLayout() {
     return Column(
-      children: data.details.map((item) {
+      children: data.items.map((item) {
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white, // Transparan putih
+            color: Colors.white,
             borderRadius: BorderRadius.circular(50),
           ),
           child: Row(
             children: [
-              // Lingkaran Icon
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-              ),
+              _buildIcon(item.category), // <-- Mengirim Enum Category, bukan label String
               const SizedBox(width: 12),
-              // Label
               Expanded(
-                child: Text(
-                  "${item.label} :",
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              // Value
-              Text(
-                "${_formatNumber(item.value)} HA",
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
+                child: Row(
+                  children: [
+                    // Label
+                    Flexible(
+                      child: Text(
+                        "${item.label} : ",
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Value
+                    Text(
+                      "${_formatNumber(item.value)} HA",
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -166,56 +163,94 @@ class LahanStatCard extends StatelessWidget {
     );
   }
 
-  // Layout 2: Grid Chips (Seperti Kartu Orange & Ungu)
-  Widget _buildGridLayout() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: data.details.map((item) {
-        // Karena pakai Wrap, kita batasi lebar item agar jadi 2 kolom (approx)
-        return LayoutBuilder(
-          builder: (context, constraints) {
-             return Container(
-              width: (constraints.maxWidth > 300) ? 140 : 120, // Lebar fixed chip
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  // --- Layout 2: Grid Layout (Compact - Kartu Hijau/Merah) ---
+  Widget _buildGridLayout(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double itemWidth = (constraints.maxWidth - 12) / 2;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: data.items.map((item) {
+            return Container(
+              width: itemWidth,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(30),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 12, height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
+                  _buildIcon(item.category), // <-- Mengirim Enum Category
+                  const SizedBox(width: 8),
+                  // Value Only
+                  Flexible(
+                    child: Text(
+                      "${_formatNumber(item.value)} HA",
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "${_formatNumber(item.value)} HA",
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ), 
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             );
-          }
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
+  // --- Helper: Build Icon dengan Ring Oranye ---
+  // SEKARANG MENERIMA ENUM (LandCategory) AGAR LEBIH KONSISTEN
+  Widget _buildIcon(LandCategory category) {
+    IconData iconData;
+
+    switch (category) {
+      case LandCategory.productive:
+        iconData = Icons.settings_suggest_rounded;
+        break;
+      case LandCategory.forestry:
+        iconData = Icons.park_rounded;
+        break;
+      case LandCategory.agriculture:
+        iconData = Icons.agriculture_rounded;
+        break;
+      case LandCategory.religious:
+        iconData = Icons.mosque_rounded;
+        break;
+      case LandCategory.other:
+      default:
+        iconData = Icons.circle;
+        break;
+    }
+
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFFFA726),
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        iconData,
+        size: 16,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  // --- Helper: Format Angka ---
   String _formatNumber(double number) {
-    // Hilangkan .0 jika bulat
     if (number % 1 == 0) return number.toInt().toString();
     return number.toStringAsFixed(2);
   }

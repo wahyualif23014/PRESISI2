@@ -1,50 +1,42 @@
 import 'dart:async';
-import 'package:http/http.dart' as http; // Biarkan import ini
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Biarkan import ini
-import '../model/dasboard_model.dart'; // Pastikan path ini benar
+
+// Import Model Baru (DTO)
+import '../model/dashboard_ui_model.dart'; 
+
+// Import Repository Baru
+import '../repo/ringkasan_area_repository.dart';
+import '../repo/harvest_repository.dart';
+import '../repo/kwartal_repo.dart';
+import '../repo/summary_repository.dart';
 
 class DashboardService {
-  // static const String baseUrl = 'http://10.0.2.2:3000'; 
-  // final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  // Inisialisasi semua repository yang dibutuhkan
+  final _lahanRepo = RingkasanAreaRepository();
+  final _harvestRepo = HarvestRepository();
+  final _quarterlyRepo = QuarterlyRepository();
+  final _summaryRepo = SummaryRepository();
 
-  Future<DashboardModel> getDashboardStats() async {
-    // --- MODE DUMMY / DEVELOPMENT ---
-    // Gunakan ini selagi backend belum siap
+  Future<DashboardUiModel> getDashboardData() async {
     try {
-      // 1. Simulasi loading (delay 2 detik) agar terlihat seperti request network
-      await Future.delayed(const Duration(seconds: 2));
+      // Simulasi delay network
+      await Future.delayed(const Duration(seconds: 1));
 
-      // 2. Return data dummy statis dari Model
-      return DashboardModel.dummy();
+      // Ambil data dari masing-masing repo
+      final lahanList = _lahanRepo.getRingkasanList();
+      final harvest = _harvestRepo.getHarvestData();
+      final quarterly = _quarterlyRepo.getQuarterlyData();
+      final summary = _summaryRepo.getSummaryData();
+
+      // Gabungkan ke dalam satu object model UI
+      return DashboardUiModel(
+        lahanData: lahanList,
+        harvestData: harvest,
+        quarterlyData: quarterly,
+        summaryData: summary,
+      );
       
     } catch (e) {
-      throw Exception('Gagal memuat data dummy: $e');
+      throw Exception('Gagal memuat data dashboard: $e');
     }
-
-    // --- MODE PRODUCTION / REAL API (Nanti aktifkan ini) ---
-    /*
-    try {
-      String? token = await _storage.read(key: 'token');
-      if (token == null) throw Exception("Token tidak ditemukan, silakan login kembali.");
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/dashboard/stats'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // Sesuaikan parsing JSON dengan struktur response backend Anda
-        return DashboardModel.fromJson(data['data']); 
-      } else {
-        throw Exception('Gagal memuat data: ${response.statusCode}');
-      }
-    } catch (e) {
-      rethrow;
-    }
-    */
   }
 }

@@ -1,48 +1,54 @@
 import 'package:flutter/material.dart';
-import '../data/model/dasboard_model.dart'; // Pastikan path benar
+
+// --- IMPORT MODEL UI BARU ---
+import '../data/model/dashboard_ui_model.dart'; 
+
+// --- IMPORT SERVICE ---
 import '../data/services/dashboard_service.dart';
 
 class DashboardProvider with ChangeNotifier {
+  // Inisialisasi Service
   final DashboardService _service = DashboardService();
 
   // --- STATE ---
-  DashboardModel? _data;
+  // Menggunakan DashboardUiModel karena ini yang dikembalikan oleh Service sekarang
+  DashboardUiModel? _data; 
   bool _isLoading = false;
   String? _errorMessage;
 
   // --- GETTERS ---
-  DashboardModel? get data => _data;
+  DashboardUiModel? get data => _data;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   // --- ACTIONS ---
   
   Future<void> fetchDashboardData() async {
-    // Reset state sebelum loading
+    // 1. Set Loading State
     _isLoading = true;
     _errorMessage = null;
     notifyListeners(); 
 
     try {
-      // Memanggil service (yang sekarang mengembalikan Dummy Data)
-      final result = await _service.getDashboardStats();
+      // 2. Panggil Service (Service akan mengambil data dari semua Repo)
+      final result = await _service.getDashboardData();
       
+      // 3. Update State Sukses
       _data = result;
       _isLoading = false;
       notifyListeners(); 
 
     } catch (e) {
-      debugPrint("Error Dashboard Provider: $e"); // Gunakan debugPrint
+      // 4. Handle Error
+      debugPrint("Error Dashboard Provider: $e");
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Fungsi Refresh
+  // Fungsi Refresh untuk Pull-to-Refresh
   Future<void> refresh() async {
-    // Kosongkan data dulu jika ingin efek 'bersih' saat refresh (opsional)
-    // _data = null; 
     await fetchDashboardData();
   }
 }
