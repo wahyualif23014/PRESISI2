@@ -32,9 +32,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   @override
   void initState() {
     super.initState();
-    // Load data pertama kali
     _refreshData();
-    // Setup timer untuk update waktu real-time
     _setupTimer();
   }
 
@@ -53,7 +51,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
 
   void _refreshData() {
     setState(() {
-      // Ambil data terbaru dari repository (Logic ada di sana)
       _headerData = _repo.getHeaderData(
         userName: widget.userName,
         userRole: widget.userRole,

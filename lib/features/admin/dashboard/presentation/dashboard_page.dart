@@ -10,7 +10,6 @@ import '../data/repo/harvest_repository.dart';
 import '../data/repo/kwartal_repo.dart';
 import '../data/repo/summary_repository.dart';
 import '../data/repo/ringkasan_area_repository.dart';
-import '../data/repo/resapan_repository.dart';
 import '../data/repo/distribution_repository.dart';
 
 // --- IMPORT MODELS ---

@@ -207,7 +207,6 @@ class LahanStatCard extends StatelessWidget {
   }
 
   // --- Helper: Build Icon dengan Ring Oranye ---
-  // SEKARANG MENERIMA ENUM (LandCategory) AGAR LEBIH KONSISTEN
   Widget _buildIcon(LandCategory category) {
     IconData iconData;
 
