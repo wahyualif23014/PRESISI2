@@ -1,28 +1,28 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../data/model/distribution_model.dart'; // Pastikan import Model benar
 
 class DistributionCard extends StatelessWidget {
-  final String title;
-  final int totalValue;
-  final List<Color> chartColors;
-  final List<double> proportions;
-  
-  // Tambahan: Ukuran chart agar konsisten (Default 70x70)
+  // Ubah parameter menjadi Model
+  final DistributionModel data; 
   final double chartSize; 
 
   const DistributionCard({
     Key? key,
-    required this.title,
-    required this.totalValue,
-    required this.chartColors,
-    required this.proportions,
-    this.chartSize = 75.0, // Ukuran default yang pas dengan font 48
+    required this.data, // Menerima data model langsung
+    this.chartSize = 75.0, 
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+
+    // Ambil data helper dari model
+    // Asumsi di DistributionModel sudah ada getter 'colors' dan 'proportions'
+    // Jika belum ada, kita map manual di sini:
+    final List<Color> chartColors = data.items.map((e) => e.color).toList();
+    final List<double> proportions = data.items.map((e) => e.value).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -41,9 +41,9 @@ class DistributionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // JUDUL
+          // JUDUL DARI DATA
           Text(
-            title,
+            data.label, // <--- Pakai data.label
             style: TextStyle(
               fontSize: isSmallScreen ? 12 : 14,
               fontWeight: FontWeight.bold,
@@ -55,10 +55,9 @@ class DistributionCard extends StatelessWidget {
           
           const SizedBox(height: 12),
           
-          // ROW KONTEN
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center, // Sejajarkan tengah secara vertikal
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 1. ANGKA TOTAL
               Expanded(
@@ -66,7 +65,7 @@ class DistributionCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    "$totalValue",
+                    "${data.total}", // <--- Pakai data.total
                     style: const TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w900,
@@ -79,8 +78,7 @@ class DistributionCard extends StatelessWidget {
               
               const SizedBox(width: 12),
 
-              // 2. DONUT CHART (FIXED SQUARE SIZE)
-              // Menggunakan SizedBox dengan width & height yang SAMA
+              // 2. DONUT CHART
               SizedBox(
                 width: chartSize,
                 height: chartSize,
@@ -88,7 +86,6 @@ class DistributionCard extends StatelessWidget {
                   painter: _DonutChartPainter(
                     colors: chartColors,
                     proportions: proportions,
-                    // Opsional: atur ketebalan stroke relatif terhadap size
                     strokeWidth: chartSize * 0.25, 
                   ),
                 ),
@@ -101,11 +98,11 @@ class DistributionCard extends StatelessWidget {
   }
 }
 
-// --- Custom Painter ---
+// Painter tetap sama, tidak perlu diubah
 class _DonutChartPainter extends CustomPainter {
   final List<Color> colors;
   final List<double> proportions;
-  final double strokeWidth; // Tambahkan parameter stroke width
+  final double strokeWidth;
 
   _DonutChartPainter({
     required this.colors, 
@@ -116,16 +113,14 @@ class _DonutChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    // Radius adalah setengah dari lebar/tinggi
     final radius = size.width / 2; 
     
-    // Rect untuk area gambar
     final rect = Rect.fromCircle(
       center: center, 
-      radius: radius - (strokeWidth / 2) // Kurangi radius dengan setengah stroke agar tidak terpotong
+      radius: radius - (strokeWidth / 2)
     );
     
-    double startAngle = -pi / 2; // Mulai jam 12
+    double startAngle = -pi / 2;
 
     for (int i = 0; i < proportions.length; i++) {
       final sweepAngle = 2 * pi * proportions[i];
@@ -133,7 +128,7 @@ class _DonutChartPainter extends CustomPainter {
         ..color = colors[i % colors.length]
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.butt; // Ujung rata (sesuai gambar referensi)
+        ..strokeCap = StrokeCap.butt;
 
       canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
       

@@ -1,50 +1,52 @@
-class DistributionModel {
-  final int total;
-  final String label;
-  final Map<String, double> breakdown; 
+import 'package:flutter/material.dart';
 
-  DistributionModel({
-    required this.total,
-    required this.label,
-    required this.breakdown,
+class DistributionItem {
+  final double value; // Nilai persentase (0.0 - 1.0) atau nilai absolut
+  final Color color;  // Warna chart untuk item ini
+
+  const DistributionItem({
+    required this.value,
+    required this.color,
   });
 
-  // Factory Dummy Data
-  factory DistributionModel.dummyTitikLahan() {
-    return DistributionModel(
-      total: 90,
-      label: "Total Titik Lahan",
-      breakdown: {
-        "Terverifikasi": 50.0, // Mewakili warna Biru
-        "Belum Verifikasi": 50.0, // Mewakili warna Ungu
-      },
+  // Factory JSON (jika nanti ada warna dari API berupa Hex String)
+  /*
+  factory DistributionItem.fromJson(Map<String, dynamic> json) {
+    return DistributionItem(
+      value: (json['value'] as num).toDouble(),
+      color: _parseColor(json['color_hex']), // Implementasi parse hex nanti
     );
   }
+  */
+}
 
-  factory DistributionModel.dummyPengelola() {
-    return DistributionModel(
-      total: 203,
-      label: "Pengelolah Lahan Polsek",
-      breakdown: {
-        "Polri": 85.0, // Mewakili warna Hijau
-        "Mitra": 15.0, // Mewakili warna Merah
-      },
-    );
-  }
+class DistributionModel {
+  final String label; // Judul Kartu (misal: "Total Titik Lahan")
+  final int total;    // Angka Besar (misal: 90)
+  final List<DistributionItem> items; // Data chart
 
-  // From JSON
+  const DistributionModel({
+    required this.label,
+    required this.total,
+    required this.items,
+  });
+
+  // --- HELPER GETTERS (Agar mudah dipakai di Widget) ---
+  
+  // Mengambil list proporsi saja (untuk chart)
+  List<double> get proportions => items.map((e) => e.value).toList();
+
+  // Mengambil list warna saja (untuk chart)
+  List<Color> get colors => items.map((e) => e.color).toList();
+
+  // --- FACTORY JSON ---
   factory DistributionModel.fromJson(Map<String, dynamic> json) {
-    Map<String, double> breakdownData = {};
-    if (json['breakdown'] != null) {
-      (json['breakdown'] as Map<String, dynamic>).forEach((key, value) {
-        breakdownData[key] = (value as num).toDouble();
-      });
-    }
-
+    // Logic parsing JSON jika backend sudah siap
+    // Sementara return object default agar tidak crash
     return DistributionModel(
-      total: (json['total'] as num?)?.toInt() ?? 0,
       label: json['label'] ?? "-",
-      breakdown: breakdownData,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      items: [], // Nanti diisi logic parsing list items
     );
   }
 }

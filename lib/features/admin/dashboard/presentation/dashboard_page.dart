@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:sdmapp/features/admin/dashboard/data/repo/resapan_repository.dart';
 import 'package:sdmapp/features/admin/dashboard/presentation/widgets/data_kwartal.dart';
+import 'package:sdmapp/features/admin/dashboard/presentation/widgets/distribution_card.dart';
 import 'package:sdmapp/features/admin/dashboard/presentation/widgets/grafik_pertumbuhan.dart';
+import 'package:sdmapp/features/admin/dashboard/presentation/widgets/resapan_card.dart';
 
 // --- IMPORT REPOSITORY (Untuk Data Dummy) ---
 import '../data/repo/harvest_repository.dart';
 import '../data/repo/kwartal_repo.dart';
 import '../data/repo/summary_repository.dart';
-import '../data/repo/ringkasan_area_repository.dart'; // Pastikan Repo Lahan diimport
+import '../data/repo/ringkasan_area_repository.dart';
+import '../data/repo/resapan_repository.dart';
+import '../data/repo/distribution_repository.dart';
 
 // --- IMPORT MODELS ---
 import '../data/model/carousel_item_model.dart';
@@ -18,8 +23,6 @@ import 'widgets/dashboard_header.dart';
 import 'widgets/lahan_stat_card.dart';
 import 'widgets/carousel.dart';
 import 'widgets/total_summary_section.dart';
-// import 'widgets/distribution_card.dart'; // Jika belum siap, komen dulu
-// import 'widgets/resapan_card.dart';      // Jika belum siap, komen dulu
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -30,14 +33,16 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   // Inisialisasi Data Dummy Langsung di sini
-  late final harvestData = HarvestRepository().getHarvestData();
-  late final summaryData = SummaryRepository().getSummaryData();
-  late final List<QuarterlyItem> quarterlyData =
+  final harvestData = HarvestRepository().getHarvestData();
+  final summaryData = SummaryRepository().getSummaryData();
+  final List<QuarterlyItem> quarterlyData =
       QuarterlyRepository().getQuarterlyData();
-
-  // Ambil Data Lahan dari Repo Lahan (RingkasanAreaRepository)
-  late final List<RingkasanAreaModel> lahanDataList =
+  final List<RingkasanAreaModel> lahanDataList =
       RingkasanAreaRepository().getRingkasanList();
+  final resapanData = ResapanRepository().getResapanData();
+  final distributionRepo = DistributionRepository();
+  late final totalTitikData = distributionRepo.getTotalTitikLahan();
+  late final pengelolaData = distributionRepo.getPengelolaLahan();
 
   @override
   Widget build(BuildContext context) {
@@ -52,10 +57,7 @@ class _DashboardPageState extends State<DashboardPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // A. HEADER SECTION
-            const DashboardHeader(
-              userName: userName,
-              userRole: userRole,
-            ),
+            const DashboardHeader(userName: userName, userRole: userRole),
 
             const SizedBox(height: 30),
 
@@ -158,21 +160,31 @@ class _DashboardPageState extends State<DashboardPage> {
             _buildSectionTitle("Ringkasan Keseluruhan"),
             const SizedBox(height: 12),
             TotalSummarySection(items: summaryData),
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 32),
-
-            // G. WIDGET LAINNYA (Opsional, buka komen jika widget siap & repo ada)
-            
             _buildSectionTitle("Peta Penyebaran Potensi Lahan"),
-            const SizedBox(height: 50),
-            // ... DistributionCard logic ...
-            
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  child: DistributionCard(
+                    data: totalTitikData, // Panggil sesuai keinginan Anda
+                  ),
+                ),
+
+                const SizedBox(width: 16), // Jarak antar kartu
+                Expanded(
+                  child: DistributionCard(
+                    data: pengelolaData, 
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 32),
             _buildSectionTitle("Total Resapan Per Tahun"),
             const SizedBox(height: 12),
-            // ResapanCard(data: ...),
-            
-            
+            ResapanCard(data: resapanData),
           ],
         ),
       ),
