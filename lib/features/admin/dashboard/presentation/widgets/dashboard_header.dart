@@ -92,7 +92,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildGreetingIcon(size: 48, iconSize: 24),
-            const SizedBox(width: 12),
+            const SizedBox(width: 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,7 +164,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         _buildRoleBadge(),

@@ -19,7 +19,7 @@ import '../data/model/ringkasan_area_model.dart';
 
 // --- IMPORT WIDGETS ---
 import 'widgets/dashboard_header.dart';
-import 'widgets/lahan_stat_card.dart';
+import 'widgets/ringkasan_aset.dart';
 import 'widgets/carousel.dart';
 import 'widgets/total_summary_section.dart';
 

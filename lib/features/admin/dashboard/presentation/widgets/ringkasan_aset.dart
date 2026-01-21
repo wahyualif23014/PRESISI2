@@ -97,7 +97,7 @@ class LahanStatCard extends StatelessWidget {
               ? _buildVerticalListLayout()
               : _buildGridLayout(context),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 10),
 
           // --- 3. FOOTER TITLE ---
           Text(
@@ -114,7 +114,6 @@ class LahanStatCard extends StatelessWidget {
     );
   }
 
-  // --- Layout 1: Vertikal List (Detail - Kartu Biru) ---
   Widget _buildVerticalListLayout() {
     return Column(
       children: data.items.map((item) {
@@ -163,7 +162,6 @@ class LahanStatCard extends StatelessWidget {
     );
   }
 
-  // --- Layout 2: Grid Layout (Compact - Kartu Hijau/Merah) ---
   Widget _buildGridLayout(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -181,11 +179,10 @@ class LahanStatCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   _buildIcon(item.category), // <-- Mengirim Enum Category
                   const SizedBox(width: 8),
-                  // Value Only
                   Flexible(
                     child: Text(
                       "${_formatNumber(item.value)} HA",
@@ -230,7 +227,7 @@ class LahanStatCard extends StatelessWidget {
     }
 
     return Container(
-      width: 28,
+      width: 30,
       height: 28,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -242,7 +239,7 @@ class LahanStatCard extends StatelessWidget {
       ),
       child: Icon(
         iconData,
-        size: 16,
+        size: 20,
         color: Colors.black87,
       ),
     );
