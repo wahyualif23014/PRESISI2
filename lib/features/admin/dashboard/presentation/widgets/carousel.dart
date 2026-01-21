@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../data/model/carousel_item_model.dart';
+import '../../data/model/carousel_item_model.dart'; // Pastikan path import ini sesuai
 
 class PromoCarousel extends StatefulWidget {
   final List<CarouselItemModel> items;
@@ -20,7 +20,7 @@ class _PromoCarouselState extends State<PromoCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.93, initialPage: 0);
+    _pageController = PageController(viewportFraction: 0.90, initialPage: 0);
 
     _timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       if (_pageController.hasClients) {
@@ -43,13 +43,9 @@ class _PromoCarouselState extends State<PromoCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final double bannerHeight = width < 600 ? width * 0.6 : 450;
-
     return Column(
       children: [
-        SizedBox(
-          height: bannerHeight,
+        Expanded(
           child: PageView.builder(
             controller: _pageController,
             itemCount: widget.items.length,
@@ -67,18 +63,12 @@ class _PromoCarouselState extends State<PromoCarousel> {
                     } else {
                       value = (index - _currentPage).toDouble();
                     }
-
                     value = (1 - (value.abs() * 0.05)).clamp(0.0, 1.0);
 
                     return Center(
                       child: Transform.scale(
                         scale: Curves.easeOutCubic.transform(value),
-                        child: Opacity(
-                          opacity: Curves.easeIn
-                              .transform(value)
-                              .clamp(0.6, 1.0),
-                          child: child,
-                        ),
+                        child: child,
                       ),
                     );
                   },
@@ -93,6 +83,7 @@ class _PromoCarouselState extends State<PromoCarousel> {
         ),
         const SizedBox(height: 12),
         _buildIndicator(),
+        const SizedBox(height: 8), 
       ],
     );
   }
@@ -106,12 +97,12 @@ class _PromoCarouselState extends State<PromoCarousel> {
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           height: 6,
-          width: _currentPage == index ? 24 : 6,
+          // Indicator yang aktif lebih panjang
+          width: _currentPage == index ? 24 : 6, 
           decoration: BoxDecoration(
-            color:
-                _currentPage == index
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.withOpacity(0.3),
+            color: _currentPage == index
+                ? Theme.of(context).primaryColor
+                : Colors.grey.withOpacity(0.3),
             borderRadius: BorderRadius.circular(10),
           ),
         ),
@@ -129,40 +120,54 @@ class _CarouselBannerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+      // Margin horizontal antar item
+      margin: const EdgeInsets.symmetric(horizontal: 5), 
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(
-          28,
-        ), // Border radius lebih besar untuk kesan premium
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isActive ? 0.2 : 0.05),
-            blurRadius: isActive ? 30 : 15,
-            offset: Offset(0, isActive ? 15 : 5),
+            color: Colors.black.withOpacity(isActive ? 0.25 : 0.05),
+            blurRadius: isActive ? 20 : 10,
+            offset: Offset(0, isActive ? 10 : 5),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
+            // 1. Background Image
             Positioned.fill(
-              child: Image.network(
-                item.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.broken_image,
-                        color: Colors.grey,
+              child: Container(
+                color: const Color(0xFF1C1C1C), // Pengganti Abu-abu (Dark Placeholder)
+                child: Image.network(
+                  item.imageUrl,
+                  fit: BoxFit.cover,
+                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                    if (wasSynchronouslyLoaded) return child;
+                    return AnimatedOpacity(
+                      opacity: frame == null ? 0 : 1,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOut,
+                      child: child,
+                    );
+                  },
+                  // Error Builder Tanpa Abu-abu Terang
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: const Color(0xFF1C1C1C), 
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.white.withOpacity(0.1),
                         size: 40,
                       ),
                     ),
+                  ),
+                ),
               ),
             ),
 
-            // 2. Gradient Overlay (Lebih dalam untuk banner besar)
+            // 2. Gradient Overlay (Agar teks terbaca jelas)
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -172,44 +177,43 @@ class _CarouselBannerItem extends StatelessWidget {
                     colors: [
                       Colors.transparent,
                       Colors.black.withOpacity(0.0),
-                      Colors.black.withOpacity(0.3),
-                      Colors.black.withOpacity(0.85),
+                      Colors.black.withOpacity(0.5),
+                      Colors.black.withOpacity(0.9),
                     ],
-                    stops: const [0.0, 0.4, 0.6, 1.0],
+                    stops: const [0.0, 0.5, 0.75, 1.0],
                   ),
                 ),
               ),
             ),
 
-            // 3. Konten Teks (Font diperbesar agar seimbang dengan ukuran widget)
+            // 3. Konten Teks
             Positioned(
-              left: 28,
+              left: 20,
               bottom: 20,
-              right: 28,
+              right: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     item.title,
-                    maxLines: 2,
+                    maxLines: 1, // Dibatasi 1 baris agar fit di tinggi 240
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20, // Ukuran Title diperbesar
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.8,
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     item.subtitle,
-                    maxLines: 4,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 12, // Ukuran Subtitle diperbesar
-                      fontWeight: FontWeight.w400,
-                      height: 1.4,
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 12,
+                      height: 1.3,
                     ),
                   ),
                 ],

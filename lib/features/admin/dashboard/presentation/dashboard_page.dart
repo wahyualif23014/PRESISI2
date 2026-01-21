@@ -205,13 +205,12 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 50),
                   Row(
                     children: [
-                      // --- KARTU 1: TOTAL TITIK LAHAN (Biru & Ungu) ---
                       Expanded(
                         child: DistributionCard(
                           title:
                               data
                                   .totalTitikLahan
-                                  .label, // Ambil dari Model: "Total Titik Lahan"
+                                  .label, 
                           totalValue:
                               data
                                   .totalTitikLahan

@@ -16,10 +16,8 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
   // Logika penentuan index berdasarkan rute aktif saat ini
   int _getCurrentIndex(String location) {
     if (location.startsWith(RouteNames.recap)) return 0;
-    // Jika rute mengandung 'data' (misal: /data, /data/units, dll)
     if (location.startsWith(RouteNames.data)) return 1;
     if (location.startsWith(RouteNames.dashboard)) return 2;
-    // Jika rute mengandung 'land' (misal: /land-management, /land-management/plots)
     if (location.startsWith(RouteNames.landManagement)) return 3;
     if (location.startsWith(RouteNames.personnel)) return 4;
     return 2; // Default ke Beranda
