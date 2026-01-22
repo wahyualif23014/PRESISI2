@@ -7,8 +7,6 @@ import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_group_sec
 import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_header_section.dart';
 import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_table_header.dart';
 
-// --- IMPORT MODEL & REPO ---
-
 class PageRecap extends StatefulWidget {
   const PageRecap({Key? key}) : super(key: key);
 
@@ -26,7 +24,6 @@ class _PageRecapState extends State<PageRecap> {
     _futureData = _repo.getRecapData();
   }
 
-  // --- LOGIC: FILTER DIALOG ---
   void _showFilterDialog() {
     showDialog(
       context: context,
@@ -40,13 +37,25 @@ class _PageRecapState extends State<PageRecap> {
     });
   }
 
-  // --- LOGIC: PRINT ---
+  // --- UPDATED: IMPLEMENTASI PRINT WIDGET ---
   void _handlePrint() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Fitur Print belum tersedia"),
-        duration: Duration(seconds: 1),
-      ),
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: PrintSuccessWidget(
+            fileName: "Data-desa-Kamal.pdf",
+            onPrintTap: () {
+              Navigator.pop(context); 
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Membuka File PDF...")),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -57,22 +66,13 @@ class _PageRecapState extends State<PageRecap> {
       body: Column(
         children: [
           const SizedBox(height: 16),
-
-          // 1. HEADER SECTION (Search, Filter, Print)
           RecapHeaderSection(
-            onSearchChanged: (val) {
-              print("Search: $val");
-            },
+            onSearchChanged: (val) {},
             onFilterTap: _showFilterDialog,
             onPrintTap: _handlePrint,
           ),
-
           const SizedBox(height: 16),
-
-          // 2. TABLE HEADER (Judul Kolom)
           const RecapTableHeader(),
-
-          // 3. LIST DATA (TREE VIEW)
           Expanded(
             child: FutureBuilder<List<RecapModel>>(
               future: _futureData,
@@ -87,9 +87,7 @@ class _PageRecapState extends State<PageRecap> {
                   return const Center(child: Text("Data Tidak Ditemukan"));
                 }
 
-                // DATA DARI REPO (FLAT LIST)
                 final flatData = snapshot.data!;
-
                 final treeWidgets = _buildTreeStructure(flatData);
 
                 return ListView(
@@ -106,64 +104,130 @@ class _PageRecapState extends State<PageRecap> {
 
   List<Widget> _buildTreeStructure(List<RecapModel> flatData) {
     List<Widget> resultWidgets = [];
-
-    // Variabel penampung sementara
     RecapModel? currentPolres;
-    List<Widget> polresChildren = []; // Isinya Polsek Group
-
+    List<Widget> polresChildren = [];
     RecapModel? currentPolsek;
-    List<Widget> polsekChildren = []; // Isinya Desa Row
+    List<Widget> polsekChildren = [];
 
-    // Fungsi kecil untuk "membungkus" Polsek & Desa yang sudah terkumpul
     void flushPolsek() {
       if (currentPolsek != null) {
         polresChildren.add(
           RecapGroupSection(
             header: currentPolsek!,
-            children: List.from(
-              polsekChildren,
-            ), // Masukkan semua desa yang terkumpul
+            children: List.from(polsekChildren),
           ),
         );
-        // Reset penampung
         polsekChildren = [];
         currentPolsek = null;
       }
     }
 
     void flushPolres() {
-      flushPolsek(); // Pastikan polsek terakhir diproses dulu
+      flushPolsek();
       if (currentPolres != null) {
         resultWidgets.add(
           RecapGroupSection(
             header: currentPolres!,
-            children: List.from(
-              polresChildren,
-            ), // Masukkan semua polsek yang terkumpul
+            children: List.from(polresChildren),
           ),
         );
-        // Reset penampung
         polresChildren = [];
         currentPolres = null;
       }
     }
 
-    // --- LOOPING DATA ---
     for (var item in flatData) {
       if (item.type == RecapRowType.polres) {
         flushPolres();
-        currentPolres = item; // Set Polres baru
+        currentPolres = item;
       } else if (item.type == RecapRowType.polsek) {
         flushPolsek();
-        currentPolsek = item; // Set Polsek baru
+        currentPolsek = item;
       } else if (item.type == RecapRowType.desa) {
         polsekChildren.add(RecapDataRow(data: item));
       }
     }
 
-
     flushPolres();
-
     return resultWidgets;
+  }
+}
+
+// --- NEW WIDGET: PRINT SUCCESS ---
+
+class PrintSuccessWidget extends StatelessWidget {
+  final String fileName;
+  final VoidCallback onPrintTap;
+
+  const PrintSuccessWidget({
+    Key? key,
+    required this.fileName,
+    required this.onPrintTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 80,
+            width: 80,
+            child: Stack(
+              children: [
+                const Align(
+                  alignment: Alignment.center,
+                  child: Icon(Icons.picture_as_pdf_outlined, size: 70, color: Color(0xFF2F80ED)),
+                ),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF00C853),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.white, spreadRadius: 2)],
+                    ),
+                    child: const Icon(Icons.check, size: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            fileName,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: onPrintTap,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.verified, color: Color(0xFF00C853), size: 20),
+                SizedBox(width: 6),
+                Text(
+                  "File Berhasil Terunduh",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF2F80ED),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

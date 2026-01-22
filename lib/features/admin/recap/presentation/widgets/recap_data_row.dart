@@ -33,8 +33,8 @@ class RecapDataRow extends StatelessWidget {
   }
 
   double get _indent {
-    if (_isPolsek) return 16.0;
-    if (_isDesa) return 32.0;
+    if (_isPolsek) return 10.0;
+    if (_isDesa) return 20.0;
     return 0.0;
   }
 
@@ -73,7 +73,7 @@ class RecapDataRow extends StatelessWidget {
                       child: Text(
                         data.namaWilayah,
                         style: textStyle,
-                        maxLines: 3, 
+                        maxLines: _isDesa ? 5 : 3, 
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
