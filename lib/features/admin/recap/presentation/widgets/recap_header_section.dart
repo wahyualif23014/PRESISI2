@@ -63,7 +63,7 @@ class RecapHeaderSection extends StatelessWidget {
 
           _buildActionButton(
             icon: Icons.print,
-            color: const Color(0xFFFF9100),
+            color: const Color(0xFFFF9100), // Sesuaikan kode warna Hex oranye
             onTap: onPrintTap,
           ),
         ],
@@ -71,7 +71,6 @@ class RecapHeaderSection extends StatelessWidget {
     );
   }
 
-  // Helper Widget untuk tombol kotak (Filter & Print)
   Widget _buildActionButton({
     required IconData icon,
     required Color color,
