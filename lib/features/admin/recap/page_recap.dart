@@ -117,7 +117,6 @@ class _PageRecapState extends State<PageRecap> {
     // Fungsi kecil untuk "membungkus" Polsek & Desa yang sudah terkumpul
     void flushPolsek() {
       if (currentPolsek != null) {
-        // Tambahkan Group Polsek ke dalam list anak Polres
         polresChildren.add(
           RecapGroupSection(
             header: currentPolsek!,
@@ -132,11 +131,9 @@ class _PageRecapState extends State<PageRecap> {
       }
     }
 
-    // Fungsi kecil untuk "membungkus" Polres & Polsek yang sudah terkumpul
     void flushPolres() {
       flushPolsek(); // Pastikan polsek terakhir diproses dulu
       if (currentPolres != null) {
-        // Tambahkan Group Polres ke list hasil akhir UI
         resultWidgets.add(
           RecapGroupSection(
             header: currentPolres!,
@@ -154,21 +151,17 @@ class _PageRecapState extends State<PageRecap> {
     // --- LOOPING DATA ---
     for (var item in flatData) {
       if (item.type == RecapRowType.polres) {
-        // Jika ketemu Polres BARU, bungkus dulu Polres LAMA
         flushPolres();
         currentPolres = item; // Set Polres baru
       } else if (item.type == RecapRowType.polsek) {
-        // Jika ketemu Polsek BARU, bungkus dulu Polsek LAMA
         flushPolsek();
         currentPolsek = item; // Set Polsek baru
       } else if (item.type == RecapRowType.desa) {
-        // Jika Desa, langsung masukkan ke anak Polsek saat ini
         polsekChildren.add(RecapDataRow(data: item));
       }
     }
 
-    // --- FINISHING ---
-    // Jangan lupa bungkus sisa data terakhir yang belum masuk loop
+
     flushPolres();
 
     return resultWidgets;

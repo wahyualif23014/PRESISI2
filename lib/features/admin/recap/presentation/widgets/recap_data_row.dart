@@ -3,8 +3,8 @@ import '../../data/model/recap_model.dart';
 
 class RecapDataRow extends StatelessWidget {
   final RecapModel data;
-  final VoidCallback? onTap; 
-  final bool isExpanded;     
+  final VoidCallback? onTap;
+  final bool isExpanded;
 
   const RecapDataRow({
     Key? key,
@@ -13,99 +13,67 @@ class RecapDataRow extends StatelessWidget {
     this.isExpanded = false,
   }) : super(key: key);
 
+  // --- LOGIC HELPER ---
+
+  bool get _isPolres => data.type == RecapRowType.polres;
+  bool get _isPolsek => data.type == RecapRowType.polsek;
+  bool get _isDesa => data.type == RecapRowType.desa;
+
+  // 1. Warna Background
+  Color get _backgroundColor {
+    if (_isPolres) return const Color(0xFFE0E0F8);
+    if (_isPolsek) return const Color(0xFFF3F3FF);
+    return Colors.white;
+  }
+
+  FontWeight get _fontWeight {
+    if (_isPolres) return FontWeight.w800;
+    if (_isPolsek) return FontWeight.w600;
+    return FontWeight.w400;
+  }
+
+  double get _indent {
+    if (_isPolsek) return 16.0;
+    if (_isDesa) return 32.0;
+    return 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 1. Tentukan Warna Background berdasarkan Tipe
-    Color getBackgroundColor() {
-      switch (data.type) {
-        case RecapRowType.polres:
-          return const Color(0xFFE0E0F8); // Ungu agak gelap
-        case RecapRowType.polsek:
-          return const Color(0xFFF3F3FF); // Ungu sangat muda
-        case RecapRowType.desa:
-        default:
-          return Colors.white;            // Putih
-      }
-    }
-
-    // 2. Tentukan Ketebalan Font
-    FontWeight getFontWeight() {
-      switch (data.type) {
-        case RecapRowType.polres:
-          return FontWeight.w800; // Sangat Tebal
-        case RecapRowType.polsek:
-          return FontWeight.w600; // Agak Tebal
-        case RecapRowType.desa:
-        default:
-          return FontWeight.w400; // Biasa
-      }
-    }
-
-    // 3. Tentukan Indentasi (Jarak Kiri) untuk Nama Wilayah
-    double getIndent() {
-      switch (data.type) {
-        case RecapRowType.polres:
-          return 0.0;
-        case RecapRowType.polsek:
-          return 16.0; // Menjorok dikit
-        case RecapRowType.desa:
-          return 32.0; // Menjorok banyak
-        default:
-          return 0.0;
-      }
-    }
-
-    // Style Dasar Text
     final textStyle = TextStyle(
       fontSize: 12,
-      fontWeight: getFontWeight(),
+      fontWeight: _fontWeight,
       color: Colors.black87,
     );
 
-    // Cek apakah baris ini bisa di-expand (Polres & Polsek)
-    final bool isExpandable = data.type != RecapRowType.desa;
+    final bool isExpandable = !_isDesa;
 
     return Material(
-      color: getBackgroundColor(),
+      color: _backgroundColor,
       child: InkWell(
-        // Desa tidak perlu onTap expand/collapse
-        onTap: isExpandable ? onTap : null, 
+        onTap: isExpandable ? onTap : null,
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey, width: 0.2)),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // --- 1. NAMA WILAYAH (DENGAN INDENTASI & ICON) ---
               Expanded(
                 flex: 3,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Spasi indentasi sesuai level
-                    SizedBox(width: getIndent()),
-
-                    // Ikon Panah (Hanya untuk Polres & Polsek)
-                    if (isExpandable)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4.0),
-                        child: Icon(
-                          isExpanded 
-                              ? Icons.keyboard_arrow_down 
-                              : Icons.keyboard_arrow_right,
-                          size: 16,
-                          color: Colors.black54,
-                        ),
-                      )
-                    else
-                      // Jika Desa, berikan spasi kosong pengganti ikon agar teks rata
-                      const SizedBox(width: 20), 
+                    SizedBox(width: _indent),
 
                     // Teks Nama Wilayah
                     Expanded(
                       child: Text(
-                        data.namaWilayah, 
+                        data.namaWilayah,
                         style: textStyle,
+                        maxLines: 3, 
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -113,42 +81,27 @@ class RecapDataRow extends StatelessWidget {
                 ),
               ),
 
-              // --- 2. DATA ANGKA (Rata Tengah) ---
-              Expanded(
-                flex: 2,
-                child: Text(
-                  "${data.potensiLahan.toInt()} HA", 
-                  style: textStyle, 
-                  textAlign: TextAlign.center
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  "${data.tanamLahan.toInt()} HA", 
-                  style: textStyle, 
-                  textAlign: TextAlign.center
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Text(
-                  data.panenDisplay, 
-                  style: textStyle, 
-                  textAlign: TextAlign.center
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  "${data.serapan.toInt()} HA", 
-                  style: textStyle, 
-                  textAlign: TextAlign.center
-                ),
-              ),
+              // --- 2. DATA ANGKA ---
+              _buildDataCell("${data.potensiLahan.toInt()} HA", textStyle),
+              _buildDataCell("${data.tanamLahan.toInt()} HA", textStyle),
+              _buildDataCell(data.panenDisplay, textStyle, flex: 3),
+              _buildDataCell("${data.serapan.toInt()} HA", textStyle),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDataCell(String text, TextStyle style, {int flex = 2}) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        text,
+        style: style,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
