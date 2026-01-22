@@ -56,7 +56,6 @@ class Personel {
   // 👉 NANTI HAPUS SAAT SUDAH PAKAI API
   // =================================================
   static List<Personel> dummyList = [
-    // ===== POLDA JAWA TIMUR =====
     Personel(
       id: '1',
       namaLengkap: 'IRJEN POL NANANG AVIANTO, M.Si.',
