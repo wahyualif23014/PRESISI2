@@ -32,8 +32,6 @@ Future<void> main() async {
 
   // 5. Jalankan Aplikasi
   runApp(
-    // PENTING: ProviderScope ditambahkan di paling luar
-    // agar semua fitur Riverpod (PersonelPage) bisa jalan.
     ProviderScope(
       child: MultiProvider(
         providers: [
