@@ -23,19 +23,15 @@ class MainLayout extends StatelessWidget {
       extendBody: true, // ⬅️ PENTING (BIAR CURVE KEPAKE)
       backgroundColor: const Color(0xFFF4F6F9),
 
-      // ======================
       // TOP BAR
-      // ======================
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(70),
         child: _TopBar(),
       ),
 
-      // ======================
       // BODY + NAVBAR
       body: Stack(
         children: [
-          // ===== CONTENT =====
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.only(bottom: _bottomNavHeight),
@@ -117,7 +113,6 @@ class _TopBar extends StatelessWidget {
                 tooltip: "Notifikasi",
               ),
 
-              // --- TENGAH: Judul Halaman ---
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -171,7 +166,6 @@ class _TopBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                // --- BAGIAN PENTING: LOGIKA PINDAH HALAMAN ---
                 onSelected: (value) {
                   if (value == 'logout') {
                     context.read<AuthProvider>().logout();
