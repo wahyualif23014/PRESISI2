@@ -1,4 +1,4 @@
-import 'package:sdmapp/presentation/models/notification_model.dart';
+import 'package:sdmapp/presentation/notif/models/notification_model.dart';
 
 
 class NotificationRepository {

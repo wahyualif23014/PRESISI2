@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sdmapp/presentation/notification_page.dart';
+import 'package:sdmapp/presentation/notif/notification_page.dart';
+import 'package:sdmapp/presentation/profile/profile_page.dart';
 
 import '../auth/provider/auth_provider.dart';
 import '../shared/widgets/CustomBottomNavBar.dart';
@@ -150,18 +151,18 @@ class _TopBar extends StatelessWidget {
                 offset: const Offset(0, 50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                ), // Menu tumpul
+                ),
                 child: Container(
-                  padding: const EdgeInsets.all(2), // Border putih tipis
+                  padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: CircleAvatar(
-                    radius: 16, // Ukuran avatar
+                    radius: 16,
                     backgroundColor: Colors.orange.shade700,
                     child: Text(
-                      initial,
+                      initial, // Pastikan variabel ini ada di widget induk
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -170,9 +171,19 @@ class _TopBar extends StatelessWidget {
                     ),
                   ),
                 ),
+                // --- BAGIAN PENTING: LOGIKA PINDAH HALAMAN ---
                 onSelected: (value) {
                   if (value == 'logout') {
                     context.read<AuthProvider>().logout();
+                  } else if (value == 'profile') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) =>
+                                const ProfilePage(),
+                      ),
+                    );
                   }
                 },
                 itemBuilder:
@@ -183,7 +194,7 @@ class _TopBar extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Halo, $userName",
+                              "Halo, $userName", // Pastikan variabel ini ada
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -201,7 +212,7 @@ class _TopBar extends StatelessWidget {
                         ),
                       ),
                       const PopupMenuItem(
-                        value: 'profile',
+                        value: 'profile', // Value ini ditangkap di onSelected
                         child: Row(
                           children: [
                             Icon(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import './models/notification_model.dart'; // Sesuaikan path import
-import './repos/notification_repository.dart'; // Sesuaikan path import
+import 'models/notification_model.dart'; // Sesuaikan path import
+import 'repos/notification_repository.dart'; // Sesuaikan path import
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
