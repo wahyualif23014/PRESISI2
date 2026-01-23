@@ -3,7 +3,8 @@ import 'package:sdmapp/features/admin/land_management/Potensi_lahan/data/model/l
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/data/repos/land_potential_repository.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_potential_group.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_potential_toolbar.dart';
-import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_summary_widget.dart'; 
+import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_summary_widget.dart';
+import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/no_land_potential_widget.dart'; 
 
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
@@ -81,8 +82,8 @@ class _CropsPageState extends State<OverviewPage> {
                     children: [
                       // A. WIDGET SUMMARY (Sekarang ikut di-scroll)
                       const LandSummaryWidget(),
+                      const NoLandPotentialWidget(),
 
-                      // B. HEADER TABEL (Sekarang ikut di-scroll)
                       Container(
                         color: Colors.grey.shade200,
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
