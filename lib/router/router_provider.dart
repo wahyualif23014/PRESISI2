@@ -25,9 +25,9 @@ import '../features/admin/main_data/commodities/comodities.dart';
 
 // ===== LAND MANAGEMENT =====
 import '../features/admin/land_management/land_shell_page.dart';
-import '../features/admin/land_management/overview/overview_page.dart';
-import '../features/admin/land_management/plots/plots_page.dart';
-import '../features/admin/land_management/crops/crops_page.dart';
+import '../features/admin/land_management/Potensi_lahan/potensi_page.dart';
+import '../features/admin/land_management/kelola_lahan/Kelola_lahan_page.dart';
+import '../features/admin/land_management/riwayat_lahan/riwayat_lahan_page.dart';
 
 class AppRouter {
   final AuthProvider authProvider;

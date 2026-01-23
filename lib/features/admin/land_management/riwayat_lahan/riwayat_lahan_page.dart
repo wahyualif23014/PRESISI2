@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-class OverviewPage extends StatelessWidget {
+class CropsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text("over"),
-    );
+    return Center(child: Text("crop"));
   }
 }
