@@ -12,12 +12,10 @@ class PersonelPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch data yang sudah dikelompokkan
     final groupedAsync = ref.watch(personelGroupedProvider);
 
     return Column(
       children: [
-        // 1. Toolbar (Search & Filter)
         const PersonelToolbar(),
 
         // 2. List Data
@@ -34,17 +32,13 @@ class PersonelPage extends ConsumerWidget {
               // Render List
               return ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                // Menggunakan physics agar scroll terasa natural di iOS/Android
                 physics: const BouncingScrollPhysics(), 
                 children: groupedMap.entries.map((entry) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Unit Kerja
                       PersonelSectionHeader(title: entry.key),
                       const SizedBox(height: 8),
-
-                      // List Personel dalam Unit tersebut
                       ...entry.value.map((personel) => PersonelCard(
                         personel: personel,
                         // Navigasi ke Detail
@@ -124,8 +118,7 @@ class PersonelPage extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx); // Tutup dialog
               
-              // Panggil Provider untuk hapus data
-              // Pastikan model Personel Anda punya field 'id'
+
               await ref.read(personelProvider.notifier).delete(personel.id);
               
               if (context.mounted) {

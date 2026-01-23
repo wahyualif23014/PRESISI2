@@ -1,24 +1,33 @@
 import '../model/personel_model.dart';
+import '../repos/personel_repository.dart'; // Import Repository
 
 class PersonelService {
-  final List<Personel> _source = Personel.dummyList;
+  // 1. Inisialisasi Repository
+  final PersonelRepository _repository = PersonelRepository();
+
+  List<Personel> _localData = [];
+
+  PersonelService() {
+    _localData = _repository.getPersonelList();
+  }
+
 
   // GET ALL PERSONEL
   Future<List<Personel>> getAllPersonel() async {
-    // simulasi delay network
     await Future.delayed(const Duration(milliseconds: 300));
-    return _source;
+    return _localData;
   }
 
   // SEARCH PERSONEL
   Future<List<Personel>> searchPersonel(String keyword) async {
     await Future.delayed(const Duration(milliseconds: 200));
 
-    if (keyword.isEmpty) return _source;
+    if (keyword.isEmpty) return _localData;
 
     final query = keyword.toLowerCase();
 
-    return _source.where((p) {
+    // Filter dari _localData
+    return _localData.where((p) {
       return p.namaLengkap.toLowerCase().contains(query) ||
           p.nrp.toLowerCase().contains(query) ||
           p.unitKerja.nama.toLowerCase().contains(query);
@@ -29,30 +38,32 @@ class PersonelService {
   Future<List<Personel>> filterByUnit(String unitId) async {
     await Future.delayed(const Duration(milliseconds: 200));
 
-    return _source
+    // Filter dari _localData
+    return _localData
         .where((p) => p.unitKerja.id == unitId)
         .toList();
   }
 
-  // ADD PERSONEL (DUMMY)
+  // ADD PERSONEL
   Future<void> addPersonel(Personel personel) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _source.add(personel);
+    await Future.delayed(const Duration(milliseconds: 300));
+    // Tambahkan ke _localData
+    _localData.add(personel);
   }
 
-  // UPDATE PERSONEL (DUMMY)
+  // UPDATE PERSONEL
   Future<void> updatePersonel(Personel personel) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    final index = _source.indexWhere((p) => p.id == personel.id);
+    final index = _localData.indexWhere((p) => p.id == personel.id);
     if (index != -1) {
-      _source[index] = personel;
+      _localData[index] = personel;
     }
   }
 
-  // DELETE PERSONEL (DUMMY)
+  // DELETE PERSONEL
   Future<void> deletePersonel(String id) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _source.removeWhere((p) => p.id == id);
+    await Future.delayed(const Duration(milliseconds: 300));
+    _localData.removeWhere((p) => p.id == id);
   }
 }

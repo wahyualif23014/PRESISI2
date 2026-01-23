@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sdmapp/features/admin/personnel/presentation/widgets/add_personel_dialog.dart';
 
 import '../../providers/personel_provider.dart';
 
@@ -8,7 +9,6 @@ class PersonelToolbar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Menggunakan Container dengan style Card agar terlihat 'floating' dan rapi
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 16, left: 16, right: 16, top: 16),
@@ -75,7 +75,7 @@ class PersonelToolbar extends ConsumerWidget {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
-                    value: 10, 
+                    value: 10,
                     icon: const Icon(Icons.keyboard_arrow_down, size: 20),
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                     items: const [
@@ -110,7 +110,17 @@ class PersonelToolbar extends ConsumerWidget {
                     'Tambah',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  onPressed: () {},
+                  // --- BAGIAN INI YANG DIUBAH ---
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        // Memanggil Widget Dialog UI yang sudah dibuat
+                        return const AddPersonelDialog();
+                      },
+                    );
+                  },
+                  // -----------------------------
                 ),
               ),
 
