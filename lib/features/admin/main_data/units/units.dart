@@ -1,12 +1,9 @@
-// Lokasi: lib/features/admin/main_data/units/pages/units_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:sdmapp/features/admin/main_data/units/data/unit_model.dart';
 import 'package:sdmapp/features/admin/main_data/units/data/unit_repository.dart';
 
-import '../widgets/unit_search_bar.dart';
-import '../widgets/action_buttons.dart';
-import '../widgets/unit_item_card.dart';
+import 'presentation/widgets/unit_search_bar.dart';
+import 'presentation/widgets/unit_item_card.dart';
 
 class UnitsPage extends StatefulWidget {
   const UnitsPage({super.key});
@@ -95,12 +92,14 @@ class _UnitsPageState extends State<UnitsPage> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                UnitSearchBar(
+                UnitSearchFilter(
                   controller: _searchController,
-                  onChanged: (value) => _runSearch(value),
+                  onChanged: (val) => print("Search: $val"),
+                  onFilterTap: () {
+                    // Logika memunculkan filter (misal showModalBottomSheet)
+                    print("Filter ditekan");
+                  },
                 ),
-                const SizedBox(height: 12),
-                ActionButtons(onFilter: () {}),
               ],
             ),
           ),
@@ -132,7 +131,7 @@ class _UnitsPageState extends State<UnitsPage> {
           Expanded(
             child:
                 _filteredList.isEmpty
-                    ? _buildEmptyState() 
+                    ? _buildEmptyState()
                     : ListView.separated(
                       padding: EdgeInsets.zero,
                       itemCount: _filteredList.length,

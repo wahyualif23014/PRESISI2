@@ -14,93 +14,105 @@ class LandPotentialToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12), // Padding sekeliling toolbar
-      color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
           // ==============================
-          // 1. SEARCH BAR (Flexible Width)
+          // 1. SEARCH BAR (UI Baru)
           // ==============================
           Expanded(
-            child: SizedBox(
-              height: 40, // Tinggi disamakan dengan tombol
+            child: Container(
+              height: 48, 
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 4), // Efek bayangan ke bawah
+                  ),
+                ],
+              ),
               child: TextField(
                 onChanged: onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Cari Data Lahan',
-                  hintStyle: const TextStyle(fontSize: 13, color: Colors.black54),
-                  prefixIcon: const Icon(Icons.search, color: Colors.black87, size: 20),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.black54),
+                textAlignVertical: TextAlignVertical.center,
+                decoration: const InputDecoration(
+                  hintText: "Cari Data Lahan",
+                  hintStyle: TextStyle(
+                    color: Colors.black87, 
+                    fontWeight: FontWeight.w600
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.black87),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.blue),
-                  ),
+                  prefixIcon: Icon(Icons.search, color: Colors.black87, size: 28),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 9),
                 ),
               ),
             ),
           ),
           
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
 
           // ==============================
-          // 2. TOMBOL FILTER (Blue)
+          // 2. TOMBOL FILTER (UI Baru)
           // ==============================
-          SizedBox(
-            height: 40,
-            child: ElevatedButton.icon(
-              onPressed: onFilterTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0097A7), // Warna Biru Cyan (Sesuai gambar)
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.filter_alt, size: 18),
-              label: const Text(
-                "Filter Data",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-            ),
+          _buildActionButton(
+            icon: Icons.filter_alt,
+            color: const Color(0xFF0097B2), // Biru Cyan
+            onTap: onFilterTap,
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
 
           // ==============================
-          // 3. TOMBOL TAMBAH (Green)
+          // 3. TOMBOL TAMBAH (UI Baru)
           // ==============================
-          SizedBox(
-            height: 40,
-            child: ElevatedButton.icon(
-              onPressed: onAddTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00C853), // Warna Hijau (Sesuai gambar)
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text(
-                "Tambah Data",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-            ),
+          _buildActionButton(
+            icon: Icons.add,
+            color: const Color(0xFF00C853), // Hijau
+            onTap: onAddTap,
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper Widget untuk tombol kotak (Filter & Tambah)
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.black, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Center(
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class WilayahSearchFilter extends StatelessWidget {
+class UnitSearchFilter extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  final VoidCallback onFilterTap;
+  final VoidCallback onFilterTap; // Callback saat tombol filter ditekan
 
-  const WilayahSearchFilter({
+  const UnitSearchFilter({
     super.key,
     required this.controller,
     required this.onChanged,
@@ -17,14 +17,14 @@ class WilayahSearchFilter extends StatelessWidget {
     return Row(
       children: [
         // ==============================
-        // 1. SEARCH BAR (UI Baru - Konsisten)
+        // 1. SEARCH BAR (Flexible Width)
         // ==============================
         Expanded(
           child: Container(
-            height: 48, // Tinggi disamakan dengan standar UI sebelumnya
+            height: 48,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12), // Radius 12
               border: Border.all(color: Colors.black, width: 1.5), // Border Hitam
               boxShadow: [
                 BoxShadow(
@@ -38,12 +38,13 @@ class WilayahSearchFilter extends StatelessWidget {
               controller: controller,
               onChanged: onChanged,
               textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(color: Colors.black87),
               decoration: const InputDecoration(
-                hintText: "Cari Wilayah",
+                hintText: "Cari Data Polres Atau Polsek",
                 hintStyle: TextStyle(
-                  color: Colors.black87, 
+                  color: Colors.black87,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
                 ),
                 prefixIcon: Icon(Icons.search, color: Colors.black87, size: 24),
                 border: InputBorder.none,
@@ -52,18 +53,18 @@ class WilayahSearchFilter extends StatelessWidget {
             ),
           ),
         ),
-        
-        const SizedBox(width: 12), // Jarak antar Search dan Filter
+
+        const SizedBox(width: 12), // Jarak spasi horizontal
 
         // ==============================
-        // 2. FILTER BUTTON (UI Baru - Konsisten)
+        // 2. FILTER BUTTON (Fixed Width at End)
         // ==============================
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: const Color(0xFF0097B2), // Warna Biru Cyan (Sesuai Filter sebelumnya)
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.black, width: 1.5),
+            color: const Color(0xFF0097B2), // Warna Biru Cyan (Konsisten)
+            borderRadius: BorderRadius.circular(12), // Radius 12
+            border: Border.all(color: Colors.black, width: 1.5), // Border Hitam
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
@@ -76,10 +77,11 @@ class WilayahSearchFilter extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onFilterTap,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.filter_alt, color: Colors.white, size: 20),
                     SizedBox(width: 8),

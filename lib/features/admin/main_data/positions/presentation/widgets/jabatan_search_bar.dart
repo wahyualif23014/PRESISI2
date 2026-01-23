@@ -15,33 +15,41 @@ class JabatanSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 45, // Tinggi disesuaikan dengan desain tombol di sebelahnya
+      height: 48, // Standar tinggi disamakan dengan komponen lain (sebelumnya 45)
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F0FF), // Warna ungu sangat muda (Background)
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white, // Background Putih
+        borderRadius: BorderRadius.circular(12), // Radius konsisten 12
         border: Border.all(
-          color: const Color(0xFF7C4DFF), // Warna ungu border
+          color: Colors.black, // Border Hitam
           width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 4), // Efek bayangan konsisten
+          ),
+        ],
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
+        textAlignVertical: TextAlignVertical.center,
         style: const TextStyle(color: Colors.black87),
         decoration: const InputDecoration(
           hintText: "Cari Data",
           hintStyle: TextStyle(
-            color: Color(0xFF7C4DFF), // Warna hint ungu
-            fontWeight: FontWeight.w500,
+            color: Colors.black87, // Warna hint Hitam
+            fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
           prefixIcon: Icon(
             Icons.search,
-            color: Color(0xFF7C4DFF), // Ikon ungu
+            color: Colors.black87, // Ikon Hitam
             size: 24,
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 6),
+          contentPadding: EdgeInsets.symmetric(vertical: 9),
         ),
       ),
     );
