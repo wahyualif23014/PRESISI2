@@ -1,12 +1,12 @@
 class CommodityModel {
   final String id;
-  final String type; // Pengelompokan (Contoh: TANAMAN KEHUTANAN)
-  final String name; // Nama Komoditi (Contoh: AKASIA)
-  bool isSelected;   // Status Checkbox
+  final String categoryId; // PENTING: Untuk menghubungkan dengan Kategori Induk
+  final String name;       // Contoh: "BAWANG MERAH"
+  bool isSelected;         // Untuk Checkbox
 
   CommodityModel({
     required this.id,
-    required this.type,
+    required this.categoryId,
     required this.name,
     this.isSelected = false,
   });

@@ -28,8 +28,6 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
   }
 
   void _loadData() {
-    // PERBAIKAN DI SINI:
-    // Panggil fungsi static dari CommodityRepository, bukan dari Model
     final data = CommodityRepository.getCategoryData();
     
     setState(() {
@@ -50,7 +48,6 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
     });
   }
 
-  // Placeholder navigasi ke detail (Scalable)
   void _navigateToDetail(CommodityCategoryModel item) {
     // TODO: Implementasi navigasi ke halaman detail
     ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +67,6 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
       backgroundColor: const Color(0xFFE0E0E0), // Abu-abu agar card terlihat timbul
       body: Column(
         children: [
-          // 1. Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ComoditiSearch(
@@ -98,7 +94,6 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
 
           const SizedBox(height: 16),
 
-          // 3. List Card (Menggantikan Table List lama)
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),

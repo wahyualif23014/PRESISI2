@@ -2,7 +2,6 @@ import '../models/commodity_category_model.dart';
 
 class CommodityRepository {
   
-  // Fungsi untuk mengambil data dummy Kategori (Sesuai Desain Card Baru)
   static List<CommodityCategoryModel> getCategoryData() {
     return [
       CommodityCategoryModel(
