@@ -72,9 +72,6 @@ class AppRouter {
     },
 
     routes: [
-      // =========================
-      // AUTH ROUTES
-      // =========================
       GoRoute(
         path: RouteNames.login,
         parentNavigatorKey: _rootNavigatorKey,
