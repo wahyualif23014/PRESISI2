@@ -16,88 +16,102 @@ class ComoditiSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Warna Tema
-    const purpleColor = Color(0xFF7C4DFF);
-    const bgPurpleLight = Color(0xFFF3F0FF);
-
     return Row(
       children: [
-        // 1. SEARCH BAR (Flexible Width)
         Expanded(
           child: Container(
-            height: 45,
+            height: 48,
             decoration: BoxDecoration(
-              color: bgPurpleLight, // Background Ungu Muda
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: purpleColor, width: 1.5),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.black, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: TextField(
               controller: controller,
               onChanged: onChanged,
+              textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(color: Colors.black87),
               decoration: const InputDecoration(
                 hintText: "Cari Data",
                 hintStyle: TextStyle(
-                  color: purpleColor,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
+                  color: Colors.black87,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
-                prefixIcon: Icon(Icons.search, color: purpleColor),
+                prefixIcon: Icon(Icons.search, color: Colors.black87, size: 24),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 9),
               ),
             ),
           ),
         ),
-        
-        const SizedBox(width: 12), // Jarak antar Search dan Tombol
-
-        // 2. TOMBOL ADD (Cyan)
+        const SizedBox(width: 12),
         _buildButton(
           label: "Add",
           icon: Icons.add,
-          color: const Color(0xFF00ACC1), // Cyan 600
+          color: const Color(0xFF00ACC1),
           onTap: onAdd,
         ),
-
         const SizedBox(width: 8),
-
-        // 3. TOMBOL DELETE (Merah)
         _buildButton(
           label: "Delete",
           icon: Icons.delete_outline,
-          color: const Color(0xFFD50000), // Red Accent
+          color: const Color(0xFFD50000),
           onTap: onDelete,
         ),
       ],
     );
   }
 
-  // Helper Widget untuk membuat tombol seragam
   Widget _buildButton({
     required String label,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return SizedBox(
-      height: 45,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 4),
           ),
-        ),
-        icon: Icon(icon, size: 20),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

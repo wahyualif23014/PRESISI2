@@ -39,9 +39,6 @@ class ComoditiyBanner extends StatelessWidget {
             ),
           ),
 
-          // -----------------------------------------------------------
-          // SEPARATOR (GARIS TEGAK)
-          // -----------------------------------------------------------
           Container(
             height: 14,
             width: 1.5,
