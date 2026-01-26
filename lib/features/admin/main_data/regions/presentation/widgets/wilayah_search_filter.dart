@@ -16,9 +16,6 @@ class WilayahSearchFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // ==============================
-        // 1. SEARCH BAR (UI Baru - Konsisten)
-        // ==============================
         Expanded(
           child: Container(
             height: 48, // Tinggi disamakan dengan standar UI sebelumnya
@@ -54,10 +51,6 @@ class WilayahSearchFilter extends StatelessWidget {
         ),
         
         const SizedBox(width: 12), // Jarak antar Search dan Filter
-
-        // ==============================
-        // 2. FILTER BUTTON (UI Baru - Konsisten)
-        // ==============================
         Container(
           height: 48,
           decoration: BoxDecoration(

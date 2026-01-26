@@ -1,4 +1,4 @@
-import 'region_model.dart';
+import '../models/region_model.dart';
 
 class WilayahRepository {
   static List<WilayahModel> getDummyData() {

@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 // Data
 import 'package:sdmapp/features/admin/main_data/regions/data/models/region_model.dart';
-import 'package:sdmapp/features/admin/main_data/regions/data/models/region_repository.dart';
+import 'package:sdmapp/features/admin/main_data/regions/data/repos/region_repository.dart';
+import 'package:sdmapp/features/admin/main_data/regions/presentation/widgets/wilayah_filter_widget.dart';
 
 // Widgets
 import 'package:sdmapp/features/admin/main_data/regions/presentation/widgets/wilayah_info_banner.dart';
@@ -29,9 +30,6 @@ class _RegionsPageState extends State<RegionsPage> {
   List<WilayahModel> _displayData = [];
   bool _isBannerVisible = true;
 
-  // --- LOGIC EXPAND/COLLAPSE ---
-  // Kita simpan nama Kabupaten/Kecamatan yang sedang "Expanded" (Terbuka)
-  // Default kosong = Tertutup semua (atau bisa diisi semua saat init jika ingin default terbuka)
   final Set<String> _expandedKabupaten = {};
   final Set<String> _expandedKecamatan = {};
 
@@ -54,7 +52,7 @@ class _RegionsPageState extends State<RegionsPage> {
     setState(() {
       _allData = data;
       _displayData = List.from(data);
-      
+
       // Default: Buka semua data saat pertama kali load
       // (Opsional: Hapus blok ini jika ingin default tertutup)
       for (var item in data) {
@@ -69,11 +67,14 @@ class _RegionsPageState extends State<RegionsPage> {
       if (query.isEmpty) {
         _displayData = List.from(_allData);
       } else {
-        _displayData = _allData.where((item) {
-          return item.namaDesa.toLowerCase().contains(query.toLowerCase()) ||
-                 item.kecamatan.toLowerCase().contains(query.toLowerCase()) ||
-                 item.kabupaten.toLowerCase().contains(query.toLowerCase());
-        }).toList();
+        _displayData =
+            _allData.where((item) {
+              return item.namaDesa.toLowerCase().contains(
+                    query.toLowerCase(),
+                  ) ||
+                  item.kecamatan.toLowerCase().contains(query.toLowerCase()) ||
+                  item.kabupaten.toLowerCase().contains(query.toLowerCase());
+            }).toList();
 
         // Saat search, otomatis buka semua yang relevan agar hasil terlihat
         for (var item in _displayData) {
@@ -125,8 +126,23 @@ class _RegionsPageState extends State<RegionsPage> {
               controller: _searchController,
               onChanged: _runSearch,
               onFilterTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Fitur Filter diklik")),
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return WilayahFilterWidget(
+                      onApply: () {
+                        // TODO: Masukkan logika filter data di sini
+                        Navigator.pop(context); // Tutup popup
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Filter diterapkan")),
+                        );
+                      },
+                      onReset: () {
+                        // TODO: Masukkan logika reset data di sini
+                        // (Popup tidak perlu ditutup jika ingin user lihat checkbox kereset)
+                      },
+                    );
+                  },
                 );
               },
             ),
@@ -168,26 +184,27 @@ class _RegionsPageState extends State<RegionsPage> {
                 }
 
                 // --- LOGIC VISIBILITY (PENTING) ---
-                
+
                 // 1. Cek Status Kabupaten (Buka/Tutup)
                 final isKabOpen = _expandedKabupaten.contains(item.kabupaten);
-                
-                final isKecOpen = isKabOpen && _expandedKecamatan.contains(item.kecamatan);
+
+                final isKecOpen =
+                    isKabOpen && _expandedKecamatan.contains(item.kecamatan);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // A. HEADER KABUPATEN
-                    if (isNewKabupaten) 
+                    if (isNewKabupaten)
                       WilayahKabupatenHeader(
                         title: item.kabupaten,
                         isExpanded: isKabOpen,
                         onTap: () => _toggleKabupaten(item.kabupaten),
                       ),
-                    
+
                     // B. HEADER KECAMATAN
                     // Hanya tampil jika Header baru DAN Kabupaten induknya terbuka
-                    if (isNewKecamatan && isKabOpen) 
+                    if (isNewKecamatan && isKabOpen)
                       WilayahKecamatanHeader(
                         title: item.kecamatan,
                         isExpanded: isKecOpen,

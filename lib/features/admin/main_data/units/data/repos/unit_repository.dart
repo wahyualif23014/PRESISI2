@@ -1,6 +1,7 @@
 // Lokasi: lib/features/admin/main_data/units/data/dummy_data.dart
 
-import 'unit_model.dart'; // Pastikan import model yang baru diupdate tadi
+import 'package:sdmapp/features/admin/main_data/units/data/models/unit_model.dart';
+
 
 final List<UnitRegion> allRegionsData = [
   // =========================================

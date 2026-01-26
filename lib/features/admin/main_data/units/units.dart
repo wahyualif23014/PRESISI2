@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/main_data/units/data/unit_model.dart';
-import 'package:sdmapp/features/admin/main_data/units/data/unit_repository.dart';
+import 'package:sdmapp/features/admin/main_data/units/data/models/unit_model.dart';
+import 'package:sdmapp/features/admin/main_data/units/data/repos/unit_repository.dart';
+import 'package:sdmapp/features/admin/main_data/units/presentation/widgets/unit_filter_dialog.dart';
 
 import 'presentation/widgets/unit_search_bar.dart';
 import 'presentation/widgets/unit_item_card.dart';
@@ -24,9 +25,7 @@ class _UnitsPageState extends State<UnitsPage> {
     _filteredList = _allData;
   }
 
-  // ==========================================================
-  // LOGIKA PENCARIAN HIERARKI (The Magic Happens Here)
-  // ==========================================================
+  //
   void _runSearch(String keyword) {
     setState(() {
       if (keyword.isEmpty) {
@@ -96,8 +95,22 @@ class _UnitsPageState extends State<UnitsPage> {
                   controller: _searchController,
                   onChanged: (val) => print("Search: $val"),
                   onFilterTap: () {
-                    // Logika memunculkan filter (misal showModalBottomSheet)
-                    print("Filter ditekan");
+                    showDialog(
+                      context: context,
+                      barrierDismissible: true, // Bisa ditutup dengan klik luar
+                      builder: (BuildContext context) {
+                        return UnitFilterDialog(
+                          onApply: () {
+                            // Tambahkan logika filtering Anda di sini
+                            print("Filter Applied!");
+                          },
+                          onReset: () {
+                            // Tambahkan logika reset data di sini
+                            print("Filter Reset!");
+                          },
+                        );
+                      },
+                    );
                   },
                 ),
               ],

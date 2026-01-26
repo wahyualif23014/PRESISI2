@@ -1,21 +1,19 @@
 // Lokasi: lib/features/admin/main_data/jabatan/pages/jabatan_page.dart
 
 import 'package:flutter/material.dart';
+
+// --- DATA LAYER ---
 import 'package:sdmapp/features/admin/main_data/positions/data/models/position_model.dart';
-import 'package:sdmapp/features/admin/main_data/positions/data/models/position_repository.dart';
+import 'package:sdmapp/features/admin/main_data/positions/data/repos/position_repository.dart';
 
-// HAPUS import provider
-// import 'package:provider/provider.dart';
-// import 'package:sdmapp/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
-
-// Tetap gunakan Model dan Repository untuk data dummy
-
-
-// Widget UI
+// --- WIDGETS UI ---
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_action_buttons.dart';
+import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_form_widget.dart';
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_list_header.dart';
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_list_item.dart';
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_search_bar.dart';
+
+// --- FORM WIDGET ---
 
 class PositionPage extends StatefulWidget {
   const PositionPage({super.key});
@@ -27,25 +25,30 @@ class PositionPage extends StatefulWidget {
 class _PositionPageState extends State<PositionPage> {
   final TextEditingController _searchController = TextEditingController();
 
-  // --- LOCAL STATE (Pengganti Provider Sementara) ---
-  List<JabatanModel> _allData = [];      // Data Master
-  List<JabatanModel> _displayData = [];  // Data yang Tampil (terfilter)
+  // Local State
+  List<JabatanModel> _allData = [];
+  List<JabatanModel> _displayData = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Load data langsung dari Repository (Tanpa Provider)
-    _loadLocalData();
+    _loadData();
   }
 
-  void _loadLocalData() {
-    setState(() {
-      _allData = JabatanRepository.getDummyData();
-      _displayData = List.from(_allData);
-    });
+  Future<void> _loadData() async {
+    // Simulasi ambil data dari Repository
+    final data = await JabatanRepository.getJabatanList();
+    if (mounted) {
+      setState(() {
+        _allData = data;
+        _displayData = List.from(_allData);
+        _isLoading = false;
+      });
+    }
   }
 
-  // Logic Search Lokal
+  // --- LOGIC SEARCH & FILTER ---
   void _runSearch(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -61,7 +64,7 @@ class _PositionPageState extends State<PositionPage> {
     });
   }
 
-  // Logic Select All Lokal
+  // --- LOGIC SELECTION ---
   void _toggleSelectAll(bool? val) {
     setState(() {
       if (val != null) {
@@ -72,7 +75,6 @@ class _PositionPageState extends State<PositionPage> {
     });
   }
 
-  // Logic Select Single Lokal
   void _toggleSingleSelection(String id) {
     setState(() {
       final index = _displayData.indexWhere((e) => e.id == id);
@@ -82,25 +84,89 @@ class _PositionPageState extends State<PositionPage> {
     });
   }
 
-  // Logic Delete Selected Lokal
-  void _deleteSelected() {
+  int get _selectedCount => _displayData.where((e) => e.isSelected).length;
+  bool get _isAllSelected => _displayData.isNotEmpty && _displayData.length == _selectedCount;
+
+  // --- LOGIC CRUD (UI ONLY) ---
+  void _addNewData(String jabatan, String nama, String nrp, String tgl) {
     setState(() {
-      // Hapus dari data tampil & master data
-      _displayData.removeWhere((element) => element.isSelected);
-      _allData.removeWhere((element) => element.isSelected);
+      final newItem = JabatanModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        namaJabatan: jabatan.isEmpty ? "Jabatan Baru" : jabatan,
+        namaPejabat: nama.isEmpty ? "Personel Baru" : nama,
+        nrp: nrp,
+        tanggalPeresmian: tgl,
+      );
+      _allData.add(newItem);
+      _displayData = List.from(_allData); // Refresh list
     });
   }
 
-  // Logic Delete Single Lokal
   void _deleteSingle(String id) {
     setState(() {
-      _displayData.removeWhere((element) => element.id == id);
-      _allData.removeWhere((element) => element.id == id);
+      _displayData.removeWhere((e) => e.id == id);
+      _allData.removeWhere((e) => e.id == id);
     });
   }
 
-  // Hitung jumlah yang dipilih
-  int get _selectedCount => _displayData.where((e) => e.isSelected).length;
+  void _deleteSelected() {
+    setState(() {
+      _displayData.removeWhere((e) => e.isSelected);
+      _allData.removeWhere((e) => e.isSelected);
+    });
+  }
+
+  // --- MODAL FORM ---
+  void _showFormModal(BuildContext context, JabatanFormType type, {JabatanModel? item}) {
+    final jabatanCtrl = TextEditingController(text: item?.namaJabatan ?? '');
+    final namaCtrl = TextEditingController(text: item?.namaPejabat ?? '');
+    final nrpCtrl = TextEditingController(text: item?.nrp ?? '');
+    final tglCtrl = TextEditingController(text: item?.tanggalPeresmian ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SingleChildScrollView(
+            child: JabatanFormWidget(
+              type: type,
+              jabatanController: jabatanCtrl,
+              namaController: namaCtrl,
+              nrpController: nrpCtrl,
+              tanggalController: tglCtrl,
+              onCancel: () => Navigator.pop(ctx),
+              onSubmit: () {
+                if (type == JabatanFormType.add) {
+                  _addNewData(
+                    jabatanCtrl.text,
+                    namaCtrl.text,
+                    nrpCtrl.text,
+                    tglCtrl.text,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Data Berhasil Ditambah")),
+                  );
+                } else {
+                  if (item != null) {
+                    _deleteSingle(item.id);
+                  } else {
+                    _deleteSelected();
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Data Berhasil Dihapus")),
+                  );
+                }
+                Navigator.pop(ctx);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
@@ -110,17 +176,10 @@ class _PositionPageState extends State<PositionPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Logic "Select All" Checkbox State
-    final isAllSelected = _displayData.isNotEmpty && 
-        _displayData.length == _selectedCount;
-
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: Column(
         children: [
-          // -------------------------------------------------------
-          // 1. BAGIAN ATAS (Header Controls)
-          // -------------------------------------------------------
           Container(
             padding: const EdgeInsets.all(16.0),
             color: Colors.white,
@@ -128,39 +187,34 @@ class _PositionPageState extends State<PositionPage> {
               children: [
                 Row(
                   children: [
-                    // Search Bar
                     Expanded(
                       flex: 4,
                       child: JabatanSearchBar(
                         controller: _searchController,
-                        onChanged: (value) => _runSearch(value), // Panggil fungsi lokal
+                        onChanged: (value) => _runSearch(value),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
-                    // Action Buttons
                     Expanded(
                       flex: 6,
                       child: JabatanActionButtons(
-                        onAdd: () {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Fitur Add (UI Only)")),
-                          );
-                        },
+                        onAdd: () => _showFormModal(context, JabatanFormType.add),
                         onDelete: () {
                           if (_selectedCount > 0) {
-                             _deleteSelected(); // Panggil fungsi lokal
-                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Data dihapus sementara")),
+                            _deleteSelected();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("$_selectedCount data dihapus")),
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Pilih data dulu")),
+                              const SnackBar(content: Text("Pilih data yang ingin dihapus")),
                             );
                           }
                         },
                         onRefresh: () {
-                          _loadLocalData(); // Reset data
+                          _isLoading = true;
+                          setState(() {});
+                          _loadData();
                           _searchController.clear();
                         },
                       ),
@@ -170,39 +224,36 @@ class _PositionPageState extends State<PositionPage> {
               ],
             ),
           ),
-
-          // -------------------------------------------------------
-          // 2. LIST HEADER
-          // -------------------------------------------------------
           JabatanListHeader(
-            isChecked: isAllSelected,
+            isChecked: _isAllSelected,
             onCheckChanged: (val) => _toggleSelectAll(val),
           ),
-
-          // -------------------------------------------------------
-          // 3. LIST DATA
-          // -------------------------------------------------------
           Expanded(
-            child: _displayData.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: EdgeInsets.zero,
-                    itemCount: _displayData.length,
-                    itemBuilder: (context, index) {
-                      final item = _displayData[index];
-                      
-                      return JabatanListItem(
-                        item: item,
-                        onToggleSelection: () => _toggleSingleSelection(item.id),
-                        onEdit: () {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Edit ${item.namaJabatan}")),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _displayData.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: _displayData.length,
+                        itemBuilder: (context, index) {
+                          final item = _displayData[index];
+                          return JabatanListItem(
+                            item: item,
+                            onToggleSelection: () => _toggleSingleSelection(item.id),
+                            onEdit: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Edit: ${item.namaJabatan}")),
+                              );
+                            },
+                            onDelete: () => _showFormModal(
+                              context,
+                              JabatanFormType.delete,
+                              item: item,
+                            ),
                           );
                         },
-                        onDelete: () => _deleteSingle(item.id),
-                      );
-                    },
-                  ),
+                      ),
           ),
         ],
       ),
