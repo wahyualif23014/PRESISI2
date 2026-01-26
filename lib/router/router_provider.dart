@@ -160,7 +160,7 @@ class AppRouter {
               GoRoute(
                 path: RouteNames.landPlots,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: PlotsPage()),
+                    (_, __) => NoTransitionPage(child: KelolaLahanPage()),
               ),
               GoRoute(
                 path: RouteNames.landCrops,
