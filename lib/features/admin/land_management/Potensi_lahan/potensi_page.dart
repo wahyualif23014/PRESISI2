@@ -8,6 +8,7 @@ import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_summary_widget.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/no_land_potential_widget.dart';
 
+// edit, delete , reseoucrce belum
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
 
