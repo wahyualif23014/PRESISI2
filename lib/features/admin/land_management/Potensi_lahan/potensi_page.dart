@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/data/repos/land_potential_repository.dart';
+import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/add_land_data_page.dart';
+import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_filter_dialog.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_potential_group.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_potential_toolbar.dart';
 import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_summary_widget.dart';
-import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/no_land_potential_widget.dart'; 
+import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/no_land_potential_widget.dart';
 
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
@@ -56,78 +58,59 @@ class _CropsPageState extends State<OverviewPage> {
       color: Colors.white,
       child: Column(
         children: [
-          // ============================================
-          // 1. TOOLBAR (TETAP FIXED DI ATAS)
-          // ============================================
           LandPotentialToolbar(
             onSearchChanged: (query) {
               print("Mencari: $query");
             },
             onFilterTap: () {
-              print("Tombol Filter ditekan");
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return const LandFilterDialog();
+                },
+              );
             },
+            // DISINI PERUBAHANNYA:
             onAddTap: () {
-              print("Tombol Tambah ditekan");
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddLandDataPage(),
+                ),
+              );
             },
           ),
-
-          // ============================================
-          // 2. SCROLLABLE AREA (Summary + Header + Data)
-          // ============================================
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    padding: const EdgeInsets.only(bottom: 100), // Padding untuk BottomNav
-                    children: [
-                      // A. WIDGET SUMMARY (Sekarang ikut di-scroll)
-                      const LandSummaryWidget(),
-                      const NoLandPotentialWidget(),
-
-                      Container(
-                        color: Colors.grey.shade200,
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                        child: const Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Text("POLISI PENGGERAK", style: _headerStyle),
-                            ),
-                            Expanded(flex: 2, child: Text("PJ", style: _headerStyle)),
-                            Expanded(
-                              flex: 3,
-                              child: Center(child: Text("ALAMAT", style: _headerStyle)),
-                            ),
-                            Expanded(
-                              flex: 3,
-                              child: Center(
-                                child: Text("VALIDASI / AKSI", style: _headerStyle),
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView(
+                      padding: const EdgeInsets.only(
+                        bottom: 100,
+                      ), // Padding untuk BottomNav
+                      children: [
+                        const LandSummaryWidget(),
+                        const NoLandPotentialWidget(),
+                        _buildHeaderPembatas("Daftar Potensi Lahan"),
+                        if (_dataList.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 50),
+                            child: Center(
+                              child: Text(
+                                "Belum ada data potensi lahan",
+                                style: TextStyle(color: Colors.grey),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-
-                      // C. LIST DATA (GROUPED)
-                      if (_dataList.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 50),
-                          child: Center(
-                            child: Text(
-                              "Belum ada data potensi lahan",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        )
-                      else
-                        ...groupedByKabupaten.entries.map((entry) {
-                          return KabupatenExpansionTile(
-                            kabupatenName: entry.key,
-                            itemsInKabupaten: entry.value,
-                          );
-                        }),
-                    ],
-                  ),
+                          )
+                        else
+                          ...groupedByKabupaten.entries.map((entry) {
+                            return KabupatenExpansionTile(
+                              kabupatenName: entry.key,
+                              itemsInKabupaten: entry.value,
+                            );
+                          }),
+                      ],
+                    ),
           ),
         ],
       ),
@@ -135,8 +118,27 @@ class _CropsPageState extends State<OverviewPage> {
   }
 }
 
-const TextStyle _headerStyle = TextStyle(
-  fontSize: 10,
-  fontWeight: FontWeight.bold,
-  color: Colors.black54,
-);
+Widget _buildHeaderPembatas(String title) {
+  return Container(
+    margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    padding: const EdgeInsets.only(left: 12.0),
+    decoration: const BoxDecoration(
+      border: Border(
+        left: BorderSide(
+          color: Colors.black, // Warna garis hitam
+          width: 4.0, // Ketebalan garis
+        ),
+      ),
+    ),
+
+    // Teks Judulnya
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    ),
+  );
+}

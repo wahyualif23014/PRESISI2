@@ -11,7 +11,7 @@ class NoLandPotentialWidget extends StatefulWidget {
 
 class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
   final NoLandPotentialRepository _repo = NoLandPotentialRepository();
-  
+
   NoLandPotentialModel? _data;
   bool _isLoading = true;
   bool _isExpanded = false; // State buka/tutup
@@ -54,9 +54,6 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
       ),
       child: Column(
         children: [
-          // ==========================================
-          // 1. HEADER (CLICKABLE)
-          // ==========================================
           InkWell(
             onTap: () {
               setState(() {
@@ -104,7 +101,9 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
 
                   // Icon Panah Indikator
                   Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.grey,
                   ),
                 ],
@@ -117,20 +116,24 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
           // ==========================================
           if (_isExpanded) ...[
             const Divider(height: 1, thickness: 1, color: Colors.black),
-            
+
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _data!.details.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 1, 
-                thickness: 1, 
-                color: Colors.black54
-              ),
+              separatorBuilder:
+                  (context, index) => const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Colors.black54,
+                  ),
               itemBuilder: (context, index) {
                 final item = _data!.details[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

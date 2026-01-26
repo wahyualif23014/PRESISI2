@@ -54,10 +54,6 @@ class LandPotentialToolbar extends StatelessWidget {
           ),
           
           const SizedBox(width: 12),
-
-          // ==============================
-          // 2. TOMBOL FILTER (UI Baru)
-          // ==============================
           _buildActionButton(
             icon: Icons.filter_alt,
             color: const Color(0xFF0097B2), // Biru Cyan

@@ -63,9 +63,6 @@ class _LandSummaryWidgetState extends State<LandSummaryWidget> {
       ),
       child: Column(
         children: [
-          // ==========================================
-          // 1. HEADER (SELALU MUNCUL) - CLICKABLE
-          // ==========================================
           InkWell(
             onTap: () {
               setState(() {

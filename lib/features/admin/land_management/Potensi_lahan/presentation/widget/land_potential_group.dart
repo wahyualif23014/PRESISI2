@@ -16,16 +16,16 @@ class KabupatenExpansionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     Map<String, List<LandPotentialModel>> groupedByKecamatan = {};
     for (var item in itemsInKabupaten) {
-      if (!groupedByKecamatan.containsKey(item.kecamatanDesa)) {
-        groupedByKecamatan[item.kecamatanDesa] = [];
+      if (!groupedByKecamatan.containsKey(item.kecamatan)) {
+        groupedByKecamatan[item.kecamatan] = [];
       }
-      groupedByKecamatan[item.kecamatanDesa]!.add(item);
+      groupedByKecamatan[item.kecamatan]!.add(item);
     }
 
     return ExpansionTile(
-      initiallyExpanded: true, // Default terbuka
-      collapsedBackgroundColor: const Color(0xFF9FA8DA), // Warna saat tertutup
-      backgroundColor: const Color(0xFF9FA8DA), // Warna Header Ungu Tua (Indigo 200)
+      initiallyExpanded: true,
+      collapsedBackgroundColor: const Color(0xFF9FA8DA),
+      backgroundColor: const Color(0xFF9FA8DA),
       title: Text(
         kabupatenName,
         style: const TextStyle(
@@ -54,15 +54,15 @@ class KecamatanExpansionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      initiallyExpanded: true, // Default terbuka
-      collapsedBackgroundColor: const Color(0xFFC5CAE9), 
-      backgroundColor: const Color(0xFFC5CAE9), // Warna Header Ungu Muda (Indigo 100)
+      initiallyExpanded: true,
+      collapsedBackgroundColor: const Color(0xFFC5CAE9),
+      backgroundColor: const Color(0xFFC5CAE9),
       title: Text(
-        kecamatanName,
+        "Kecamatan $kecamatanName",
         style: const TextStyle(
             fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
       ),
-      shape: const Border(), 
+      shape: const Border(),
       children: items.map((data) => LandPotentialCard(data: data)).toList(),
     );
   }
