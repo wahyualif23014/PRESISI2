@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
+import 'package:sdmapp/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart';
 
-
-class RegionExpansionTile extends StatelessWidget {
+// =========================================================
+// LEVEL 1: GROUP WILAYAH (KAB/KEC/DESA) - UNGU TUA
+// =========================================================
+class HistoryRegionExpansionTile extends StatelessWidget {
   final String title;
-  final List<LandManagementItemModel> items;
+  final List<LandHistoryItemModel> items;
 
-  const RegionExpansionTile({
+  const HistoryRegionExpansionTile({
     super.key,
     required this.title,
     required this.items,
@@ -14,7 +16,8 @@ class RegionExpansionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Map<String, List<LandManagementItemModel>> groupedByDusun = {};
+    // Grouping berdasarkan Sub-Region (Dusun)
+    Map<String, List<LandHistoryItemModel>> groupedByDusun = {};
     for (var item in items) {
       if (!groupedByDusun.containsKey(item.subRegionGroup)) {
         groupedByDusun[item.subRegionGroup] = [];
@@ -24,9 +27,9 @@ class RegionExpansionTile extends StatelessWidget {
 
     return ExpansionTile(
       initiallyExpanded: true,
-      collapsedBackgroundColor: const Color(0xFFC5CAE9), // Ungu Tua (Indigo 100)
+      collapsedBackgroundColor: const Color(0xFFC5CAE9), // Ungu Tua
       backgroundColor: const Color(0xFFC5CAE9),
-      shape: const Border(), // Hilangkan garis border default
+      shape: const Border(),
       textColor: Colors.black,
       iconColor: Colors.black,
       title: Text(
@@ -34,7 +37,7 @@ class RegionExpansionTile extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
       ),
       children: groupedByDusun.entries.map((entry) {
-        return SubRegionExpansionTile(
+        return HistorySubRegionExpansionTile(
           title: entry.key,
           items: entry.value,
         );
@@ -46,11 +49,11 @@ class RegionExpansionTile extends StatelessWidget {
 // =========================================================
 // LEVEL 2: GROUP DUSUN - UNGU MUDA (MENJOROK)
 // =========================================================
-class SubRegionExpansionTile extends StatelessWidget {
+class HistorySubRegionExpansionTile extends StatelessWidget {
   final String title;
-  final List<LandManagementItemModel> items;
+  final List<LandHistoryItemModel> items;
 
-  const SubRegionExpansionTile({
+  const HistorySubRegionExpansionTile({
     super.key,
     required this.title,
     required this.items,
@@ -60,33 +63,33 @@ class SubRegionExpansionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExpansionTile(
       initiallyExpanded: true,
-      collapsedBackgroundColor: const Color(0xFFE8EAF6), // Ungu Muda (Indigo 50)
+      collapsedBackgroundColor: const Color(0xFFE8EAF6), // Ungu Muda
       backgroundColor: const Color(0xFFE8EAF6),
       shape: const Border(),
-      tilePadding: const EdgeInsets.only(left: 20, right: 16), // Menjorok ke dalam
+      tilePadding: const EdgeInsets.only(left: 20, right: 16),
       title: Text(
         title,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
       ),
-      children: items.map((item) => LandManagementRow(item: item)).toList(),
+      children: items.map((item) => HistoryRow(item: item)).toList(),
     );
   }
 }
 
 // =========================================================
-// LEVEL 3: DATA ITEM ROW
+// LEVEL 3: DATA ITEM ROW (KHUSUS RIWAYAT)
 // =========================================================
-class LandManagementRow extends StatelessWidget {
-  final LandManagementItemModel item;
+class HistoryRow extends StatelessWidget {
+  final LandHistoryItemModel item;
 
-  const LandManagementRow({super.key, required this.item});
+  const HistoryRow({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      margin: const EdgeInsets.only(bottom: 1), // Garis pemisah tipis
+      margin: const EdgeInsets.only(bottom: 1),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -102,13 +105,26 @@ class LandManagementRow extends StatelessWidget {
             child: _buildPersonInfo(item.picName, item.picPhone),
           ),
           
-          // 3. LUAS (Flex 1)
+          // 3. LUAS (Flex 2) - KHUSUS RIWAYAT ADA KATEGORI LAHAN
           Expanded(
-            flex: 1,
-            child: Text(
-              item.landArea.toString(),
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+            flex: 2, 
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  item.landArea.toStringAsFixed(2), // Format 2 desimal (3.50)
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.landCategory, // "POKTAN BINAAN POLRI"
+                  style: const TextStyle(fontSize: 7, color: Colors.grey, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
 
@@ -117,6 +133,7 @@ class LandManagementRow extends StatelessWidget {
             flex: 2,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: Color(int.parse(item.statusColor.replaceAll('#', '0xFF'))),
                 borderRadius: BorderRadius.circular(2),

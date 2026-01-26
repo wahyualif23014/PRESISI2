@@ -165,7 +165,7 @@ class AppRouter {
               GoRoute(
                 path: RouteNames.landCrops,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: CropsPage()),
+                    (_, __) => NoTransitionPage(child: RiwayatKelolaLahanPage()),
               ),
             ],
           ),
