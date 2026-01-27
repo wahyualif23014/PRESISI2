@@ -1,7 +1,20 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '/router/route_names.dart'; // Pastikan path benar
+import '/router/route_names.dart';
+
+class _NavItemData {
+  final String label;
+  final IconData icon;
+  final IconData activeIcon;
+  final String route;
+
+  const _NavItemData({
+    required this.label,
+    required this.icon,
+    required this.activeIcon,
+    required this.route,
+  });
+}
 
 class CustomBottomNavBar extends StatefulWidget {
   const CustomBottomNavBar({super.key});
@@ -13,95 +26,82 @@ class CustomBottomNavBar extends StatefulWidget {
 class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
   static const double _navHeight = 80;
 
-  // Logika penentuan index berdasarkan rute aktif saat ini
+  static const List<_NavItemData> _navItems = [
+    _NavItemData(
+      label: "Rekap",
+      icon: Icons.print_outlined,
+      activeIcon: Icons.print_rounded,
+      route: RouteNames.recap,
+    ),
+    _NavItemData(
+      label: "Data",
+      icon: Icons.storage_outlined,
+      activeIcon: Icons.storage_rounded,
+      route: RouteNames.data,
+    ),
+    _NavItemData(
+      label: "Beranda",
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home_rounded,
+      route: RouteNames.dashboard,
+    ),
+    _NavItemData(
+      label: "Lahan",
+      icon: Icons.spa_outlined,
+      activeIcon: Icons.spa_rounded,
+      route: RouteNames.landManagement,
+    ),
+    _NavItemData(
+      label: "Personel",
+      icon: Icons.person_outline,
+      activeIcon: Icons.person_rounded,
+      route: RouteNames.personnel,
+    ),
+  ];
+
   int _getCurrentIndex(String location) {
-    if (location.startsWith(RouteNames.recap)) return 0;
-    if (location.startsWith(RouteNames.data)) return 1;
-    if (location.startsWith(RouteNames.dashboard)) return 2;
-    if (location.startsWith(RouteNames.landManagement)) return 3;
-    if (location.startsWith(RouteNames.personnel)) return 4;
-    return 2; // Default ke Beranda
+    final index = _navItems.indexWhere(
+      (item) => location.startsWith(item.route),
+    );
+    return index != -1 ? index : 2;
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final location = GoRouterState.of(context).uri.toString();
-    final itemWidth = size.width / 5;
     final currentIndex = _getCurrentIndex(location);
+    final itemWidth = size.width / _navItems.length;
 
-    return Container(
+    return SizedBox(
       height: _navHeight,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
+      width: size.width,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 1. Animasi Background Curve (Latar belakang putih yang melengkung)
           _AnimatedCurveBackground(
             currentIndex: currentIndex,
             itemWidth: itemWidth,
-            backgroundColor: Colors.white,
+            totalItems: _navItems.length,
           ),
-
-          // 2. Barisan Item Navigasi
           Row(
-            children: [
-              _NavBarItem(
-                index: 0,
-                currentIndex: currentIndex,
-                width: itemWidth,
-                label: "Rekap",
-                icon: Icons.print_outlined,
-                activeIcon: Icons.print_rounded,
-                onTap: () => context.go(RouteNames.recap),
-              ),
-              _NavBarItem(
-                index: 1,
-                currentIndex: currentIndex,
-                width: itemWidth,
-                label: "Data",
-                icon: Icons.storage_outlined,
-                activeIcon: Icons.storage_rounded,
-                onTap: () => context.go(RouteNames.data), 
-              ),
-              _NavBarItem(
-                index: 2,
-                currentIndex: currentIndex,
-                width: itemWidth,
-                label: "Beranda",
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                onTap: () => context.go(RouteNames.dashboard),
-              ),
-              _NavBarItem(
-                index: 3,
-                currentIndex: currentIndex,
-                width: itemWidth,
-                label: "Lahan",
-                icon: Icons.spa_outlined,
-                activeIcon: Icons.spa_rounded,
-                onTap: () => context.go(RouteNames.landManagement),
-              ),
-              _NavBarItem(
-                index: 4,
-                currentIndex: currentIndex,
-                width: itemWidth,
-                label: "Personel",
-                icon: Icons.person_outline,
-                activeIcon: Icons.person_rounded,
-                onTap: () => context.go(RouteNames.personnel),
-              ),
-            ],
+            children:
+                _navItems.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+
+                  return _NavBarItem(
+                    index: index,
+                    currentIndex: currentIndex,
+                    width: itemWidth,
+                    data: item,
+                    onTap: () {
+                      if (index != currentIndex) {
+                        context.go(item.route);
+                      }
+                    },
+                  );
+                }).toList(),
           ),
         ],
       ),
@@ -109,26 +109,18 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
   }
 }
 
-// ============================================================================
-// SUB-WIDGETS (Sama dengan kode Anda namun dengan pembersihan variabel)
-// ============================================================================
-
 class _NavBarItem extends StatelessWidget {
   final int index;
   final int currentIndex;
   final double width;
-  final String label;
-  final IconData icon;
-  final IconData activeIcon;
+  final _NavItemData data;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.index,
     required this.currentIndex,
     required this.width,
-    required this.label,
-    required this.icon,
-    required this.activeIcon,
+    required this.data,
     required this.onTap,
   });
 
@@ -143,11 +135,12 @@ class _NavBarItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: width,
+        height: 90,
         child: Stack(
           alignment: Alignment.center,
           children: [
             AnimatedPositioned(
-              duration: const Duration(milliseconds: 350),
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOutCubic,
               top: isSelected ? 8 : 24,
               child: Column(
@@ -160,23 +153,36 @@ class _NavBarItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected ? primaryColor : Colors.transparent,
                       shape: BoxShape.circle,
-                      boxShadow: isSelected 
-                        ? [BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))] 
-                        : [],
+                      boxShadow:
+                          isSelected
+                              ? [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.4),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ]
+                              : [],
                     ),
                     child: Icon(
-                      isSelected ? activeIcon : icon,
+                      isSelected ? data.activeIcon : data.icon,
                       size: 24,
                       color: isSelected ? Colors.white : inactiveColor,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? primaryColor : inactiveColor,
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: 1.0,
+                    child: Text(
+                      data.label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? primaryColor : inactiveColor,
+                        letterSpacing: 0.3,
+                      ),
                     ),
                   ),
                 ],
@@ -189,31 +195,30 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-// Widget Painter tetap sama untuk menjaga UI Curve yang bagus
 class _AnimatedCurveBackground extends StatelessWidget {
   final int currentIndex;
   final double itemWidth;
-  final Color backgroundColor;
+  final int totalItems;
 
   const _AnimatedCurveBackground({
-    required this.currentIndex, 
-    required this.itemWidth, 
-    required this.backgroundColor
+    required this.currentIndex,
+    required this.itemWidth,
+    required this.totalItems,
   });
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: currentIndex.toDouble()),
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
       builder: (context, value, _) {
         return CustomPaint(
           size: Size(MediaQuery.of(context).size.width, 80),
           painter: _CurvePainter(
-            position: value, 
-            itemWidth: itemWidth, 
-            color: backgroundColor
+            position: value,
+            itemWidth: itemWidth,
+            color: Colors.white,
           ),
         );
       },
@@ -226,33 +231,70 @@ class _CurvePainter extends CustomPainter {
   final double itemWidth;
   final Color color;
 
-  _CurvePainter({required this.position, required this.itemWidth, required this.color});
+  _CurvePainter({
+    required this.position,
+    required this.itemWidth,
+    required this.color,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..style = PaintingStyle.fill;
+    final paint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
+
     final path = Path();
 
+    // Hitung posisi tengah kurva
     final centerX = (position * itemWidth) + (itemWidth / 2);
+
+    // Konfigurasi Lekukan Tengah (Navigasi)
     const curveDepth = 22.0;
-    final curveWidth = itemWidth * 0.8;
+    final curveWidth = itemWidth * 0.75;
     final curveStart = centerX - (curveWidth / 2);
     final curveEnd = centerX + (curveWidth / 2);
 
     path.moveTo(0, 0);
-    path.lineTo(curveStart - 16, 0);
-    path.cubicTo(curveStart - 8, 0, curveStart, -curveDepth * 0.5, curveStart, -curveDepth * 0.6);
-    path.cubicTo(curveStart + 10, -curveDepth, curveEnd - 10, -curveDepth, curveEnd, -curveDepth * 0.6);
-    path.cubicTo(curveEnd, -curveDepth * 0.5, curveEnd + 8, 0, curveEnd + 16, 0);
+
+    // 2. Garis lurus menuju awal lekukan navigasi
+    path.lineTo(curveStart - 20, 0);
+
+    path.cubicTo(
+      curveStart - 5,
+      0,
+      curveStart + 5,
+      -curveDepth, // Control point 2
+      centerX,
+      -curveDepth, // Titik tengah
+    );
+
+    path.cubicTo(
+      curveEnd - 5,
+      -curveDepth, // Control point 3
+      curveEnd + 5,
+      0, // Control point 4
+      curveEnd + 20,
+      0, // Titik akhir kurva
+    );
+
+    // 4. Lanjut lurus ke Titik Lebar Penuh, 0 (Pojok Kanan Atas Tajam)
     path.lineTo(size.width, 0);
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
+
+    // 5. Tutup Path ke bawah
+    path.lineTo(size.width, size.height); // Kanan Bawah
+    path.lineTo(0, size.height); // Kiri Bawah
     path.close();
 
-    canvas.drawShadow(path, Colors.black.withOpacity(0.06), 4, true);
+    // Gambar Shadow dan Path
+    canvas.drawShadow(path, Colors.black.withOpacity(0.15), 8, true);
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant _CurvePainter oldDelegate) => oldDelegate.position != position;
+  bool shouldRepaint(covariant _CurvePainter oldDelegate) {
+    return oldDelegate.position != position ||
+        oldDelegate.itemWidth != itemWidth ||
+        oldDelegate.color != color;
+  }
 }
