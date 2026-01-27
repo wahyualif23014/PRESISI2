@@ -1,21 +1,15 @@
-// Enum untuk menentukan level baris
-enum RecapRowType {
-  polres, 
-  polsek, 
-  desa    
-}
+enum RecapRowType { polres, polsek, desa }
 
 class RecapModel {
   final String id;
   final String namaWilayah;
-  final double potensiLahan; 
-  final double tanamLahan;   
-  final double panenLuas;    
-  final double panenTon;     
-  final double serapan;      
-  
-  // Mengganti isHeader dengan tipe yang lebih spesifik
-  final RecapRowType type;   
+  final double potensiLahan;
+  final double tanamLahan;
+  final double panenLuas;
+  final double panenTon;
+  final double serapan;
+  final RecapRowType type;
+  final String? namaPolsek;
 
   RecapModel({
     required this.id,
@@ -25,12 +19,11 @@ class RecapModel {
     required this.panenLuas,
     required this.panenTon,
     required this.serapan,
-    this.type = RecapRowType.desa, // Defaultnya adalah Desa
+    this.type = RecapRowType.desa,
+    this.namaPolsek,
   });
 
-  // --- FACTORY JSON ---
   factory RecapModel.fromJson(Map<String, dynamic> json) {
-    // Helper sederhana untuk konversi string/int dari API ke Enum
     RecapRowType parseType(dynamic val) {
       if (val == 'polres' || val == 0) return RecapRowType.polres;
       if (val == 'polsek' || val == 1) return RecapRowType.polsek;
@@ -45,10 +38,24 @@ class RecapModel {
       panenLuas: (json['panen_luas'] as num?)?.toDouble() ?? 0.0,
       panenTon: (json['panen_ton'] as num?)?.toDouble() ?? 0.0,
       serapan: (json['serapan'] as num?)?.toDouble() ?? 0.0,
-      type: parseType(json['level']), // Asumsi key di API bernama 'level'
+      type: parseType(json['level']),
+      namaPolsek: json['nama_polsek'], 
     );
   }
 
-  // Helper Display
+  RecapModel copyWith({String? namaPolsek}) {
+    return RecapModel(
+      id: id,
+      namaWilayah: namaWilayah,
+      potensiLahan: potensiLahan,
+      tanamLahan: tanamLahan,
+      panenLuas: panenLuas,
+      panenTon: panenTon,
+      serapan: serapan,
+      type: type,
+      namaPolsek: namaPolsek ?? this.namaPolsek,
+    );
+  }
+
   String get panenDisplay => "${panenLuas.toStringAsFixed(0)} HA / ${panenTon.toStringAsFixed(0)} TON";
 }

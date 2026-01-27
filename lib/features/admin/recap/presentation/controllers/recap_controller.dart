@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/recap/data/model/recap_model.dart';
-import 'package:sdmapp/features/admin/recap/data/repo/recap_repo.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_data_row.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_group_section.dart';
+import '../../data/model/recap_model.dart';
+import '../../data/repo/recap_repo.dart';
 
 enum RecapState { initial, loading, loaded, error, empty }
 
@@ -12,16 +10,15 @@ class RecapController extends ChangeNotifier {
   RecapState _state = RecapState.initial;
   RecapState get state => _state;
 
-  List<Widget> _treeWidgets = [];
-  List<Widget> get treeWidgets => _treeWidgets;
+  Map<String, List<RecapModel>> _groupedData = {};
+  Map<String, List<RecapModel>> get groupedData => _groupedData;
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  // Fungsi Fetch Data (Non-Blocking UI)
   Future<void> fetchData() async {
     _state = RecapState.loading;
-    notifyListeners(); 
+    notifyListeners();
 
     try {
       final flatData = await _repo.getRecapData();
@@ -29,8 +26,7 @@ class RecapController extends ChangeNotifier {
       if (flatData.isEmpty) {
         _state = RecapState.empty;
       } else {
-        // PROSES BERAT (Grouping) dilakukan di sini agar UI tetap smooth
-        _treeWidgets = _buildTreeStructure(flatData);
+        _groupedData = _processDataStructure(flatData);
         _state = RecapState.loaded;
       }
     } catch (e) {
@@ -41,54 +37,27 @@ class RecapController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Logic Grouping Data (Clean Code)
-  List<Widget> _buildTreeStructure(List<RecapModel> flatData) {
-    List<Widget> resultWidgets = [];
-    RecapModel? currentPolres;
-    List<Widget> polresChildren = [];
-    RecapModel? currentPolsek;
-    List<Widget> polsekChildren = [];
-
-    void flushPolsek() {
-      if (currentPolsek != null) {
-        polresChildren.add(
-          RecapGroupSection(
-            header: currentPolsek!,
-            children: List.from(polsekChildren),
-          ),
-        );
-        polsekChildren = [];
-        currentPolsek = null;
-      }
-    }
-
-    void flushPolres() {
-      flushPolsek();
-      if (currentPolres != null) {
-        resultWidgets.add(
-          RecapGroupSection(
-            header: currentPolres!,
-            children: List.from(polresChildren),
-          ),
-        );
-        polresChildren = [];
-        currentPolres = null;
-      }
-    }
+  Map<String, List<RecapModel>> _processDataStructure(List<RecapModel> flatData) {
+    Map<String, List<RecapModel>> result = {};
+    String currentPolres = "";
+    String currentPolsek = "";
 
     for (var item in flatData) {
       if (item.type == RecapRowType.polres) {
-        flushPolres();
-        currentPolres = item;
+        currentPolres = item.namaWilayah;
+        result[currentPolres] = [];
       } else if (item.type == RecapRowType.polsek) {
-        flushPolsek();
-        currentPolsek = item;
+        currentPolsek = item.namaWilayah;
       } else if (item.type == RecapRowType.desa) {
-        polsekChildren.add(RecapDataRow(data: item));
+        final enrichedItem = item.namaPolsek == null 
+            ? item.copyWith(namaPolsek: currentPolsek) 
+            : item;
+        
+        if (currentPolres.isNotEmpty) {
+           result[currentPolres]?.add(enrichedItem);
+        }
       }
     }
-
-    flushPolres();
-    return resultWidgets;
+    return result;
   }
 }

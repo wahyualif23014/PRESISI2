@@ -1,121 +1,252 @@
 import 'package:flutter/material.dart';
 import '../../data/model/recap_model.dart';
 
-class RecapDataRow extends StatelessWidget {
-  final RecapModel data;
-  final VoidCallback? onTap;
-  final bool isExpanded;
+// 1. LEVEL POLRES (Parent)
 
-  const RecapDataRow({
-    Key? key,
-    required this.data,
-    this.onTap,
-    this.isExpanded = false,
-  }) : super(key: key);
 
-  bool get _isPolres => data.type == RecapRowType.polres;
-  bool get _isPolsek => data.type == RecapRowType.polsek;
-  bool get _isDesa => data.type == RecapRowType.desa;
+class RecapPolresSection extends StatelessWidget {
+  final String polresName;
+  final List<RecapModel> itemsInPolres;
 
-  Color get _backgroundColor {
-    if (_isPolres) return const Color(0xFFEFF6FF);
-    if (_isPolsek) return const Color(0xFFF8FAFC);
-    return Colors.white;
-  }
-
-  double get _indent {
-    if (_isPolsek) return 16.0;
-    if (_isDesa) return 32.0;
-    return 0.0;
-  }
+  const RecapPolresSection({
+    super.key,
+    required this.polresName,
+    required this.itemsInPolres,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bool isExpandable = !_isDesa;
+    // 1. Logic Grouping
+    final Map<String, List<RecapModel>> groupedByPolsek = {};
     
-    final baseStyle = TextStyle(
-      fontSize: 12,
-      color: Colors.black87,
-      height: 1.3,
-      fontWeight: _isDesa ? FontWeight.w400 : FontWeight.w600,
-    );
+    for (var item in itemsInPolres) {
+      final key = item.namaPolsek ?? 'Lainnya';
+      if (!groupedByPolsek.containsKey(key)) {
+        groupedByPolsek[key] = [];
+      }
+      groupedByPolsek[key]!.add(item);
+    }
 
-    return Material(
-      color: _backgroundColor,
-      child: InkWell(
-        onTap: isExpandable ? onTap : null,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 60), 
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.grey.shade300,
-                width: 1.0,
+    // 2. Kalkulasi Total
+    final totalPotensi = _sum(itemsInPolres, (m) => m.potensiLahan);
+    final totalTanam = _sum(itemsInPolres, (m) => m.tanamLahan);
+    final totalPanenLuas = _sum(itemsInPolres, (m) => m.panenLuas);
+    final totalPanenTon = _sum(itemsInPolres, (m) => m.panenTon);
+    final avgSerapan = _avg(itemsInPolres, (m) => m.serapan);
+
+    return ExpansionTile(
+      initiallyExpanded: true,
+      collapsedBackgroundColor: const Color(0xFF9FA8DA), // Warna Level 1
+      backgroundColor: const Color(0xFF9FA8DA),
+      iconColor: Colors.black87,
+      collapsedIconColor: Colors.black87,
+      
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 1.0),
+            child: Text(
+              polresName.toUpperCase(), // Uppercase agar tegas
+              style: const TextStyle(
+                fontSize: 16, // Ukuran font besar (H1)
+                fontWeight: FontWeight.w800, // Sangat tebal
+                color: Colors.black87,
+                letterSpacing: 0.5,
               ),
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    SizedBox(width: _indent),
-                    if (isExpandable)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: AnimatedRotation(
-                          turns: isExpanded ? 0.25 : 0,
-                          duration: const Duration(milliseconds: 250),
-                          child: Icon(
-                            Icons.arrow_right_rounded, 
-                            size: 20, 
-                            color: _isPolres ? const Color(0xFF1E40AF) : Colors.grey.shade700,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 28),
-                    
-                    Expanded(
-                      child: Text(
-                        data.namaWilayah,
-                        style: baseStyle.copyWith(
-                          color: _isPolres ? const Color(0xFF1E40AF) : Colors.black87,
-                          fontSize: _isPolres ? 13 : 12,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildDataCell("${data.potensiLahan.toInt()} HA", baseStyle, flex: 2),
-              _buildDataCell("${data.tanamLahan.toInt()} HA", baseStyle, flex: 2),
-              _buildDataCell(data.panenDisplay, baseStyle, flex: 3),
-              _buildDataCell("${data.serapan.toInt()}%", baseStyle, flex: 2),
-            ],
+
+          // BAGIAN 2: GARIS BATAS
+          Divider(
+            color: Colors.black.withOpacity(0.2),
+            thickness: 1,
+            height: 24, // Memberi jarak atas bawah garis
           ),
+
+          // BAGIAN 3: STATISTIK (SUMMARY)
+          _RecapDataColumns(
+            name: "TOTAL REKAPITULASI", // Label pengganti nama wilayah
+            potensi: totalPotensi,
+            tanam: totalTanam,
+            panenLuas: totalPanenLuas,
+            panenTon: totalPanenTon,
+            serapan: avgSerapan,
+            isHeader: true,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            textColor: const Color(0xFF1A237E), // Warna biru tua agar beda dikit
+          ),
+        ],
+      ),
+      children: groupedByPolsek.entries.map((entry) {
+        return RecapPolsekSection(
+          polsekName: entry.key,
+          itemsInPolsek: entry.value,
+        );
+      }).toList(),
+    );
+  }
+}
+
+// 2. LEVEL POLSEK (Child)
+class RecapPolsekSection extends StatelessWidget {
+  final String polsekName;
+  final List<RecapModel> itemsInPolsek;
+
+  const RecapPolsekSection({
+    super.key,
+    required this.polsekName,
+    required this.itemsInPolsek,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionTile(
+      initiallyExpanded: true,
+      collapsedBackgroundColor: const Color(0xFFC5CAE9), // Warna Level 2
+      backgroundColor: const Color(0xFFC5CAE9),
+      iconColor: Colors.black87,
+      collapsedIconColor: Colors.black87,
+      shape: const Border(), // Hapus border default
+      title: _RecapDataColumns(
+        name: "Polsek $polsekName",
+        potensi: _sum(itemsInPolsek, (m) => m.potensiLahan),
+        tanam: _sum(itemsInPolsek, (m) => m.tanamLahan),
+        panenLuas: _sum(itemsInPolsek, (m) => m.panenLuas),
+        panenTon: _sum(itemsInPolsek, (m) => m.panenTon),
+        serapan: _avg(itemsInPolsek, (m) => m.serapan),
+        isHeader: true,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        textColor: Colors.black87,
+      ),
+      children: itemsInPolsek.map((data) => RecapDesaRow(data: data)).toList(),
+    );
+  }
+}
+
+// 3. LEVEL DESA (Leaf/Item)
+
+class RecapDesaRow extends StatelessWidget {
+  final RecapModel data;
+
+  const RecapDesaRow({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 50),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ), // Padding disesuaikan dengan ExpansionTile
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade300, width: 1.0),
         ),
       ),
+      child: _RecapDataColumns(
+        name: data.namaWilayah,
+        potensi: data.potensiLahan,
+        tanam: data.tanamLahan,
+        panenLuas: data.panenLuas,
+        panenTon: data.panenTon,
+        serapan: data.serapan,
+        isHeader: false,
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        textColor: Colors.black87,
+      ),
+    );
+  }
+}
+
+class _RecapDataColumns extends StatelessWidget {
+  final String name;
+  final double potensi;
+  final double tanam;
+  final double panenLuas;
+  final double panenTon;
+  final double serapan;
+  final bool isHeader;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final Color textColor;
+
+  const _RecapDataColumns({
+    required this.name,
+    required this.potensi,
+    required this.tanam,
+    required this.panenLuas,
+    required this.panenTon,
+    required this.serapan,
+    required this.isHeader,
+    required this.fontSize,
+    required this.fontWeight,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: textColor,
+    );
+
+    return Row(
+      children: [
+        // Kolom Nama Wilayah
+        Expanded(
+          flex: 3,
+          child: Text(
+            name,
+            style: style,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        // Kolom Potensi
+        _buildCell("${potensi.toInt()} HA", style, 2),
+        // Kolom Tanam
+        _buildCell("${tanam.toInt()} HA", style, 2),
+        // Kolom Panen (Gabungan Luas/Ton)
+        _buildCell(
+          "${panenLuas.toStringAsFixed(0)} HA / ${panenTon.toStringAsFixed(0)} TON",
+          style,
+          3,
+        ),
+        // Kolom Serapan
+        _buildCell("${serapan.toInt()}%", style, 2),
+      ],
     );
   }
 
-  Widget _buildDataCell(String text, TextStyle style, {required int flex}) {
+  Widget _buildCell(String text, TextStyle style, int flex) {
     return Expanded(
       flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Text(
-          text,
-          style: style,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+      child: Text(
+        text,
+        style: style,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
+}
+
+double _sum(List<RecapModel> items, double Function(RecapModel) selector) {
+  if (items.isEmpty) return 0.0;
+  return items.map(selector).reduce((a, b) => a + b);
+}
+
+double _avg(List<RecapModel> items, double Function(RecapModel) selector) {
+  if (items.isEmpty) return 0.0;
+  final total = items.map(selector).reduce((a, b) => a + b);
+  return total / items.length;
 }
