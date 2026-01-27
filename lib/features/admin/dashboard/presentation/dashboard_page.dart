@@ -173,11 +173,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
 
                 const SizedBox(width: 16), // Jarak antar kartu
-                Expanded(
-                  child: DistributionCard(
-                    data: pengelolaData, 
-                  ),
-                ),
+                Expanded(child: DistributionCard(data: pengelolaData)),
               ],
             ),
             const SizedBox(height: 32),
@@ -191,13 +187,19 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF64748B),
-        letterSpacing: 1.0,
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      padding: const EdgeInsets.only(left: 12.0),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Colors.black, width: 4.0)),
+      ),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
       ),
     );
   }
