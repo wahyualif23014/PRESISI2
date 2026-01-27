@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../data/model/recap_model.dart';
-import 'recap_data_row.dart'; // Pastikan path import benar
+import 'recap_data_row.dart';
 
 class RecapGroupSection extends StatefulWidget {
   final RecapModel header;
-  final List<Widget> children; 
+  final List<Widget> children;
 
   const RecapGroupSection({
     Key? key,
@@ -22,7 +22,7 @@ class _RecapGroupSectionState extends State<RecapGroupSection> {
   @override
   void initState() {
     super.initState();
-    _isExpanded = widget.header.type == RecapRowType.polres; 
+    _isExpanded = widget.header.type == RecapRowType.polres;
   }
 
   @override
@@ -35,16 +35,17 @@ class _RecapGroupSectionState extends State<RecapGroupSection> {
           isExpanded: _isExpanded,
           onTap: () {
             setState(() {
-              _isExpanded = !_isExpanded; // Toggle Buka/Tutup
+              _isExpanded = !_isExpanded;
             });
           },
         ),
-
-
-        if (_isExpanded)
-          Column(
-            children: widget.children,
-          ),
+        AnimatedCrossFade(
+          firstChild: Container(),
+          secondChild: Column(children: widget.children),
+          crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
+          sizeCurve: Curves.easeInOut,
+        ),
       ],
     );
   }
