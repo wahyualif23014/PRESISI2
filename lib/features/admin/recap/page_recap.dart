@@ -73,7 +73,7 @@ class _PageRecapState extends State<PageRecap> {
           const SizedBox(height: 16),
 
           // 2. Table Header (Judul Kolom)
-          const RecapTableHeader(),
+          // const RecapTableHeader(),
 
           // 3. Data Content
           Expanded(
