@@ -49,7 +49,7 @@ class _DashboardPageState extends State<DashboardPage> {
     const userRole = "Polda Jatim";
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
         child: Column(
@@ -66,11 +66,11 @@ class _DashboardPageState extends State<DashboardPage> {
               child: PromoCarousel(items: dummyCarouselData),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
 
             // C. STATISTICS SECTION (LAHAN)
             _buildSectionTitle("Ringkasan Area Lahan"),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             LayoutBuilder(
               builder: (context, constraints) {
@@ -139,21 +139,21 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 8),
 
             // D. CHART SECTION (GRAFIK PANEN)
             _buildSectionTitle("Analisis Hasil Panen"),
             const SizedBox(height: 12),
             GrafikChartCard(data: harvestData),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 10),
 
             // E. DATA KWARTAL
             _buildSectionTitle("Data Kwartal"),
             const SizedBox(height: 20),
             QuarterlyStatsSection(items: quarterlyData),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 10),
 
             // F. SUMMARY (RINGKASAN)
             _buildSectionTitle("Ringkasan Keseluruhan"),

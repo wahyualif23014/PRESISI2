@@ -35,7 +35,7 @@ class _MainDataShellPageState extends State<MainDataShellPage> {
     final showMenu = isDataRoute && !_isMenuManuallyClosed;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Stack(
         children: [
           Positioned.fill(

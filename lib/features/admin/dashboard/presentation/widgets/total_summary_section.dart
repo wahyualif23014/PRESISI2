@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-// Import Model Baru
+// Pastikan import model sudah benar
 import '../../data/model/summary_item_model.dart'; 
 
 class TotalSummarySection extends StatelessWidget {
-  final List<SummaryItemModel> items; // Gunakan Model baru
+  final List<SummaryItemModel> items;
 
   const TotalSummarySection({super.key, required this.items});
 
@@ -11,19 +11,41 @@ class TotalSummarySection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        // Shadow halus untuk kontainer utama
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Section (Opsional: Judul Ringkasan)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: Text(
+              "Ringkasan Panen",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B), // Slate 800
+              ),
+            ),
+          ),
+          
+          // Grid Items
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (int i = 0; i < items.length; i++) ...[
                 Expanded(child: _buildCompactCard(items[i])),
-                // Tambahkan jarak antar item, kecuali item terakhir
                 if (i < items.length - 1) const SizedBox(width: 12),
               ],
             ],
@@ -37,27 +59,26 @@ class TotalSummarySection extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFFF8FAFC), // Slate 50 (Background Card Sedikit Abu)
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.black12),
+            border: Border.all(color: const Color(0xFFE2E8F0)), // Slate 200
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Mengirim Enum Type ke fungsi icon
-              _buildIcon(item.type), 
-              const SizedBox(height: 8),
+              _buildIcon(item.type),
+              const SizedBox(height: 12),
 
-              // Angka & Unit
+              // Value & Unit
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -66,10 +87,11 @@ class TotalSummarySection extends StatelessWidget {
                     child: Text(
                       _formatNumber(item.value),
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black87,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800, // Extra Bold
+                        color: Color(0xFF0F172A), // Slate 900 (Hitam Pekat)
                         height: 1.0,
+                        letterSpacing: -0.5,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -79,9 +101,10 @@ class TotalSummarySection extends StatelessWidget {
                   Text(
                     item.unit,
                     style: const TextStyle(
-                      fontSize: 10, // Unit kecil
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B), // Slate 500 (Abu Medium)
+                      height: 1.5, 
                     ),
                   ),
                 ],
@@ -89,53 +112,68 @@ class TotalSummarySection extends StatelessWidget {
             ],
           ),
         ),
-
-        const SizedBox(height: 8),
-
+        const SizedBox(height: 10),
+        
         // Label di bawah card
         Text(
           item.label,
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF475569),
+            color: Color(0xFF475569), // Slate 600
+            height: 1.2,
           ),
           textAlign: TextAlign.center,
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 
-  // Helper Icon (Sekarang menggunakan Switch Enum, bukan String)
   Widget _buildIcon(SummaryType type) {
     IconData iconData;
-    Color color;
+    Color iconColor;
+    Color bgColor;
 
     switch (type) {
       case SummaryType.success:
-        iconData = Icons.agriculture;
-        color = const Color(0xFFEAB308); // Kuning Emas
+        iconData = Icons.verified_rounded; // Ganti icon agar lebih representatif
+        iconColor = const Color(0xFF16A34A); // Green 600
+        bgColor = const Color(0xFFDCFCE7); // Green 100
         break;
       case SummaryType.failed:
-        iconData = Icons.warning_amber_rounded;
-        color = const Color(0xFFF59E0B); // Amber/Oranye
+        iconData = Icons.gpp_bad_rounded;
+        iconColor = const Color(0xFFDC2626); // Red 600
+        bgColor = const Color(0xFFFEE2E2); // Red 100
         break;
       case SummaryType.plant:
-        iconData = Icons.eco;
-        color = const Color(0xFF4ADE80); // Hijau Muda
+        iconData = Icons.local_florist_rounded;
+        iconColor = const Color(0xFF059669); // Emerald 600
+        bgColor = const Color(0xFFD1FAE5); // Emerald 100
         break;
       case SummaryType.process:
-        iconData = Icons.hourglass_bottom_rounded;
-        color = const Color(0xFF8D6E63); // Coklat
+        iconData = Icons.pending_actions_rounded;
+        iconColor = const Color(0xFFD97706); // Amber 600
+        bgColor = const Color(0xFFFEF3C7); // Amber 100
         break;
     }
 
-    return Icon(iconData, size: 28, color: color);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: bgColor, 
+        shape: BoxShape.circle,
+      ),
+      child: Icon(iconData, size: 24, color: iconColor),
+    );
   }
 
   String _formatNumber(double number) {
-    return number % 1 == 0 ? number.toInt().toString() : number.toString();
+    // Format ribuan jika perlu (opsional)
+    if (number % 1 == 0) {
+      return number.toInt().toString();
+    }
+    return number.toString();
   }
 }

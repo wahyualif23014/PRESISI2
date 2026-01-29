@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/kwartal_item_model.dart';
-// Pastikan import ini mengarah ke file model QuarterlyItem Anda yang benar
 
 class QuarterlyStatsSection extends StatefulWidget {
   final List<QuarterlyItem> items; 
@@ -28,17 +27,17 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_availablePeriods.contains(_selectedPeriod) &&
-        _availablePeriods.isNotEmpty) {
+    // Validasi selected period
+    if (!_availablePeriods.contains(_selectedPeriod) && _availablePeriods.isNotEmpty) {
       _selectedPeriod = _availablePeriods.first;
     }
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF64748B).withOpacity(0.08),
@@ -54,48 +53,40 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Text(
-                    "Data Setiap Kwartal",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.info_outline, size: 18, color: Colors.red[400]),
-                ],
+              const _SectionHeader(),
+              _ElegantDropdown(
+                value: _selectedPeriod,
+                items: _availablePeriods,
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedPeriod = val);
+                },
               ),
-              _buildDropdown(),
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // --- CONTENT GRID ---
           if (_filteredItems.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text("Data tidak tersedia untuk periode ini"),
-              ),
-            )
+            const _EmptyState()
           else
             LayoutBuilder(
               builder: (context, constraints) {
-                final double itemWidth = (constraints.maxWidth - 16) / 2;
+                // Responsif: di mobile 1 kolom, di tablet/web 2 kolom
+                final isSmall = constraints.maxWidth < 500;
+                final double itemWidth = isSmall 
+                    ? constraints.maxWidth 
+                    : (constraints.maxWidth - 16) / 2;
 
                 return Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  children:
-                      _filteredItems.map((item) {
-                        return SizedBox(
-                          width:
-                              constraints.maxWidth < 400
-                                  ? constraints.maxWidth
-                                  : itemWidth,
-                          child: _buildItemCard(item),
-                        );
-                      }).toList(),
+                  children: _filteredItems.map((item) {
+                    return SizedBox(
+                      width: itemWidth,
+                      child: _QuarterlyItemCard(item: item),
+                    );
+                  }).toList(),
                 );
               },
             ),
@@ -103,65 +94,151 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
       ),
     );
   }
+}
 
-  // --- WIDGET DROPDOWN ---
-  Widget _buildDropdown() {
+// =============================================================================
+// SUB-WIDGETS (Clean Architecture Presentation)
+// =============================================================================
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Text(
+          "Data Setiap Kwartal",
+          style: TextStyle(
+            fontSize: 16, 
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B), // Slate 800
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: "Informasi detail per periode kwartal",
+          child: Icon(Icons.info_outline_rounded, size: 18, color: Colors.grey[400]),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(Icons.folder_off_outlined, size: 48, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          Text(
+            "Data tidak tersedia untuk periode ini",
+            style: TextStyle(color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ElegantDropdown extends StatelessWidget {
+  final String value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  const _ElegantDropdown({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36, // Diperkecil dari 40
+      padding: const EdgeInsets.symmetric(horizontal: 4), // Padding lebih rapat
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(20),
         color: Colors.white,
+        borderRadius: BorderRadius.circular(10), // Radius disesuaikan
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: _selectedPeriod,
-          icon: Icon(
-            Icons.keyboard_arrow_down,
-            size: 16,
-            color: Colors.grey[600],
+          value: value,
+          icon: Padding(
+            padding: const EdgeInsets.only(left: 4), // Jarak icon lebih dekat
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18, // Ukuran icon diperkecil
+              color: Colors.grey[600],
+            ),
           ),
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+          style: const TextStyle(
+            color: Color(0xFF334155), // Slate 700
+            fontSize: 12, // Font size diperkecil sedikit
+            fontWeight: FontWeight.w600,
           ),
-          items:
-              _availablePeriods.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() {
-                _selectedPeriod = newValue;
-              });
-            }
-          },
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          elevation: 3,
+          items: items.map((String val) {
+            return DropdownMenuItem<String>(
+              value: val,
+              child: Text(val),
+            );
+          }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );
   }
+}
 
-  // --- WIDGET ITEM CARD ---
-  Widget _buildItemCard(QuarterlyItem item) {
+class _QuarterlyItemCard extends StatelessWidget {
+  final QuarterlyItem item;
+
+  const _QuarterlyItemCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black87),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF64748B).withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Bagian Atas: Value & Period
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            padding: const EdgeInsets.all(20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Value Besar
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -169,38 +246,49 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
                       _formatNumber(item.value),
                       style: const TextStyle(
                         fontSize: 32,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A), // Slate 900
                         height: 1.0,
+                        letterSpacing: -1.0,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.only(bottom: 5),
                       child: Text(
                         item.unit,
                         style: const TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF94A3B8), // Slate 400
                         ),
                       ),
                     ),
                   ],
                 ),
-                // Period Badge Kecil (Opsional jika sudah ada dropdown, tapi bagus untuk visual)
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, size: 14, color: Colors.red),
-                    const SizedBox(width: 4),
-                    Text(
-                      item.period,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
+                
+                // Period Badge Kecil
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2), // Red 50
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFECACA)), // Red 200
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.period,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFEF4444), // Red 500
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -208,18 +296,17 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
 
           // Bagian Bawah: Label Ungu
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: const BoxDecoration(
-              color: Color(0xFFF3E8FF), // Background Ungu Muda
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
+              color: Color(0xFFF3E8FF), // Purple 100
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
             child: Text(
               item.label,
               style: const TextStyle(
-                color: Color(0xFF9333EA), // Teks Ungu Tua
-                fontWeight: FontWeight.w500,
-                fontSize: 12,
+                color: Color(0xFF7E22CE), // Purple 700 (Kontras Bagus)
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -232,7 +319,7 @@ class _QuarterlyStatsSectionState extends State<QuarterlyStatsSection> {
   }
 
   String _formatNumber(double number) {
-    // Jika bulat (90.0), tampilkan 90. Jika desimal (90.5), tampilkan 90.5
-    return number % 1 == 0 ? number.toInt().toString() : number.toString();
+    if (number % 1 == 0) return number.toInt().toString();
+    return number.toStringAsFixed(2);
   }
 }

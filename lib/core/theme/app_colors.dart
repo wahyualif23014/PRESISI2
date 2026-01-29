@@ -48,8 +48,6 @@ class AppColors {
 
   static const Color indigoPrimary = Color(0xFF6366F1);
   static const Color indigoBg      = Color(0xFFEEF2FF);
-
-
   static const Color white       = Colors.white;
   static const Color black       = Colors.black;
   static const Color transparent = Colors.transparent;

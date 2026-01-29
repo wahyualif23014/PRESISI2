@@ -1,3 +1,4 @@
+import 'package:KETAHANANPANGAN/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '/router/route_names.dart';
@@ -111,7 +112,7 @@ class _NavBarItem extends StatelessWidget {
   final VoidCallback onTap;
 
   static const Color primaryColor = Color(0xFF7C6FDE);
-  static const Color inactiveColor = Color(0xFF94A3B8);
+  static const Color inactiveColor = Color(0xFF0F172A);
 
   const _NavBarItem({
     required this.data,
@@ -216,7 +217,7 @@ class _NavCurveBackground extends StatelessWidget {
           painter: _NavCurvePainter(
             position: value,
             itemWidth: itemWidth,
-            color: Colors.white,
+            color: const Color.fromARGB(255, 230, 234, 245),
           ),
         );
       },

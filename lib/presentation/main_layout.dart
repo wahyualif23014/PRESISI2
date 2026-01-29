@@ -13,7 +13,7 @@ class MainLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      backgroundColor: const Color(0xFFF8F9FC), 
+      backgroundColor: const Color(0xFFF8FAFC), 
       
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(_topBarHeight),

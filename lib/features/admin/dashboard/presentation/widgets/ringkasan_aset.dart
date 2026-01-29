@@ -12,7 +12,7 @@ class LahanStatCard extends StatelessWidget {
     super.key,
     required this.data,
     required this.backgroundColor,
-    this.layoutType = CardLayoutType.grid, // Default grid
+    this.layoutType = CardLayoutType.grid,
   });
 
   @override
@@ -34,72 +34,12 @@ class LahanStatCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // --- 1. HEADER SECTION ---
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Kiri: Label Data
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Data",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    "Total Keseluruhan",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              // Kanan: Angka Besar
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _formatNumber(data.totalValue), // <-- Menggunakan totalValue sesuai Model
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      height: 1.0,
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4, bottom: 5),
-                    child: Text(
-                      "HA",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
+          _buildHeader(),
           const SizedBox(height: 24),
-
-          // --- 2. BODY SECTION (List / Grid) ---
           layoutType == CardLayoutType.list
               ? _buildVerticalListLayout()
               : _buildGridLayout(context),
-
-          const SizedBox(height: 10),
-
-          // --- 3. FOOTER TITLE ---
+          const SizedBox(height: 16),
           Text(
             data.title, 
             textAlign: TextAlign.center,
@@ -114,49 +54,68 @@ class LahanStatCard extends StatelessWidget {
     );
   }
 
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Data",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 2),
+            Text(
+              "Total Keseluruhan",
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              _formatNumber(data.totalValue),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                height: 1.0,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 5),
+              child: Text(
+                "HA",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildVerticalListLayout() {
     return Column(
       children: data.items.map((item) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(50),
-          ),
-          child: Row(
-            children: [
-              _buildIcon(item.category), // <-- Mengirim Enum Category, bukan label String
-              const SizedBox(width: 12),
-              Expanded(
-                child: Row(
-                  children: [
-                    // Label
-                    Flexible(
-                      child: Text(
-                        "${item.label} : ",
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    // Value
-                    Text(
-                      "${_formatNumber(item.value)} HA",
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        return _StatListItem(
+          label: item.label,
+          value: item.value,
+          category: item.category,
         );
       }).toList(),
     );
@@ -171,30 +130,11 @@ class LahanStatCard extends StatelessWidget {
           spacing: 12,
           runSpacing: 12,
           children: data.items.map((item) {
-            return Container(
+            return SizedBox(
               width: itemWidth,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  _buildIcon(item.category), // <-- Mengirim Enum Category
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      "${_formatNumber(item.value)} HA",
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              child: _StatGridItem(
+                value: item.value,
+                category: item.category,
               ),
             );
           }).toList(),
@@ -203,8 +143,137 @@ class LahanStatCard extends StatelessWidget {
     );
   }
 
-  // --- Helper: Build Icon dengan Ring Oranye ---
-  Widget _buildIcon(LandCategory category) {
+  String _formatNumber(double number) {
+    if (number % 1 == 0) return number.toInt().toString();
+    return number.toStringAsFixed(2);
+  }
+}
+
+class _StatListItem extends StatelessWidget {
+  final String label;
+  final double value;
+  final LandCategory category;
+
+  const _StatListItem({
+    required this.label,
+    required this.value,
+    required this.category,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(50),
+      ),
+      child: Row(
+        children: [
+          _CategoryIcon(category: category),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatNumber(value),
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Text(
+                "HA",
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatNumber(double number) {
+    if (number % 1 == 0) return number.toInt().toString();
+    return number.toStringAsFixed(2);
+  }
+}
+
+class _StatGridItem extends StatelessWidget {
+  final double value;
+  final LandCategory category;
+
+  const _StatGridItem({
+    required this.value,
+    required this.category,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          _CategoryIcon(category: category, size: 24),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              "${_formatNumber(value)} HA",
+              style: const TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatNumber(double number) {
+    if (number % 1 == 0) return number.toInt().toString();
+    return number.toStringAsFixed(2);
+  }
+}
+
+class _CategoryIcon extends StatelessWidget {
+  final LandCategory category;
+  final double size;
+
+  const _CategoryIcon({
+    required this.category,
+    this.size = 28,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     IconData iconData;
 
     switch (category) {
@@ -220,15 +289,14 @@ class LahanStatCard extends StatelessWidget {
       case LandCategory.religious:
         iconData = Icons.mosque_rounded;
         break;
-      case LandCategory.other:
       default:
         iconData = Icons.circle;
         break;
     }
 
     return Container(
-      width: 30,
-      height: 28,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -239,15 +307,9 @@ class LahanStatCard extends StatelessWidget {
       ),
       child: Icon(
         iconData,
-        size: 20,
+        size: size * 0.6,
         color: Colors.black87,
       ),
     );
-  }
-
-  // --- Helper: Format Angka ---
-  String _formatNumber(double number) {
-    if (number % 1 == 0) return number.toInt().toString();
-    return number.toStringAsFixed(2);
   }
 }
