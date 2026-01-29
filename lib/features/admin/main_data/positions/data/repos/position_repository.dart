@@ -9,10 +9,7 @@ import 'package:sdmapp/features/admin/main_data/positions/data/models/position_m
 class JabatanRepository {
   
   // ---------------------------------------------------------------------------
-  // OPSI 1: FUNGSI DENGAN DUMMY DATA (Gunakan ini sekarang)
-  // ---------------------------------------------------------------------------
   static Future<List<JabatanModel>> getJabatanList() async {
-    // Simulasi delay agar terasa seperti loading dari internet
     await Future.delayed(const Duration(milliseconds: 300));
 
     return [

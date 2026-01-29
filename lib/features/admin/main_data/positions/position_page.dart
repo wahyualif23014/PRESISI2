@@ -1,19 +1,103 @@
-// Lokasi: lib/features/admin/main_data/jabatan/pages/jabatan_page.dart
-
 import 'package:flutter/material.dart';
 
-// --- DATA LAYER ---
 import 'package:sdmapp/features/admin/main_data/positions/data/models/position_model.dart';
 import 'package:sdmapp/features/admin/main_data/positions/data/repos/position_repository.dart';
 
-// --- WIDGETS UI ---
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_action_buttons.dart';
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_form_widget.dart';
-import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_list_header.dart';
-import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_list_item.dart';
+import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_card_item.dart';
 import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_search_bar.dart';
 
-// --- FORM WIDGET ---
+class JabatanController extends ChangeNotifier {
+  List<JabatanModel> _allData = [];
+  List<JabatanModel> displayData = [];
+  bool isLoading = true;
+
+  JabatanController() {
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    isLoading = true;
+    notifyListeners();
+    
+    try {
+      _allData = await JabatanRepository.getJabatanList();
+      displayData = List.from(_allData);
+    } catch (e) {
+      debugPrint("Error loading data: $e");
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void runSearch(String query) {
+    if (query.isEmpty) {
+      displayData = List.from(_allData);
+    } else {
+      displayData = _allData.where((item) {
+        final titleLower = item.namaJabatan.toLowerCase();
+        final nameLower = (item.namaPejabat ?? '').toLowerCase();
+        final searchLower = query.toLowerCase();
+        return titleLower.contains(searchLower) || nameLower.contains(searchLower);
+      }).toList();
+    }
+    notifyListeners();
+  }
+
+  void toggleSelectAll(bool? val) {
+    if (val != null) {
+      for (var item in displayData) {
+        item.isSelected = val;
+      }
+      notifyListeners();
+    }
+  }
+
+  void toggleSingleSelection(String id) {
+    final index = displayData.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      displayData[index].isSelected = !displayData[index].isSelected;
+      notifyListeners();
+    }
+  }
+
+  void addNewData(String jabatan, String nama, String nrp, String tgl) {
+    final newItem = JabatanModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      namaJabatan: jabatan.isEmpty ? "Jabatan Baru" : jabatan,
+      namaPejabat: nama.isEmpty ? "Personel Baru" : nama,
+      nrp: nrp,
+      tanggalPeresmian: tgl,
+    );
+    _allData.add(newItem);
+    runSearch(""); 
+  }
+
+  void editData(JabatanModel item, String jabatan, String nama, String nrp, String tgl) {
+    // LOGIKA KOSONG
+  }
+
+  void deleteSingle(String id) {
+    displayData.removeWhere((e) => e.id == id);
+    _allData.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
+
+  void deleteSelected() {
+    displayData.removeWhere((e) => e.isSelected);
+    _allData.removeWhere((e) => e.isSelected);
+    notifyListeners();
+  }
+
+  void refreshData() {
+    _loadData();
+  }
+
+  int get selectedCount => displayData.where((e) => e.isSelected).length;
+  bool get isAllSelected => displayData.isNotEmpty && displayData.length == selectedCount;
+}
 
 class PositionPage extends StatefulWidget {
   const PositionPage({super.key});
@@ -24,165 +108,90 @@ class PositionPage extends StatefulWidget {
 
 class _PositionPageState extends State<PositionPage> {
   final TextEditingController _searchController = TextEditingController();
-
-  // Local State
-  List<JabatanModel> _allData = [];
-  List<JabatanModel> _displayData = [];
-  bool _isLoading = true;
+  late JabatanController _controller;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    // Simulasi ambil data dari Repository
-    final data = await JabatanRepository.getJabatanList();
-    if (mounted) {
-      setState(() {
-        _allData = data;
-        _displayData = List.from(_allData);
-        _isLoading = false;
-      });
-    }
-  }
-
-  // --- LOGIC SEARCH & FILTER ---
-  void _runSearch(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _displayData = List.from(_allData);
-      } else {
-        _displayData = _allData.where((item) {
-          final titleLower = item.namaJabatan.toLowerCase();
-          final nameLower = (item.namaPejabat ?? '').toLowerCase();
-          final searchLower = query.toLowerCase();
-          return titleLower.contains(searchLower) || nameLower.contains(searchLower);
-        }).toList();
-      }
+    _controller = JabatanController();
+    _controller.addListener(() {
+      if (mounted) setState(() {});
     });
   }
 
-  // --- LOGIC SELECTION ---
-  void _toggleSelectAll(bool? val) {
-    setState(() {
-      if (val != null) {
-        for (var item in _displayData) {
-          item.isSelected = val;
-        }
-      }
-    });
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _controller.dispose();
+    super.dispose();
   }
 
-  void _toggleSingleSelection(String id) {
-    setState(() {
-      final index = _displayData.indexWhere((e) => e.id == id);
-      if (index != -1) {
-        _displayData[index].isSelected = !_displayData[index].isSelected;
-      }
-    });
-  }
-
-  int get _selectedCount => _displayData.where((e) => e.isSelected).length;
-  bool get _isAllSelected => _displayData.isNotEmpty && _displayData.length == _selectedCount;
-
-  // --- LOGIC CRUD (UI ONLY) ---
-  void _addNewData(String jabatan, String nama, String nrp, String tgl) {
-    setState(() {
-      final newItem = JabatanModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        namaJabatan: jabatan.isEmpty ? "Jabatan Baru" : jabatan,
-        namaPejabat: nama.isEmpty ? "Personel Baru" : nama,
-        nrp: nrp,
-        tanggalPeresmian: tgl,
-      );
-      _allData.add(newItem);
-      _displayData = List.from(_allData); // Refresh list
-    });
-  }
-
-  void _deleteSingle(String id) {
-    setState(() {
-      _displayData.removeWhere((e) => e.id == id);
-      _allData.removeWhere((e) => e.id == id);
-    });
-  }
-
-  void _deleteSelected() {
-    setState(() {
-      _displayData.removeWhere((e) => e.isSelected);
-      _allData.removeWhere((e) => e.isSelected);
-    });
-  }
-
-  // --- MODAL FORM ---
   void _showFormModal(BuildContext context, JabatanFormType type, {JabatanModel? item}) {
     final jabatanCtrl = TextEditingController(text: item?.namaJabatan ?? '');
     final namaCtrl = TextEditingController(text: item?.namaPejabat ?? '');
     final nrpCtrl = TextEditingController(text: item?.nrp ?? '');
     final tglCtrl = TextEditingController(text: item?.tanggalPeresmian ?? '');
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: SingleChildScrollView(
-            child: JabatanFormWidget(
-              type: type,
-              jabatanController: jabatanCtrl,
-              namaController: namaCtrl,
-              nrpController: nrpCtrl,
-              tanggalController: tglCtrl,
-              onCancel: () => Navigator.pop(ctx),
-              onSubmit: () {
-                if (type == JabatanFormType.add) {
-                  _addNewData(
-                    jabatanCtrl.text,
-                    namaCtrl.text,
-                    nrpCtrl.text,
-                    tglCtrl.text,
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Data Berhasil Ditambah")),
-                  );
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: JabatanFormWidget(
+            type: type,
+            jabatanController: jabatanCtrl,
+            namaController: namaCtrl,
+            nrpController: nrpCtrl,
+            tanggalController: tglCtrl,
+            onCancel: () => Navigator.pop(ctx),
+            onSubmit: () {
+              if (type == JabatanFormType.add) {
+                _controller.addNewData(
+                  jabatanCtrl.text,
+                  namaCtrl.text,
+                  nrpCtrl.text,
+                  tglCtrl.text,
+                );
+                _showSnackBar("Data Berhasil Ditambah");
+              } else if (type == JabatanFormType.edit) {
+                
+                // LOGIKA EDIT KOSONG
+
+              } else {
+                if (item != null) {
+                  _controller.deleteSingle(item.id);
                 } else {
-                  if (item != null) {
-                    _deleteSingle(item.id);
-                  } else {
-                    _deleteSelected();
-                  }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Data Berhasil Dihapus")),
-                  );
+                  _controller.deleteSelected();
                 }
-                Navigator.pop(ctx);
-              },
-            ),
+                _showSnackBar("Data Berhasil Dihapus");
+              }
+              Navigator.pop(ctx);
+            },
           ),
         );
       },
     );
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    const bgColor = Color(0xFFF8FAFC); 
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: bgColor,
       body: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16.0),
-            color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
             child: Column(
               children: [
                 Row(
@@ -191,7 +200,7 @@ class _PositionPageState extends State<PositionPage> {
                       flex: 4,
                       child: JabatanSearchBar(
                         controller: _searchController,
-                        onChanged: (value) => _runSearch(value),
+                        onChanged: (value) => _controller.runSearch(value),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -200,21 +209,15 @@ class _PositionPageState extends State<PositionPage> {
                       child: JabatanActionButtons(
                         onAdd: () => _showFormModal(context, JabatanFormType.add),
                         onDelete: () {
-                          if (_selectedCount > 0) {
-                            _deleteSelected();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("$_selectedCount data dihapus")),
-                            );
+                          if (_controller.selectedCount > 0) {
+                            _controller.deleteSelected();
+                            _showSnackBar("${_controller.selectedCount} data dihapus");
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Pilih data yang ingin dihapus")),
-                            );
+                            _showSnackBar("Pilih data yang ingin dihapus");
                           }
                         },
                         onRefresh: () {
-                          _isLoading = true;
-                          setState(() {});
-                          _loadData();
+                          _controller.refreshData();
                           _searchController.clear();
                         },
                       ),
@@ -224,35 +227,60 @@ class _PositionPageState extends State<PositionPage> {
               ],
             ),
           ),
-          JabatanListHeader(
-            isChecked: _isAllSelected,
-            onCheckChanged: (val) => _toggleSelectAll(val),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Transform.scale(
+                  scale: 0.9,
+                  child: Checkbox(
+                    value: _controller.isAllSelected,
+                    onChanged: (val) => _controller.toggleSelectAll(val),
+                    activeColor: const Color(0xFF6366F1),
+                  ),
+                ),
+                Text(
+                  _controller.selectedCount > 0 
+                      ? "${_controller.selectedCount} Dipilih" 
+                      : "Pilih Semua",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
           ),
+
           Expanded(
-            child: _isLoading
+            child: _controller.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _displayData.isEmpty
+                : _controller.displayData.isEmpty
                     ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: _displayData.length,
-                        itemBuilder: (context, index) {
-                          final item = _displayData[index];
-                          return JabatanListItem(
-                            item: item,
-                            onToggleSelection: () => _toggleSingleSelection(item.id),
-                            onEdit: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("Edit: ${item.namaJabatan}")),
-                              );
-                            },
-                            onDelete: () => _showFormModal(
-                              context,
-                              JabatanFormType.delete,
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: GridView.builder(
+                          padding: const EdgeInsets.only(top: 16, bottom: 80),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2, 
+                            crossAxisSpacing: 12, 
+                            mainAxisSpacing: 12, 
+                            childAspectRatio: 0.70, 
+                          ),
+                          itemCount: _controller.displayData.length,
+                          itemBuilder: (context, index) {
+                            final item = _controller.displayData[index];
+                            return JabatanCardItem(
                               item: item,
-                            ),
-                          );
-                        },
+                              onToggleSelection: () => _controller.toggleSingleSelection(item.id),
+                              onEdit: () => _showFormModal(context, JabatanFormType.edit, item: item), 
+                              onDelete: () => _showFormModal(context, JabatanFormType.delete, item: item), 
+                            );
+                          },
+                        ),
                       ),
           ),
         ],
@@ -265,7 +293,7 @@ class _PositionPageState extends State<PositionPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
+          Icon(Icons.folder_off_rounded, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
             "Data jabatan tidak ditemukan",

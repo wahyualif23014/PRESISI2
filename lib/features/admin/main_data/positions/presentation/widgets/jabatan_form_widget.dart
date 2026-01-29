@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Enum untuk menentukan mode: Tambah atau Hapus
-enum JabatanFormType { add, delete }
+enum JabatanFormType { add, edit, delete } // Tambahkan 'edit' jika perlu
 
 class JabatanFormWidget extends StatelessWidget {
   final JabatanFormType type;
@@ -25,127 +24,173 @@ class JabatanFormWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Logika Penentuan Teks & Icon berdasarkan Tipe
-    final isAdd = type == JabatanFormType.add;
+    final isDelete = type == JabatanFormType.delete;
     
-    final title = isAdd ? "Tambah Data Jabatan" : "Hapus Data Jabatan";
-    final submitLabel = isAdd ? "Tambah Personel" : "Hapus Personel";
-    
-    final submitIcon = isAdd ? Icons.add : Icons.delete_outline;
+    final title = isDelete ? "Hapus Data Jabatan" : (type == JabatanFormType.add ? "Tambah Data Jabatan" : "Edit Data Jabatan");
+    final submitLabel = isDelete ? "Hapus Data" : "Simpan Data";
+    final submitColor = isDelete ? Colors.redAccent : const Color(0xFF10B981); // Emerald Green
+    final iconHeader = isDelete ? Icons.delete_forever_rounded : Icons.edit_note_rounded;
 
-
-    final submitColor = const Color(0xFF00C853); 
-
+    // --- FORM CONTENT ---
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(24.0),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Tinggi menyesuaikan konten
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // --- HEADER ---
-          Column(
-            children: [
-              // Icon Polisi (Menggunakan icon standar flutter yang mirip)
-              const Icon(
-                Icons.local_police_outlined,
-                size: 64,
-                color: Colors.black,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
+          // 1. Header Icon & Title
+          _FormHeader(title: title, icon: iconHeader, isDestructive: isDelete),
+          
           const SizedBox(height: 24),
 
-          // --- FORM FIELDS ---
-          _buildLabelAndInput("Nama Jabatan", jabatanController),
-          _buildLabelAndInput("Nama Lengkap", namaController),
-          _buildLabelAndInput("NRP Personel", nrpController),
-          // Tanggal biasanya readOnly agar user memilih lewat DatePicker
-          // Tapi disini disamakan stylenya dengan input text biasa
-          _buildLabelAndInput("Tanggal Peresmian Jabatan", tanggalController),
+          // 2. Form Fields (Hidden if Delete Mode)
+          if (!isDelete) ...[
+            _FormInputField(
+              label: "Nama Jabatan",
+              controller: jabatanController,
+              hint: "Contoh: Kabag Ops",
+              icon: Icons.work_outline_rounded,
+            ),
+            _FormInputField(
+              label: "Nama Pejabat",
+              controller: namaController,
+              hint: "Nama Lengkap & Gelar",
+              icon: Icons.person_outline_rounded,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: _FormInputField(
+                    label: "NRP",
+                    controller: nrpController,
+                    hint: "12345678",
+                    icon: Icons.badge_outlined,
+                    isNumber: true,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _FormInputField(
+                    label: "Tanggal Peresmian",
+                    controller: tanggalController,
+                    hint: "DD/MM/YYYY",
+                    icon: Icons.calendar_today_rounded,
+                    isReadOnly: true, // Idealnya pakai DatePicker
+                  ),
+                ),
+              ],
+            ),
+          ] else 
+            const Text(
+              "Apakah Anda yakin ingin menghapus data ini? Data yang dihapus tidak dapat dikembalikan.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
 
           const SizedBox(height: 32),
 
-          // --- ACTION BUTTONS ---
+          // 3. Action Buttons
           Row(
             children: [
-              // Tombol Cancel (Merah)
               Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: onCancel,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF0000), // Merah terang
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.close, size: 24),
-                    label: const Text(
-                      "Cancel Personel",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 14
-                      ),
-                    ),
-                  ),
+                child: _ActionButton(
+                  label: "Batal",
+                  icon: Icons.close_rounded,
+                  color: Colors.grey.shade200,
+                  textColor: Colors.grey.shade800,
+                  onTap: onCancel,
                 ),
               ),
               const SizedBox(width: 16),
-              
-              // Tombol Submit (Hijau) - Dinamis (Tambah/Hapus)
               Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: onSubmit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: submitColor, // Hijau sesuai gambar
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: Icon(submitIcon, size: 24),
-                    label: Text(
-                      submitLabel,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 14
-                      ),
-                    ),
-                  ),
+                child: _ActionButton(
+                  label: submitLabel,
+                  icon: isDelete ? Icons.delete_outline : Icons.check_circle_outline,
+                  color: submitColor,
+                  textColor: Colors.white,
+                  onTap: onSubmit,
                 ),
               ),
             ],
           ),
           
-          // Jarak aman untuk keyboard di Android/iOS
+          // Safety padding for bottom sheet
           SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
         ],
       ),
     );
   }
+}
 
-  // Widget Helper untuk membuat Label + Input Field yang seragam
-  Widget _buildLabelAndInput(String label, TextEditingController controller) {
+// -----------------------------------------------------------------------------
+// SUB-WIDGETS (Private & Clean)
+// -----------------------------------------------------------------------------
+
+class _FormHeader extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isDestructive;
+
+  const _FormHeader({
+    required this.title,
+    required this.icon,
+    this.isDestructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDestructive ? Colors.red.shade50 : Colors.blue.shade50,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            size: 32,
+            color: isDestructive ? Colors.red : Colors.blue.shade700,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B), // Slate 800
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FormInputField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final IconData icon;
+  final bool isNumber;
+  final bool isReadOnly;
+
+  const _FormInputField({
+    required this.label,
+    required this.controller,
+    this.hint = "",
+    required this.icon,
+    this.isNumber = false,
+    this.isReadOnly = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -154,28 +199,72 @@ class JabatanFormWidget extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold, // Label tebal hitam
-              color: Colors.black,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569), // Slate 600
             ),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFE0E0E0), // Abu-abu muda seperti di gambar
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none, // Tidak ada garis border
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, 
-                vertical: 16
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9), // Slate 100
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.transparent),
+            ),
+            child: TextField(
+              controller: controller,
+              readOnly: isReadOnly,
+              keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              decoration: InputDecoration(
+                prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade500),
+                hintText: hint,
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                isDense: true,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+        icon: Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
