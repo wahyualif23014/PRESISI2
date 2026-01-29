@@ -1,22 +1,25 @@
 package initializers
 
 import (
-    "log"
-    "os"
+	"log"
+	"os"
 
-    "gorm.io/driver/mysql" // Pastikan driver ini di-import
-    "gorm.io/gorm"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 
 func ConnectToDB() {
-    var err error
-    dsn := os.Getenv("DB_URL")
-    
-    DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	var err error
+	
+	// Ambil string koneksi dari .env
+	dsn := os.Getenv("DB_URL")
+	
+	// Buka koneksi MySQL
+	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
-    if err != nil {
-        log.Fatal("Gagal koneksi ke database: ", err)
-    }
+	if err != nil {
+		log.Fatal("Failed to connect to database")
+	}
 }
