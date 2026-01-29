@@ -10,11 +10,9 @@ class LandSubBottomNav extends StatelessWidget {
   void _handleNavigation(BuildContext context, String route) {
     final GoRouter router = GoRouter.of(context);
     
-    // Tutup UI Popup
-    onClose(); 
+    onClose();
 
-    // Jalankan delay animasi sebelum pindah halaman
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 150), () {
       router.go(route);
     });
   }
@@ -42,7 +40,6 @@ class LandSubBottomNav extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ================= HEADER =================
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -76,7 +73,6 @@ class LandSubBottomNav extends StatelessWidget {
               ),
             ),
 
-            // ================= MENU ITEMS =================
             _LandPopupItem(
               icon: Icons.dashboard_rounded,
               label: 'Data Potensi Lahan',

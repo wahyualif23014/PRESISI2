@@ -83,9 +83,6 @@ class AppRouter {
         builder: (_, __) => const RegisterScreen(),
       ),
 
-      // =========================
-      // MAIN SHELL (BOTTOM NAV)
-      // =========================
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
@@ -106,63 +103,76 @@ class AppRouter {
                 (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
 
-          // MAIN DATA SHELL
+          // ===========================================
+          // MAIN DATA SHELL (PERBAIKAN DI SINI)
+          // ===========================================
           ShellRoute(
             builder: (context, state, child) {
               return MainDataShellPage(child: child);
             },
             routes: [
+              // 1. ROUTE ROOT DATA (/data)
+              // Hapus 'redirect'. Ganti dengan pageBuilder ke halaman default (UnitsPage).
+              // Ini agar saat user klik "Data", URL tetap '/data' dan ShellPage bisa mendeteksi reset menu.
               GoRoute(
                 path: RouteNames.data,
-                redirect: (_, __) => RouteNames.dataUnits,
+                pageBuilder: (_, __) => const NoTransitionPage(child: UnitsPage()), 
               ),
+              
+              // 2. Sub Routes
               GoRoute(
                 path: RouteNames.dataUnits,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: UnitsPage()),
+                    (_, __) => const NoTransitionPage(child: UnitsPage()),
               ),
               GoRoute(
                 path: RouteNames.dataPositions,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: PositionPage()),
+                    (_, __) => const NoTransitionPage(child: PositionPage()),
               ),
               GoRoute(
                 path: RouteNames.dataRegions,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: RegionsPage()),
+                    (_, __) => const NoTransitionPage(child: RegionsPage()),
               ),
               GoRoute(
                 path: RouteNames.dataCommodities,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: ComoditiesPage()),
+                    (_, __) => const NoTransitionPage(child: ComoditiesPage()),
               ),
             ],
           ),
 
-          // LAND MANAGEMENT SHELL
+          // ===========================================
+          // LAND MANAGEMENT SHELL (PERBAIKAN DI SINI)
+          // ===========================================
           ShellRoute(
             builder: (context, state, child) {
               return LandShellPage(child: child);
             },
             routes: [
+              // 1. ROUTE ROOT LAND (/land-management)
+              // Hapus 'redirect'. Ganti dengan pageBuilder ke halaman default (OverviewPage).
               GoRoute(
                 path: RouteNames.landManagement,
-                redirect: (_, __) => RouteNames.landOverview,
+                 pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage()),
               ),
+
+              // 2. Sub Routes
               GoRoute(
                 path: RouteNames.landOverview,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: OverviewPage()),
+                    (_, __) => const NoTransitionPage(child: OverviewPage()),
               ),
               GoRoute(
                 path: RouteNames.landPlots,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: KelolaLahanPage()),
+                    (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
               ),
               GoRoute(
                 path: RouteNames.landCrops,
                 pageBuilder:
-                    (_, __) => NoTransitionPage(child: RiwayatKelolaLahanPage()),
+                    (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage()),
               ),
             ],
           ),
@@ -171,7 +181,7 @@ class AppRouter {
           GoRoute(
             path: RouteNames.recap,
             pageBuilder:
-                (_, __) => NoTransitionPage(child: PageRecap()),
+                (_, __) => const NoTransitionPage(child: PageRecap()),
           ),
         ],
       ),

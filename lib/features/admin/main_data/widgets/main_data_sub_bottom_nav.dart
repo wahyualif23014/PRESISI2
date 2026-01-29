@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../router/route_names.dart';
+import '../../../../router/route_names.dart'; // Sesuaikan path
 
 class MainDataSubBottomNav extends StatelessWidget {
   final VoidCallback onClose;
@@ -9,16 +9,32 @@ class MainDataSubBottomNav extends StatelessWidget {
 
   void _handleNavigation(BuildContext context, String route) {
     final GoRouter router = GoRouter.of(context);
+    
+    // 1. Jalankan callback onClose (ini akan memicu setState di MainDataShellPage)
+    //    Efeknya: Menu turun ke bawah, Blur hilang.
     onClose(); 
 
-    // Jalankan delay animasi
-    Future.delayed(const Duration(milliseconds: 200), () {
+    // 2. Beri jeda sebentar (150-200ms) agar animasi tutup terlihat mata user
+    Future.delayed(const Duration(milliseconds: 150), () {
+      // 3. Baru pindah halaman
       router.go(route);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // ... (Sisa code UI Container dan PopupItem Anda tetap sama)
+    // Pastikan di bagian onTap item memanggil _handleNavigation
+    // Contoh:
+    /*
+      _PopupItem(
+        icon: Icons.map_rounded,
+        label: 'Wilayah',
+        onTap: () => _handleNavigation(context, RouteNames.dataRegions),
+      ),
+    */
+    
+    // Copy sisa code UI Anda di sini...
     const primaryColor = Color(0xFF7C6FDE);
 
     return Center(
@@ -98,7 +114,7 @@ class MainDataSubBottomNav extends StatelessWidget {
   }
 }
 
-// Widget _PopupItem tetap sama (pastikan tidak ada penggunaan context di dalamnya setelah delay)
+// Widget _PopupItem
 class _PopupItem extends StatelessWidget {
   final IconData icon;
   final String label;
