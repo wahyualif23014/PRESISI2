@@ -1,7 +1,7 @@
 // Lokasi: lib/features/admin/main_data/units/widgets/unit_item_card.dart
 
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/main_data/units/data/models/unit_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/units/data/models/unit_model.dart';
 // Pastikan import ini mengarah ke file UnitModel yang baru (yang ada class UnitModel-nya)
 
 class UnitItemCard extends StatelessWidget {

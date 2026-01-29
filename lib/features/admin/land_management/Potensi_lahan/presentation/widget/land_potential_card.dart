@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
-import 'package:sdmapp/features/admin/land_management/Potensi_lahan/presentation/widget/land_detail_dialog.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/presentation/widget/land_detail_dialog.dart';
 
 class LandPotentialCard extends StatelessWidget {
   final LandPotentialModel data;

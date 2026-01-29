@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/dashboard/data/model/kwartal_item_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/kwartal_item_model.dart';
 // Pastikan import ini mengarah ke file model QuarterlyItem Anda yang benar
 
 class QuarterlyStatsSection extends StatefulWidget {

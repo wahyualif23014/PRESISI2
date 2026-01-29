@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sdmapp/auth/provider/auth_provider.dart';
-import 'package:sdmapp/presentation/profile/profile_page.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
+import 'package:KETAHANANPANGAN/presentation/profile/profile_page.dart';
 
 class ProfileMenuButton extends StatelessWidget {
   const ProfileMenuButton({super.key});

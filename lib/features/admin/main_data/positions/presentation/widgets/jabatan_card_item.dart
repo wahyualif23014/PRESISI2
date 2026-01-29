@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/main_data/positions/data/models/position_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
 
 class JabatanCardItem extends StatelessWidget {
   final JabatanModel item;

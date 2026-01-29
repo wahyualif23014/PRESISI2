@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart';
 
 // =========================================================
 // LEVEL 1: GROUP WILAYAH (KAB/KEC/DESA) - UNGU TUA

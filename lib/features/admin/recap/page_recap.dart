@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/recap/presentation/controllers/recap_controller.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/PrintSuccess.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_data_row.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_filter_dialog.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_header_section.dart';
-import 'package:sdmapp/features/admin/recap/presentation/widgets/recap_table_header.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/controllers/recap_controller.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/PrintSuccess.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_data_row.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_filter_dialog.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_header_section.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_table_header.dart';
 
 class PageRecap extends StatefulWidget {
   const PageRecap({Key? key}) : super(key: key);

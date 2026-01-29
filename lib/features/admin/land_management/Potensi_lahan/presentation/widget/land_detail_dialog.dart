@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
 
 class LandDetailDialog extends StatelessWidget {
   final LandPotentialModel data;

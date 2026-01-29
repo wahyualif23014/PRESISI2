@@ -1,6 +1,6 @@
 // Lokasi: lib/features/admin/main_data/jabatan/data/repos/jabatan_repository.dart
 
-import 'package:sdmapp/features/admin/main_data/positions/data/models/position_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
 
 // Import http jika nanti sudah connect API
 // import 'package:http/http.dart' as http; 

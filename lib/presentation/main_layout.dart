@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/shared/widgets/CustomBottomNavBar.dart';
+import 'package:KETAHANANPANGAN/shared/widgets/CustomBottomNavBar.dart';
 import 'widgets/admin_top_bar.dart'; // Import widget baru
 
 class MainLayout extends StatelessWidget {

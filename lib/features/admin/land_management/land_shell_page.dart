@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sdmapp/router/route_names.dart';
+import 'package:KETAHANANPANGAN/router/route_names.dart';
 import 'widgets/land_sub_bottom_nav.dart';
 
 class LandShellPage extends StatefulWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/dashboard/data/repo/resapan_repository.dart';
-import 'package:sdmapp/features/admin/dashboard/presentation/widgets/data_kwartal.dart';
-import 'package:sdmapp/features/admin/dashboard/presentation/widgets/distribution_card.dart';
-import 'package:sdmapp/features/admin/dashboard/presentation/widgets/grafik_pertumbuhan.dart';
-import 'package:sdmapp/features/admin/dashboard/presentation/widgets/resapan_card.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/repo/resapan_repository.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/data_kwartal.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/distribution_card.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/grafik_pertumbuhan.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/resapan_card.dart';
 
 // --- IMPORT REPOSITORY (Untuk Data Dummy) ---
 import '../data/repo/harvest_repository.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Untuk fitur Copy Paste
-import 'package:sdmapp/features/admin/main_data/regions/data/models/region_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/models/region_model.dart';
 
 class WilayahListItem extends StatelessWidget {
   final WilayahModel item;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/personnel/data/model/role_enum.dart';
+import 'package:KETAHANANPANGAN/features/admin/personnel/data/model/role_enum.dart';
 import '../../data/model/personel_model.dart';
 
 class PersonelCard extends StatelessWidget {

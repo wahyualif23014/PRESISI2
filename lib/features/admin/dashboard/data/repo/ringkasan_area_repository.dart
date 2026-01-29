@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/dashboard/data/model/ringkasan_area_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/ringkasan_area_model.dart';
 
 class RingkasanAreaRepository {
   

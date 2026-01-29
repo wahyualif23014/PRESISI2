@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sdmapp/features/admin/personnel/presentation/widgets/add_personel_dialog.dart';
+import 'package:KETAHANANPANGAN/features/admin/personnel/presentation/widgets/add_personel_dialog.dart';
 
 import '../../providers/personel_provider.dart';
 

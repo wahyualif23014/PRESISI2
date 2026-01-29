@@ -47,11 +47,7 @@ class CustomBottomNavBar extends StatelessWidget {
     return index != -1 ? index : 2;
   }
 
-  // =======================================================================
-  // [PERBAIKAN UTAMA DI SINI]
-  // Menghapus pengecekan 'if (index != currentIndex)'
-  // Agar tombol bisa ditekan ulang untuk memicu reset menu di ShellPage
-  // =======================================================================
+
   void _onItemTapped(BuildContext context, int index, int currentIndex) {
     context.go(_navItems[index].route);
   }

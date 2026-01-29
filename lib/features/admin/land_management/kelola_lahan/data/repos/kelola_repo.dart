@@ -1,4 +1,4 @@
-import 'package:sdmapp/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
 
 
 class LandManagementRepository {

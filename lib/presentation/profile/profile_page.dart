@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sdmapp/presentation/profile/repos/profile_repository.dart';
+import 'package:KETAHANANPANGAN/presentation/profile/repos/profile_repository.dart';
 import 'models/profile_model.dart'; // Sesuaikan path import
 
 class ProfilePage extends StatefulWidget {

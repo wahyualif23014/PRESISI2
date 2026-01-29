@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:sdmapp/features/admin/dashboard/data/model/harvest_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/harvest_model.dart';
 
 // Import model yang sudah dibuat sebelumnya
 

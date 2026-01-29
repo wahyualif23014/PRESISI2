@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:sdmapp/features/admin/main_data/positions/data/models/position_model.dart';
-import 'package:sdmapp/features/admin/main_data/positions/data/repos/position_repository.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/repos/position_repository.dart';
 
-import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_action_buttons.dart';
-import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_form_widget.dart';
-import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_card_item.dart';
-import 'package:sdmapp/features/admin/main_data/positions/presentation/widgets/jabatan_search_bar.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_action_buttons.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_form_widget.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_card_item.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_search_bar.dart';
 
 class JabatanController extends ChangeNotifier {
   List<JabatanModel> _allData = [];

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
-import 'register_screen.dart'; // Import halaman register
+import 'register_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,20 +11,31 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
+  // Controller tetap dipertahankan
+  final _nrpController = TextEditingController(); // Sebelumnya email, sekarang NRP sesuai desain
   final _passController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  // Warna tema sesuai gambar (Emas/Kuning Gelap)
+  final Color _primaryGold = const Color(0xFFC0A100); 
+
+  @override
+  void dispose() {
+    _nrpController.dispose();
+    _passController.dispose();
+    super.dispose();
+  }
 
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Sembunyikan keyboard
     FocusScope.of(context).unfocus();
 
     final auth = context.read<AuthProvider>();
 
+    // Memanggil fungsi login dari provider
     final success = await auth.login(
-      _emailController.text.trim(),
+      _nrpController.text.trim(),
       _passController.text.trim(),
     );
 
@@ -37,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.green,
         ),
       );
+      // Tambahkan navigasi ke Dashboard disini jika perlu
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -47,74 +59,325 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _navigateToRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Menggunakan Stack untuk Background Image
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.security, size: 80, color: Colors.blue),
-                const SizedBox(height: 20),
-                const Text("MASUK SISTEM", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 30),
-
-                // Email
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: "Email", prefixIcon: Icon(Icons.email), border: OutlineInputBorder()),
-                  validator: (val) => val!.isEmpty ? 'Email wajib diisi' : null,
-                ),
-                const SizedBox(height: 15),
-
-                // Password
-                TextFormField(
-                  controller: _passController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: "Password", prefixIcon: Icon(Icons.lock), border: OutlineInputBorder()),
-                  validator: (val) => val!.isEmpty ? 'Password wajib diisi' : null,
-                ),
-                const SizedBox(height: 25),
-
-                // Tombol Login
-                Consumer<AuthProvider>(
-                  builder: (context, auth, _) {
-                    return SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: auth.isLoading ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-                        child: auth.isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text("MASUK"),
-                      ),
-                    );
-                  },
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // Link ke Register
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                    );
-                  },
-                  child: const Text("Belum punya akun? Daftar di sini"),
-                )
-              ],
+      body: Stack(
+        children: [
+          // 1. Background Image Layer
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                // --- ISI PATH GAMBAR BACKGROUND ANDA DI SINI ---
+                image: AssetImage('assets/image/background.png'), 
+                fit: BoxFit.cover,
+              ),
             ),
           ),
-        ),
+          
+          // 2. Overlay Layer (Supaya teks terbaca jelas)
+          Container(
+            color: Colors.black.withOpacity(0.6), // Gelapkan background 60%
+          ),
+
+          // 3. Content Layer
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // --- Header Logo & Text ---
+                    _LoginHeader(primaryGold: _primaryGold),
+
+                    const SizedBox(height: 40),
+
+                    // --- Input Fields ---
+                    _CustomLabelInput(
+                      label: "No NRP",
+                      hint: "Masukan NRP Anda Disini",
+                      controller: _nrpController,
+                      primaryColor: _primaryGold,
+                      validator: (val) => val!.isEmpty ? 'NRP wajib diisi' : null,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _CustomLabelInput(
+                      label: "Kata Sandi",
+                      hint: "Masukan Password Anda Disini",
+                      controller: _passController,
+                      primaryColor: _primaryGold,
+                      isPassword: true,
+                      validator: (val) => val!.isEmpty ? 'Password wajib diisi' : null,
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // --- Action Buttons ---
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) {
+                        return Column(
+                          children: [
+                            // Tombol Login
+                            _LoginButton(
+                              text: "Login",
+                              isLoading: auth.isLoading,
+                              onPressed: _handleLogin,
+                              color: _primaryGold,
+                              textColor: Colors.white,
+                              isFilled: true,
+                            ),
+                            
+                            const SizedBox(height: 15),
+
+                            // Tombol Register
+                            _LoginButton(
+                              text: "Register",
+                              isLoading: false, // Register tidak loading di sini
+                              onPressed: auth.isLoading ? null : _navigateToRegister,
+                              color: _primaryGold,
+                              textColor: _primaryGold,
+                              isFilled: false,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // --- Forgot Password ---
+                    TextButton(
+                      onPressed: () {
+                        // Tambahkan logika lupa password
+                      },
+                      child: Text(
+                        "Lupa Kata Sandi",
+                        style: TextStyle(
+                          color: _primaryGold,
+                          decoration: TextDecoration.underline,
+                          decorationColor: _primaryGold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+
+
+class _LoginHeader extends StatelessWidget {
+  final Color primaryGold;
+  const _LoginHeader({required this.primaryGold});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // --- ISI PATH LOGO ANDA DI SINI ---
+        Image.asset(
+          'assets/image/logo.png', 
+          height: 100, // Sesuaikan ukuran logo
+          errorBuilder: (context, error, stackTrace) => 
+              const Icon(Icons.shield, size: 80, color: Colors.white), // Fallback jika gambar kosong
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          "Selamat Datang",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          "SIKAP PRESISI Polda Jawa Timur",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomLabelInput extends StatefulWidget {
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final Color primaryColor;
+  final bool isPassword;
+  final String? Function(String?)? validator;
+
+  const _CustomLabelInput({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    required this.primaryColor,
+    this.isPassword = false,
+    this.validator,
+  });
+
+  @override
+  State<_CustomLabelInput> createState() => _CustomLabelInputState();
+}
+
+class _CustomLabelInputState extends State<_CustomLabelInput> {
+  bool _obscureText = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: widget.controller,
+          obscureText: widget.isPassword ? _obscureText : false,
+          style: const TextStyle(color: Colors.white),
+          validator: widget.validator,
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            hintStyle: TextStyle(color: Colors.grey[400]),
+            filled: true,
+            fillColor: Colors.black.withOpacity(0.3), // Transparan gelap
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            
+            // Border saat tidak fokus
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(color: widget.primaryColor, width: 1.5),
+            ),
+            
+            // Border saat diketik
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(color: widget.primaryColor, width: 2.0),
+            ),
+            
+            // Border saat error
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Colors.red, width: 2.0),
+            ),
+
+            // Icon Mata untuk Password
+            suffixIcon: widget.isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  )
+                : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoginButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final Color color;
+  final Color textColor;
+  final bool isFilled;
+  final bool isLoading;
+
+  const _LoginButton({
+    required this.text,
+    required this.onPressed,
+    required this.color,
+    required this.textColor,
+    required this.isFilled,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: isFilled
+          ? ElevatedButton(
+              onPressed: isLoading ? null : onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      text,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+            )
+          : OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: color, width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ),
     );
   }
 }
