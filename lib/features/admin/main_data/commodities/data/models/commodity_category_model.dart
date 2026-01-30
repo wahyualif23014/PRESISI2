@@ -1,11 +1,11 @@
 class CommodityCategoryModel {
-  final String id;
+  final String id;          // Primary Key (Contoh: "1")
   final String title;       // Contoh: "HORTIKULTURA"
-  final String description; // Contoh: "Hortikultura adalah cabang pertanian..."
-  final String imageAsset;  // Path gambar asset
-  final List<String> tags;  // Contoh: ["KUBIS", "TIMUN", "TOMAT"]
+  final String description; 
+  final String imageAsset;  
+  final List<String> tags;  // Hanya untuk tampilan label di Card depan
 
-  CommodityCategoryModel({
+  const CommodityCategoryModel({
     required this.id,
     required this.title,
     required this.description,

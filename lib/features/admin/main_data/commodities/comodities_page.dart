@@ -1,11 +1,18 @@
+import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/data/repos/commodity_item_repository.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/presentation/widgets/commodity_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/data/repos/commodity_category_repository.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/presentation/widgets/comoditiy_search.dart';
 
-// Import Model, Repo, dan Widget Baru
+// Import Model
 import 'data/models/commodity_category_model.dart';
+// Import Widget
 import 'presentation/widgets/comodity_banner.dart';
 import 'presentation/widgets/commodity_category_card.dart';
+// Import Halaman Detail
+
+// IMPORT WIDGET FORM BARU DISINI
+import 'presentation/widgets/commodity_form_dialog.dart'; 
 
 class ComoditiesPage extends StatefulWidget {
   const ComoditiesPage({super.key});
@@ -17,7 +24,6 @@ class ComoditiesPage extends StatefulWidget {
 class _ComoditiesPageState extends State<ComoditiesPage> {
   final TextEditingController _searchController = TextEditingController();
 
-  // Menggunakan Model Kategori Baru
   List<CommodityCategoryModel> _allData = [];
   List<CommodityCategoryModel> _displayData = [];
 
@@ -29,7 +35,6 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
 
   void _loadData() {
     final data = CommodityRepository.getCategoryData();
-    
     setState(() {
       _allData = data;
       _displayData = List.from(data);
@@ -49,9 +54,55 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
   }
 
   void _navigateToDetail(CommodityCategoryModel item) {
-    // TODO: Implementasi navigasi ke halaman detail
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Membuka detail: ${item.title}")),
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => CommodityListPage(category: item),
+      ),
+    );
+  }
+
+  // --- FUNGSI 1: TAMPILKAN DIALOG TAMBAH ---
+  void _showAddDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return CommodityFormDialog(
+          isEdit: false, // Mode Tambah
+          onCancel: () => Navigator.pop(context),
+          onConfirm: (name, desc) {
+            // Logika simpan data baru disini
+            print("Simpan Baru: $name");
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+               const SnackBar(content: Text("Data Berhasil Ditambahkan")),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- FUNGSI 2: TAMPILKAN DIALOG EDIT ---
+  // Fungsi ini bisa dipanggil ketika user menekan tombol edit pada card/list
+  void _showEditDialog(CommodityCategoryModel item) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return CommodityFormDialog(
+          isEdit: true, // Mode Edit
+          initialName: item.title, // Isi data awal
+          initialDescription: item.description,
+          onCancel: () => Navigator.pop(context),
+          onConfirm: (name, desc) {
+            // Logika update data disini
+            print("Update Data: $name");
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+               const SnackBar(content: Text("Data Berhasil Diubah")),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -64,47 +115,49 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E0E0), // Abu-abu agar card terlihat timbul
+      backgroundColor: const Color(0xFFE0E0E0),
       body: Column(
         children: [
+          // 1. Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ComoditiSearch(
               controller: _searchController,
               onChanged: _runSearch,
-              onAdd: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Fitur Tambah Data")),
-                );
-              },
+              // Panggil Fungsi Tambah Disini
+              onAdd: _showAddDialog, 
               onDelete: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Fitur Hapus Data")),
                 );
               },
             ),
           ),
 
-          // 2. Banner (Tetap dipertahankan sesuai request)
+          // 2. Banner
           ComoditiyBanner(
-            totalTypes: _displayData.length, // Menghitung jumlah kategori
-            totalItems: 0, // Bisa disesuaikan jika ada data total sub-item
+            totalTypes: _displayData.length,
+            totalItems: 0,
             onClose: () {},
           ),
 
           const SizedBox(height: 16),
 
+          // 3. List Category Cards
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _displayData.length,
               itemBuilder: (context, index) {
                 final item = _displayData[index];
-                
-                // Memanggil Widget Card Baru
-                return CommodityCategoryCard(
-                  item: item,
-                  onViewAllTap: () => _navigateToDetail(item),
+
+                return GestureDetector(
+                  // Contoh: Tekan lama untuk Edit (Opsional, atau tambahkan tombol edit di Card)
+                  onLongPress: () => _showEditDialog(item),
+                  child: CommodityCategoryCard(
+                    item: item,
+                    onViewAllTap: () => _navigateToDetail(item),
+                  ),
                 );
               },
             ),

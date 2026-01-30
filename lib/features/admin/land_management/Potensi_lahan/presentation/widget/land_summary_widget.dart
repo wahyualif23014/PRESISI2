@@ -79,7 +79,7 @@ class _LandSummaryWidgetState extends State<LandSummaryWidget> {
                     width: 32,
                     height: 32,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF00FF00), // Hijau terang (Lime Green)
+                      color: Color.fromARGB(255, 106, 106, 106), // Hijau terang (Lime Green)
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
