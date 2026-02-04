@@ -5,8 +5,7 @@ import (
 )
 
 func SyncDatabase() {
-	// Fungsi ini akan membuat tabel 'users' jika belum ada
-	// Menggunakan variabel DB yang didefinisikan di database.go
+
 	if DB != nil {
 		DB.AutoMigrate(&models.User{})
 	}

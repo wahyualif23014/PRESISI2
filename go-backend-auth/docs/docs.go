@@ -26,7 +26,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengambil list semua user yang terdaftar",
+                "description": "Mengambil list semua user yang terdaftar.",
                 "consumes": [
                     "application/json"
                 ],
@@ -44,6 +44,15 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -53,7 +62,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Membuat user baru dengan NRP dan Role tertentu",
+                "description": "Membuat user baru dengan NRP dan Role tertentu.",
                 "consumes": [
                     "application/json"
                 ],
@@ -82,6 +91,15 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -93,7 +111,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengambil data user berdasarkan ID",
+                "description": "Mengambil data user berdasarkan ID.",
                 "consumes": [
                     "application/json"
                 ],
@@ -120,6 +138,15 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -129,7 +156,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengupdate Nama, Jabatan, atau Role user. Gunakan ini untuk mengubah role dari 'view' ke 'polsek/polres'.",
+                "description": "Mengupdate Nama, Jabatan, atau Role user.",
                 "consumes": [
                     "application/json"
                 ],
@@ -165,6 +192,15 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             },
@@ -174,7 +210,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Soft delete user berdasarkan ID",
+                "description": "Soft delete user berdasarkan ID.",
                 "consumes": [
                     "application/json"
                 ],
@@ -206,11 +242,108 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/login": {
+            "post": {
+                "description": "Login menggunakan NRP dan Password untuk mendapatkan Token JWT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login User",
+                "parameters": [
+                    {
+                        "description": "Data Login",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.LoginInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/signup": {
+            "post": {
+                "description": "Mendaftar akun baru. Default role adalah 'view'.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register User Baru (Public)",
+                "parameters": [
+                    {
+                        "description": "Data Registrasi",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.RegisterInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "controllers.CreateUserInput": {
             "type": "object",
+            "required": [
+                "jabatan",
+                "nama_lengkap",
+                "nrp",
+                "password",
+                "role"
+            ],
             "properties": {
                 "jabatan": {
                     "type": "string",
@@ -229,12 +362,57 @@ const docTemplate = `{
                     "example": "rahasia123"
                 },
                 "role": {
+                    "description": "Admin wajib isi Role",
                     "allOf": [
                         {
                             "$ref": "#/definitions/models.Role"
                         }
                     ],
                     "example": "polres"
+                }
+            }
+        },
+        "controllers.LoginInput": {
+            "type": "object",
+            "required": [
+                "nrp",
+                "password"
+            ],
+            "properties": {
+                "nrp": {
+                    "type": "string",
+                    "example": "12345678"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                }
+            }
+        },
+        "controllers.RegisterInput": {
+            "type": "object",
+            "required": [
+                "jabatan",
+                "nama_lengkap",
+                "nrp",
+                "password"
+            ],
+            "properties": {
+                "jabatan": {
+                    "type": "string",
+                    "example": "Anggota Sabhara"
+                },
+                "nama_lengkap": {
+                    "type": "string",
+                    "example": "Budi Santoso"
+                },
+                "nrp": {
+                    "type": "string",
+                    "example": "12345678"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password123"
                 }
             }
         },

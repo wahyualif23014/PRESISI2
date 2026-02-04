@@ -11,37 +11,50 @@ import (
 
 // --- STRUCTS UNTUK SWAGGER ---
 
+// CreateUserInput digunakan oleh Admin untuk menambah user baru
 type CreateUserInput struct {
-	NamaLengkap string      `json:"nama_lengkap" example:"Budi Santoso"`
-	NRP         string      `json:"nrp" example:"87011234"`
-	Jabatan     string      `json:"jabatan" example:"Kanit Reskrim"`
-	Password    string      `json:"password" example:"rahasia123"`
-	Role        models.Role `json:"role" example:"polres"`
+	NamaLengkap string      `json:"nama_lengkap" binding:"required" example:"Budi Santoso"`
+	NRP         string      `json:"nrp" binding:"required" example:"87011234"`
+	Jabatan     string      `json:"jabatan" binding:"required" example:"Kanit Reskrim"`
+	Password    string      `json:"password" binding:"required" example:"rahasia123"`
+	Role        models.Role `json:"role" binding:"required" example:"polres"` // Admin wajib isi Role
 }
 
+// UpdateUserInput digunakan oleh Admin untuk edit user
 type UpdateUserInput struct {
-	NamaLengkap string      `json:"nama_lengkap" example:"Budi Santoso S.H."`
-	Jabatan     string      `json:"jabatan" example:"Kapolsek"`
-	Role        models.Role `json:"role" example:"polres"`
+	NamaLengkap string      `json:"nama_lengkap" binding:"omitempty" example:"Budi Santoso S.H."`
+	Jabatan     string      `json:"jabatan" binding:"omitempty" example:"Kapolsek"`
+	Role        models.Role `json:"role" binding:"omitempty" example:"polres"`
+	// Password sebaiknya dipisah endpointnya atau handle logic khusus jika kosong
 }
 
 // --- HANDLERS ---
 
 // CreateUser godoc
 // @Summary      Tambah User Baru (Admin Only)
-// @Description  Membuat user baru dengan NRP dan Role tertentu
+// @Description  Membuat user baru dengan NRP dan Role tertentu.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Param        request body CreateUserInput true "Data User Baru"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]string
 // @Router       /admin/users [post]
 func CreateUser(c *gin.Context) {
 	var body CreateUserInput
 
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal membaca body request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal membaca body request: " + err.Error()})
+		return
+	}
+
+	// Validasi Role (Optional but recommended)
+	switch body.Role {
+	case models.RoleAdmin, models.RoleView, models.RolePolres, models.RolePolsek:
+		// Valid
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Role tidak valid"})
 		return
 	}
 
@@ -56,7 +69,7 @@ func CreateUser(c *gin.Context) {
 		NRP:         body.NRP,
 		Jabatan:     body.Jabatan,
 		Password:    string(hash),
-		Role:        body.Role, // Admin boleh menentukan Role saat membuat user
+		Role:        body.Role, // Admin menentukan Role
 		FotoProfil:  "",
 	}
 
@@ -72,16 +85,18 @@ func CreateUser(c *gin.Context) {
 
 // GetUsers godoc
 // @Summary      Lihat Semua User
-// @Description  Mengambil list semua user yang terdaftar
+// @Description  Mengambil list semua user yang terdaftar.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]string
 // @Router       /admin/users [get]
 func GetUsers(c *gin.Context) {
 	var users []models.User
-	result := initializers.DB.Find(&users)
+	// Select specific fields to avoid sending passwords (even though hashed) or massive data
+	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "jabatan", "role", "foto_profil").Find(&users)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
@@ -93,18 +108,21 @@ func GetUsers(c *gin.Context) {
 
 // GetUserByID godoc
 // @Summary      Lihat Detail User
-// @Description  Mengambil data user berdasarkan ID
+// @Description  Mengambil data user berdasarkan ID.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Param        id   path      int  true  "User ID"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]string
 // @Router       /admin/users/{id} [get]
 func GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
-	result := initializers.DB.First(&user, id)
+	
+	// Gunakan Select agar lebih efisien dan aman
+	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "jabatan", "role", "foto_profil").First(&user, id)
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
@@ -116,7 +134,7 @@ func GetUserByID(c *gin.Context) {
 
 // UpdateUser godoc
 // @Summary      Edit Data User (Termasuk Upgrade Role)
-// @Description  Mengupdate Nama, Jabatan, atau Role user. Gunakan ini untuk mengubah role dari 'view' ke 'polsek/polres'.
+// @Description  Mengupdate Nama, Jabatan, atau Role user.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
@@ -124,6 +142,7 @@ func GetUserByID(c *gin.Context) {
 // @Param        id      path   int              true  "User ID"
 // @Param        request body   UpdateUserInput  true  "Data Update"
 // @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]string
 // @Router       /admin/users/{id} [put]
 func UpdateUser(c *gin.Context) {
 	id := c.Param("id")
@@ -141,19 +160,38 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Update data
-	initializers.DB.Model(&user).Updates(models.User{
-		NamaLengkap: body.NamaLengkap,
-		Jabatan:     body.Jabatan,
-		Role:        body.Role, // Di sini Admin mengubah role User
-	})
+	// Persiapkan data update. Gunakan map agar hanya field yang dikirim yang diupdate.
+	// Jika menggunakan struct, field kosong ("") bisa menimpa data yang ada.
+	updates := make(map[string]interface{})
+
+	if body.NamaLengkap != "" {
+		updates["nama_lengkap"] = body.NamaLengkap
+	}
+	if body.Jabatan != "" {
+		updates["jabatan"] = body.Jabatan
+	}
+	if body.Role != "" {
+		// Validasi Role
+		switch body.Role {
+		case models.RoleAdmin, models.RoleView, models.RolePolres, models.RolePolsek:
+			updates["role"] = body.Role
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Role tidak valid"})
+			return
+		}
+	}
+
+	initializers.DB.Model(&user).Updates(updates)
+
+	// Fetch updated user to return
+	initializers.DB.First(&user, id)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate", "data": user})
 }
 
 // DeleteUser godoc
 // @Summary      Hapus User
-// @Description  Soft delete user berdasarkan ID
+// @Description  Soft delete user berdasarkan ID.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json

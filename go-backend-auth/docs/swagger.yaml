@@ -17,7 +17,46 @@ definitions:
       role:
         allOf:
         - $ref: '#/definitions/models.Role'
+        description: Admin wajib isi Role
         example: polres
+    required:
+    - jabatan
+    - nama_lengkap
+    - nrp
+    - password
+    - role
+    type: object
+  controllers.LoginInput:
+    properties:
+      nrp:
+        example: "12345678"
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - nrp
+    - password
+    type: object
+  controllers.RegisterInput:
+    properties:
+      jabatan:
+        example: Anggota Sabhara
+        type: string
+      nama_lengkap:
+        example: Budi Santoso
+        type: string
+      nrp:
+        example: "12345678"
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - jabatan
+    - nama_lengkap
+    - nrp
+    - password
     type: object
   controllers.UpdateUserInput:
     properties:
@@ -65,7 +104,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Mengambil list semua user yang terdaftar
+      description: Mengambil list semua user yang terdaftar.
       produces:
       - application/json
       responses:
@@ -73,6 +112,12 @@ paths:
           description: OK
           schema:
             additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
             type: object
       security:
       - BearerAuth: []
@@ -82,7 +127,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Membuat user baru dengan NRP dan Role tertentu
+      description: Membuat user baru dengan NRP dan Role tertentu.
       parameters:
       - description: Data User Baru
         in: body
@@ -98,6 +143,12 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
       summary: Tambah User Baru (Admin Only)
@@ -107,7 +158,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Soft delete user berdasarkan ID
+      description: Soft delete user berdasarkan ID.
       parameters:
       - description: User ID
         in: path
@@ -131,7 +182,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Mengambil data user berdasarkan ID
+      description: Mengambil data user berdasarkan ID.
       parameters:
       - description: User ID
         in: path
@@ -146,6 +197,12 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
       summary: Lihat Detail User
@@ -154,8 +211,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: Mengupdate Nama, Jabatan, atau Role user. Gunakan ini untuk mengubah
-        role dari 'view' ke 'polsek/polres'.
+      description: Mengupdate Nama, Jabatan, atau Role user.
       parameters:
       - description: User ID
         in: path
@@ -176,11 +232,76 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
       summary: Edit Data User (Termasuk Upgrade Role)
       tags:
       - admin-users
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Login menggunakan NRP dan Password untuk mendapatkan Token JWT.
+      parameters:
+      - description: Data Login
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login User
+      tags:
+      - auth
+  /signup:
+    post:
+      consumes:
+      - application/json
+      description: Mendaftar akun baru. Default role adalah 'view'.
+      parameters:
+      - description: Data Registrasi
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register User Baru (Public)
+      tags:
+      - auth
 securityDefinitions:
   BearerAuth:
     in: header
