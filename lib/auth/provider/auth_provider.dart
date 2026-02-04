@@ -1,102 +1,109 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/auth_model.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final AuthService _service = AuthService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final AuthService _authService = AuthService();
+  final _storage = const FlutterSecureStorage();
 
-  AuthModel? _user;
+  UserModel? _user;
+  String? _token;
   bool _isLoading = false;
-  String? _errorMessage;
 
-  AuthModel? get user => _user;
+  // Getters
+  UserModel? get user => _user;
+  String? get token => _token;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get isAuth => _user != null;
+  bool get isAuthenticated => _token != null;
 
-  // --- LOGIN ---
-  Future<bool> login(String email, String password) async {
+  // --- LOGIN LOGIC ---
+  Future<String?> login(String nrp, String password) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
 
-    try {
-      final AuthModel resultUser = await _service.login(email, password);
-      _user = resultUser;
+    final result = await _authService.login(nrp, password);
 
-      await _storage.write(key: 'token', value: _user!.token);
-      await _storage.write(key: 'nama', value: _user!.nama);
-      await _storage.write(key: 'role', value: _user!.role);
-      await _storage.write(key: 'satuan_kerja', value: _user!.satuanKerja);
+    if (result['success']) {
+      final data = result['data'];
+      _token = data['token'];
+      
+      // Convert JSON user ke Object UserModel
+      _user = UserModel.fromJson(data['user']);
 
+      // Simpan Token & User Data ke HP (Persistent)
+      await _storage.write(key: 'jwt_token', value: _token);
+      await _storage.write(key: 'user_data', value: jsonEncode(_user!.toJson()));
+      
       _isLoading = false;
       notifyListeners();
-      return true;
-    } catch (e) {
-      // Gunakan debugPrint untuk log di production code
-      debugPrint("Error Login: $e");
-
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      return null; // Null artinya sukses tanpa error message
+    } else {
       _isLoading = false;
       notifyListeners();
-      return false;
+      return result['message']; // Return pesan error
     }
   }
 
-  // --- REGISTER ---
-  Future<bool> register({
-    required String email,
-    required String password,
+  // --- REGISTER LOGIC ---
+  Future<String?> register({
     required String nama,
+    required String nrp,
+    required String jabatan,
+    required String password,
     required String role,
-    required String satuanKerja,
   }) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
 
-    try {
-      await _service.signUp(
-        email: email,
-        password: password,
-        nama: nama,
-        role: role,
-        satuanKerja: satuanKerja,
-      );
+    final result = await _authService.register(
+      nama: nama,
+      nrp: nrp,
+      jabatan: jabatan,
+      password: password,
+      role: role,
+    );
 
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      debugPrint("Error Register: $e");
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
-      _isLoading = false;
-      notifyListeners();
-      return false;
+    _isLoading = false;
+    notifyListeners();
+
+    if (result['success']) {
+      return null; // Sukses
+    } else {
+      return result['message']; // Return error
     }
   }
 
-  // --- AUTO LOGIN ---
-  Future<bool> tryAutoLogin() async {
-    final AuthModel? existingUser = _service.getCurrentUser();
+  // --- AUTO LOGIN (Saat App Dibuka) ---
+  Future<void> tryAutoLogin() async {
+    final savedToken = await _storage.read(key: 'jwt_token');
+    
+    if (savedToken == null) return;
 
-    if (existingUser != null) {
-      _user = existingUser;
-      await _storage.write(key: 'token', value: _user!.token);
-      notifyListeners();
-      return true;
+    // Cek Expired Token
+    if (JwtDecoder.isExpired(savedToken)) {
+      await logout();
+      return;
     }
 
-    return false;
+    _token = savedToken;
+    
+    // Load User Data
+    final userString = await _storage.read(key: 'user_data');
+    if (userString != null) {
+      _user = UserModel.fromJson(jsonDecode(userString));
+    }
+
+    notifyListeners();
   }
 
   // --- LOGOUT ---
   Future<void> logout() async {
-    await _service.signOut();
-    await _storage.deleteAll();
+    _token = null;
     _user = null;
+    await _storage.deleteAll();
     notifyListeners();
   }
 }

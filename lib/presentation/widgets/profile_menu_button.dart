@@ -8,31 +8,42 @@ class ProfileMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Ambil Data dari Provider (Sesuai Model Go Backend)
     final auth = context.watch<AuthProvider>();
-    final String userName = auth.user?.nama ?? "Tamu";
+    final user = auth.user;
+
+    final String userName = user?.namaLengkap ?? "Tamu";
+    final String userJabatan = user?.jabatan ?? "Pengguna";
+    final String userNrp = user?.nrp ?? "-";
+    
+    // Ambil inisial huruf pertama
     final String initial = userName.isNotEmpty ? userName[0].toUpperCase() : "U";
+
+    // Warna Tema (Konsisten dengan Login Screen)
+    const Color primaryGold = Color(0xFFC0A100);
 
     return Theme(
       data: Theme.of(context).copyWith(
         popupMenuTheme: PopupMenuThemeData(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 4,
+          color: Colors.white, // Pastikan background putih bersih
         ),
       ),
       child: PopupMenuButton<String>(
         offset: const Offset(0, 50),
         tooltip: "Profil Saya",
         
-        // Avatar UI
+        // --- 2. Avatar UI (Konsisten Warna Gold) ---
         child: Container(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(2), // Padding border lebih tipis agar rapi
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey.shade200, width: 1.5),
+            border: Border.all(color: primaryGold.withOpacity(0.5), width: 1.5),
           ),
           child: CircleAvatar(
             radius: 16,
-            backgroundColor: const Color(0xFFF97316), // Orange Professional
+            backgroundColor: primaryGold, // Warna Emas
             child: Text(
               initial,
               style: const TextStyle(
@@ -44,10 +55,11 @@ class ProfileMenuButton extends StatelessWidget {
           ),
         ),
 
-        // Action Handler
+        // --- 3. Action Handler ---
         onSelected: (value) {
           if (value == 'logout') {
             context.read<AuthProvider>().logout();
+            // Router biasanya otomatis redirect ke Login jika isAuthenticated false
           } else if (value == 'profile') {
             Navigator.push(
               context,
@@ -56,9 +68,9 @@ class ProfileMenuButton extends StatelessWidget {
           }
         },
 
-        // Menu Items
+        // --- 4. Menu Items ---
         itemBuilder: (context) => [
-          // Header (Non-clickable)
+          // HEADER: Nama, Jabatan, NRP (Non-clickable)
           PopupMenuItem<String>(
             enabled: false,
             child: Column(
@@ -74,10 +86,17 @@ class ProfileMenuButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                const Text(
-                  "Administrator",
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                const SizedBox(height: 4),
+                // Menampilkan Jabatan & NRP
+                Text(
+                  "$userJabatan ($userNrp)", 
+                  style: TextStyle(
+                    fontSize: 11, 
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const Divider(height: 24),
               ],
@@ -92,6 +111,7 @@ class ProfileMenuButton extends StatelessWidget {
     );
   }
 
+  // Helper Widget untuk Item Menu
   PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String text, Color color) {
     return PopupMenuItem<String>(
       value: value,

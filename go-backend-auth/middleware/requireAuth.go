@@ -22,7 +22,6 @@ func RequireAuth(c *gin.Context) {
 	}
 
 	// 2. Support format "Bearer <token>" (Standar Industri)
-	// Jika header berisi "Bearer eyJ...", kita ambil bagian tokennya saja.
 	tokenString := authHeader
 	if len(strings.Split(authHeader, " ")) == 2 {
 		tokenString = strings.Split(authHeader, " ")[1]
@@ -54,8 +53,11 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
+	// 5. Query DB (OPTIMIZED SELECT)
+	// Kita hanya mengambil kolom yang ada di struct User baru (NamaLengkap, NRP, Jabatan)
+	// Password tidak diambil demi keamanan.
 	var user models.User
-	result := initializers.DB.Select("id", "name", "email", "role", "satuan_kerja").First(&user, claims["sub"])
+	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "role", "jabatan").First(&user, claims["sub"])
 
 	if result.Error != nil || user.ID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or deleted"})
@@ -76,7 +78,7 @@ func RequireRoles(allowedRoles ...models.Role) gin.HandlerFunc {
 			return
 		}
 
-		// 2. Type Assertion (Memastikan data user valid)
+		// 2. Type Assertion
 		user, ok := userValue.(models.User)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "User context error"})

@@ -1,7 +1,9 @@
+import 'package:KETAHANANPANGAN/router/route_names.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart'; // Tambahkan untuk navigasi jika pakai GoRouter
 import '../provider/auth_provider.dart';
-import 'register_screen.dart'; 
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,13 +13,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Controller tetap dipertahankan
-  final _nrpController = TextEditingController(); // Sebelumnya email, sekarang NRP sesuai desain
+  final _nrpController = TextEditingController();
   final _passController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   // Warna tema sesuai gambar (Emas/Kuning Gelap)
-  final Color _primaryGold = const Color(0xFFC0A100); 
+  final Color _primaryGold = const Color(0xFFC0A100);
 
   @override
   void dispose() {
@@ -26,34 +27,46 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // --- LOGIC UTAMA INTEGRASI GO BACKEND ---
   void _handleLogin() async {
+    // 1. Validasi Form UI
     if (!_formKey.currentState!.validate()) return;
 
+    // 2. Tutup Keyboard
     FocusScope.of(context).unfocus();
 
+    // 3. Panggil Auth Provider
     final auth = context.read<AuthProvider>();
 
-    // Memanggil fungsi login dari provider
-    final success = await auth.login(
+    // Memanggil fungsi login ke Go Backend
+    // Return value: String? (null jika SUKSES, String error jika GAGAL)
+    final String? errorMessage = await auth.login(
       _nrpController.text.trim(),
       _passController.text.trim(),
     );
 
     if (!mounted) return;
 
-    if (success) {
+    // 4. Cek Hasil Login
+    if (errorMessage == null) {
+      // --- SUKSES ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Selamat Datang, ${auth.user?.nama}"),
+          // Mengambil nama dari User Model yang sudah di-load Provider
+          content: Text("Login Berhasil. Selamat Datang, ${auth.user?.namaLengkap ?? 'User'}"),
           backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
         ),
       );
-      // Tambahkan navigasi ke Dashboard disini jika perlu
+
+      // --- NAVIGASI KE DASHBOARD ---
+      context.go(RouteNames.dashboard); 
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(auth.errorMessage ?? "Login Gagal"),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -68,7 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Menggunakan Stack untuk Background Image
     return Scaffold(
       body: Stack(
         children: [
@@ -76,16 +88,15 @@ class _LoginScreenState extends State<LoginScreen> {
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                // --- ISI PATH GAMBAR BACKGROUND ANDA DI SINI ---
-                image: AssetImage('assets/image/background.png'), 
+                image: AssetImage('assets/image/background.png'),
                 fit: BoxFit.cover,
               ),
             ),
           ),
-          
-          // 2. Overlay Layer (Supaya teks terbaca jelas)
+
+          // 2. Overlay Layer
           Container(
-            color: Colors.black.withOpacity(0.6), // Gelapkan background 60%
+            color: Colors.black.withOpacity(0.6),
           ),
 
           // 3. Content Layer
@@ -97,12 +108,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // --- Header Logo & Text ---
+                    // --- Header ---
                     _LoginHeader(primaryGold: _primaryGold),
 
                     const SizedBox(height: 40),
 
-                    // --- Input Fields ---
+                    // --- Input NRP ---
                     _CustomLabelInput(
                       label: "No NRP",
                       hint: "Masukan NRP Anda Disini",
@@ -113,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 20),
 
+                    // --- Input Password ---
                     _CustomLabelInput(
                       label: "Kata Sandi",
                       hint: "Masukan Password Anda Disini",
@@ -124,27 +136,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 40),
 
-                    // --- Action Buttons ---
                     Consumer<AuthProvider>(
                       builder: (context, auth, _) {
                         return Column(
                           children: [
-                            // Tombol Login
                             _LoginButton(
                               text: "Login",
-                              isLoading: auth.isLoading,
+                              isLoading: auth.isLoading, 
                               onPressed: _handleLogin,
                               color: _primaryGold,
                               textColor: Colors.white,
                               isFilled: true,
                             ),
-                            
                             const SizedBox(height: 15),
-
-                            // Tombol Register
                             _LoginButton(
                               text: "Register",
-                              isLoading: false, // Register tidak loading di sini
+                              isLoading: false,
                               onPressed: auth.isLoading ? null : _navigateToRegister,
                               color: _primaryGold,
                               textColor: _primaryGold,
@@ -160,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // --- Forgot Password ---
                     TextButton(
                       onPressed: () {
-                        // Tambahkan logika lupa password
+                        // TODO: Implementasi Lupa Password
                       },
                       child: Text(
                         "Lupa Kata Sandi",
@@ -182,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-
+// --- WIDGET PENDUKUNG (TIDAK ADA PERUBAHAN DARI KODE ANDA) ---
 
 class _LoginHeader extends StatelessWidget {
   final Color primaryGold;
@@ -192,12 +199,11 @@ class _LoginHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // --- ISI PATH LOGO ANDA DI SINI ---
         Image.asset(
-          'assets/image/logo.png', 
-          height: 100, // Sesuaikan ukuran logo
-          errorBuilder: (context, error, stackTrace) => 
-              const Icon(Icons.shield, size: 80, color: Colors.white), // Fallback jika gambar kosong
+          'assets/image/logo.png',
+          height: 100,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.shield, size: 80, color: Colors.white),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -269,22 +275,16 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
             hintText: widget.hint,
             hintStyle: TextStyle(color: Colors.grey[400]),
             filled: true,
-            fillColor: Colors.black.withOpacity(0.3), // Transparan gelap
+            fillColor: Colors.black.withOpacity(0.3),
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            
-            // Border saat tidak fokus
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide(color: widget.primaryColor, width: 1.5),
             ),
-            
-            // Border saat diketik
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide(color: widget.primaryColor, width: 2.0),
             ),
-            
-            // Border saat error
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: const BorderSide(color: Colors.red, width: 1.5),
@@ -293,8 +293,6 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
               borderRadius: BorderRadius.circular(30),
               borderSide: const BorderSide(color: Colors.red, width: 2.0),
             ),
-
-            // Icon Mata untuk Password
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(

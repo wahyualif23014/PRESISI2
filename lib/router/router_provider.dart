@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'route_names.dart';
 
-// Import Screen
+// Import Provider & Screens
 import '../../auth/provider/auth_provider.dart';
 import '../../auth/pages/login_screen.dart';
 import '../../auth/pages/register_screen.dart';
@@ -34,44 +34,61 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     
-    // 1. SET INITIAL LOCATION KE SPLASH
+    // 1. Initial Location tetap Splash
     initialLocation: RouteNames.splash, 
     
+    // 2. Dengarkan perubahan di AuthProvider (Login/Logout)
     refreshListenable: authProvider,
 
+    // 3. Logic Redirect (Penjaga Pintu)
     redirect: (context, state) {
-      final isLoggedIn = authProvider.isAuth;
-      final isLoading = authProvider.isLoading;
+      final isLoggedIn = authProvider.isAuthenticated;
       final location = state.matchedLocation;
 
-      // 2. JIKA SEDANG DI SPLASH, BIARKAN SAJA (JANGAN REDIRECT DULU)
-      // Biarkan animasi selesai, nanti Splash Screen yang akan navigasi manual.
+      // A. LOGIC SPLASH SCREEN (PENTING)
+      // Jika sedang di Splash Screen, JANGAN redirect apapun.
+      // Biarkan Splash Screen menyelesaikan animasinya sendiri, 
+      // lalu Splash Screen yang akan memanggil context.go() secara manual.
       if (location == RouteNames.splash) {
         return null; 
       }
 
-      if (isLoading) return null;
-
+      // Cek apakah user sedang berada di halaman Login atau Register
       final isAuthRoute = location == RouteNames.login || location == RouteNames.register;
 
-      if (!isLoggedIn) {
-        return isAuthRoute ? null : RouteNames.login;
+      // B. JIKA SUDAH LOGIN (Logic yang Anda Minta)
+      if (isLoggedIn) {
+        // Jika user sudah login, TAPI user berada di halaman Login/Register
+        // Maka PAKSA arahkan ke Dashboard
+        if (isAuthRoute) {
+          return RouteNames.dashboard;
+        }
+        // Jika user sudah login dan berada di halaman lain (dashboard dll), biarkan.
+        return null;
       }
 
-      if (isLoggedIn && isAuthRoute) {
-        return RouteNames.dashboard;
+      // C. JIKA BELUM LOGIN
+      if (!isLoggedIn) {
+        // Jika user belum login, dan mencoba mengakses halaman selain Login/Register/Splash
+        // Maka PAKSA arahkan ke Login
+        if (!isAuthRoute) {
+          return RouteNames.login;
+        }
+        // Jika user memang di halaman login/register, biarkan.
+        return null;
       }
 
       return null;
     },
 
     routes: [
-      // 3. TAMBAHKAN ROUTE SPLASH
+      // --- SPLASH SCREEN ---
       GoRoute(
         path: RouteNames.splash,
         builder: (context, state) => const CustomSplashScreen(),
       ),
 
+      // --- AUTH ROUTES ---
       GoRoute(
         path: RouteNames.login,
         parentNavigatorKey: _rootNavigatorKey,
@@ -83,22 +100,26 @@ class AppRouter {
         builder: (_, __) => const RegisterScreen(),
       ),
 
+      // --- MAIN APP SHELL (Bottom Navbar / Sidebar) ---
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
           return MainLayout(child: child);
         },
         routes: [
+          // 1. Dashboard
           GoRoute(
             path: RouteNames.dashboard,
             pageBuilder: (_, __) => const NoTransitionPage(child: DashboardPage()),
           ),
+          
+          // 2. Personel
           GoRoute(
             path: RouteNames.personnel,
             pageBuilder: (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
           
-          // MAIN DATA SHELL
+          // 3. Data Utama (Nested Shell)
           ShellRoute(
             builder: (context, state, child) => MainDataShellPage(child: child),
             routes: [
@@ -110,7 +131,7 @@ class AppRouter {
             ],
           ),
 
-          // LAND MANAGEMENT SHELL
+          // 4. Manajemen Lahan (Nested Shell)
           ShellRoute(
             builder: (context, state, child) => LandShellPage(child: child),
             routes: [
@@ -121,6 +142,7 @@ class AppRouter {
             ],
           ),
 
+          // 5. Rekap
           GoRoute(
             path: RouteNames.recap,
             pageBuilder: (_, __) => const NoTransitionPage(child: PageRecap()),

@@ -10,27 +10,26 @@ import (
 )
 
 // --- STRUCTS UNTUK SWAGGER ---
-// Kita harus definisikan di luar agar Swagger bisa membaca Schema-nya
 
 type CreateUserInput struct {
-	Name        string      `json:"nama" example:"Kapolres A"`
-	Email       string      `json:"email" example:"kapolres@polri.go.id"`
+	NamaLengkap string      `json:"nama_lengkap" example:"Budi Santoso"`
+	NRP         string      `json:"nrp" example:"87011234"`
+	Jabatan     string      `json:"jabatan" example:"Kanit Reskrim"`
 	Password    string      `json:"password" example:"rahasia123"`
 	Role        models.Role `json:"role" example:"polres"`
-	SatuanKerja string      `json:"satuan_kerja" example:"POLRES JOMBANG"`
 }
 
 type UpdateUserInput struct {
-	Name        string      `json:"nama" example:"Kapolres A Edit"`
+	NamaLengkap string      `json:"nama_lengkap" example:"Budi Santoso S.H."`
+	Jabatan     string      `json:"jabatan" example:"Kapolsek"`
 	Role        models.Role `json:"role" example:"polres"`
-	SatuanKerja string      `json:"satuan_kerja" example:"POLRES JOMBANG"`
 }
 
 // --- HANDLERS ---
 
 // CreateUser godoc
 // @Summary      Tambah User Baru (Admin Only)
-// @Description  Membuat user baru dengan role tertentu
+// @Description  Membuat user baru dengan NRP dan Role tertentu (Langsung Active)
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
@@ -39,7 +38,7 @@ type UpdateUserInput struct {
 // @Success      200  {object}  map[string]interface{}
 // @Router       /admin/users [post]
 func CreateUser(c *gin.Context) {
-	var body CreateUserInput // Gunakan struct yang sudah didefinisikan di atas
+	var body CreateUserInput
 
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal membaca body request"})
@@ -53,21 +52,51 @@ func CreateUser(c *gin.Context) {
 	}
 
 	user := models.User{
-		Name:        body.Name,
-		Email:       body.Email,
+		NamaLengkap: body.NamaLengkap,
+		NRP:         body.NRP,
+		Jabatan:     body.Jabatan,
 		Password:    string(hash),
 		Role:        body.Role,
-		SatuanKerja: body.SatuanKerja,
+		FotoProfil:  "",
+		Status:      "active", // KARENA ADMIN YANG BUAT, LANGSUNG AKTIF
 	}
 
 	result := initializers.DB.Create(&user)
 
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan user (Email mungkin duplikat)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal menyimpan user. NRP mungkin sudah terdaftar."})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User berhasil ditambahkan", "data": user})
+}
+
+// ApproveUser godoc
+// @Summary      Setujui User (Validasi Akun)
+// @Description  Mengubah status user dari pending menjadi active
+// @Tags         admin-users
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      int  true  "User ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /admin/users/{id}/approve [put]
+func ApproveUser(c *gin.Context) {
+	id := c.Param("id")
+	var user models.User
+
+	if err := initializers.DB.First(&user, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
+		return
+	}
+
+	// Update status menjadi "active"
+	initializers.DB.Model(&user).Update("status", "active")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User berhasil divalidasi dan diaktifkan",
+		"data":    user,
+	})
 }
 
 // GetUsers godoc
@@ -116,7 +145,7 @@ func GetUserByID(c *gin.Context) {
 
 // UpdateUser godoc
 // @Summary      Edit Data User
-// @Description  Mengupdate Nama, Role, atau Satuan Kerja user
+// @Description  Mengupdate Nama, Jabatan, atau Role user
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
@@ -134,7 +163,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var body UpdateUserInput // Gunakan struct bernama
+	var body UpdateUserInput
 
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal membaca body request"})
@@ -142,9 +171,9 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	initializers.DB.Model(&user).Updates(models.User{
-		Name:        body.Name,
+		NamaLengkap: body.NamaLengkap,
+		Jabatan:     body.Jabatan,
 		Role:        body.Role,
-		SatuanKerja: body.SatuanKerja,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate", "data": user})

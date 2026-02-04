@@ -53,7 +53,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Membuat user baru dengan role tertentu",
+                "description": "Membuat user baru dengan NRP dan Role tertentu (Langsung Active)",
                 "consumes": [
                     "application/json"
                 ],
@@ -129,7 +129,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengupdate Nama, Role, atau Satuan Kerja user",
+                "description": "Mengupdate Nama, Jabatan, atau Role user",
                 "consumes": [
                     "application/json"
                 ],
@@ -206,19 +206,61 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/admin/users/{id}/approve": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengubah status user dari pending menjadi active",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-users"
+                ],
+                "summary": "Setujui User (Validasi Akun)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
         "controllers.CreateUserInput": {
             "type": "object",
             "properties": {
-                "email": {
+                "jabatan": {
                     "type": "string",
-                    "example": "kapolres@polri.go.id"
+                    "example": "Kanit Reskrim"
                 },
-                "nama": {
+                "nama_lengkap": {
                     "type": "string",
-                    "example": "Kapolres A"
+                    "example": "Budi Santoso"
+                },
+                "nrp": {
+                    "type": "string",
+                    "example": "87011234"
                 },
                 "password": {
                     "type": "string",
@@ -231,19 +273,19 @@ const docTemplate = `{
                         }
                     ],
                     "example": "polres"
-                },
-                "satuan_kerja": {
-                    "type": "string",
-                    "example": "POLRES JOMBANG"
                 }
             }
         },
         "controllers.UpdateUserInput": {
             "type": "object",
             "properties": {
-                "nama": {
+                "jabatan": {
                     "type": "string",
-                    "example": "Kapolres A Edit"
+                    "example": "Kapolsek"
+                },
+                "nama_lengkap": {
+                    "type": "string",
+                    "example": "Budi Santoso S.H."
                 },
                 "role": {
                     "allOf": [
@@ -252,10 +294,6 @@ const docTemplate = `{
                         }
                     ],
                     "example": "polres"
-                },
-                "satuan_kerja": {
-                    "type": "string",
-                    "example": "POLRES JOMBANG"
                 }
             }
         },
@@ -286,12 +324,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "1.1",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Backend API Polres & Polsek",
-	Description:      "API Service untuk Manajemen User dan Pelaporan Data Kepolisian.",
+	Title:            "Backend API Polres & Polsek (Sistem NRP)",
+	Description:      "API Service untuk Manajemen User (Login NRP), Validasi Akun, dan Pelaporan Data Kepolisian.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

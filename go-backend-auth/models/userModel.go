@@ -15,9 +15,14 @@ const (
 
 type User struct {
 	gorm.Model
-	Name        string `json:"nama"`
-	Email       string `gorm:"unique" json:"email"`
+	NamaLengkap string `json:"nama_lengkap"`
+	NRP         string `gorm:"unique;not null" json:"nrp"`
+	Jabatan     string `json:"jabatan"`
 	Password    string `json:"-"`
 	Role        Role   `json:"role"`
-	SatuanKerja string `json:"satuan_kerja"`
+	FotoProfil  string `json:"foto_profil"`
+	
+	// UPDATE DI SINI:
+	// Kita tambahkan tag gorm type:enum agar sinkron dengan database
+	Status      string `json:"status" gorm:"type:enum('active', 'pending');default:'pending'"` 
 }

@@ -10,24 +10,26 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	// Internal Packages (Sesuaikan path dengan go.mod Anda)
+	// Internal Packages
 	"github.com/wahyualif23014/backendGO/controllers"
 	"github.com/wahyualif23014/backendGO/initializers"
-	_ "github.com/wahyualif23014/backendGO/docs"
 	"github.com/wahyualif23014/backendGO/middleware"
 	"github.com/wahyualif23014/backendGO/models"
+
+	// Import Docs (Wajib underscore agar init() jalan)
+	_ "github.com/wahyualif23014/backendGO/docs"
 )
 
-// Inisialisasi Environment & Database sebelum aplikasi jalan
+// Inisialisasi Environment & Database
 func init() {
 	initializers.LoadEnvVariables()
 	initializers.ConnectToDB()
 	initializers.SyncDatabase()
 }
 
-// @title           Backend API Polres & Polsek
-// @version         1.0
-// @description     API Service untuk Manajemen User dan Pelaporan Data Kepolisian.
+// @title           Backend API Polres & Polsek (Sistem NRP)
+// @version         1.1
+// @description     API Service untuk Manajemen User (Login NRP), Validasi Akun, dan Pelaporan Data Kepolisian.
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name    Tim IT Support
@@ -60,24 +62,28 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-	r.POST("/signup", controllers.Signup) // Register awal (bisa dimatikan saat production)
-	r.POST("/login", controllers.Login)
+	
+	r.POST("/signup", controllers.Signup) // Register (Status default: Pending)
+	r.POST("/login", controllers.Login)   // Login (Hanya Status Active)
 
-	// --- 4. Protected Routes (Harus Login) ---
+	// --- 4. Protected Routes (Wajib Login & Punya Token) ---
 	authorized := r.Group("/")
 	authorized.Use(middleware.RequireAuth)
 
 	{
-		// A. ADMIN GROUP: Manajemen User (CRUD)
+		// A. ADMIN GROUP: Manajemen User
 		// Hanya bisa diakses oleh Role "admin"
 		adminRoutes := authorized.Group("/admin")
 		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
-			adminRoutes.POST("/users", controllers.CreateUser)       // Create User
-			adminRoutes.GET("/users", controllers.GetUsers)          // Read All
-			adminRoutes.GET("/users/:id", controllers.GetUserByID)   // Read One
-			adminRoutes.PUT("/users/:id", controllers.UpdateUser)    // Update
-			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Delete
+			adminRoutes.POST("/users", controllers.CreateUser)            // Create (Langsung Active)
+			adminRoutes.GET("/users", controllers.GetUsers)               // Read All
+			adminRoutes.GET("/users/:id", controllers.GetUserByID)        // Read One
+			adminRoutes.PUT("/users/:id", controllers.UpdateUser)         // Update Data
+			adminRoutes.DELETE("/users/:id", controllers.DeleteUser)      // Soft Delete
+			
+			// FITUR BARU: Validasi Akun
+			adminRoutes.PUT("/users/:id/approve", controllers.ApproveUser) // Ubah Pending -> Active
 		}
 
 		// B. INPUT GROUP: Input Laporan
@@ -86,22 +92,27 @@ func main() {
 		inputRoutes.Use(middleware.RequireRoles(models.RolePolres, models.RolePolsek, models.RoleAdmin))
 		{
 			inputRoutes.POST("/laporan", func(c *gin.Context) {
-				// Nanti ganti function ini dengan controller laporan yang asli
+				// TODO: Sambungkan ke controller laporan nanti
 				c.JSON(200, gin.H{"message": "Laporan berhasil diinput"})
 			})
 		}
 
 		// C. VIEW GROUP: Dashboard & Monitoring
-		// Bisa diakses: Semua User yang login (termasuk RoleView)
+		// Bisa diakses: Semua User Active
 		viewRoutes := authorized.Group("/view")
 		viewRoutes.Use(middleware.RequireRoles(models.RoleView, models.RoleAdmin, models.RolePolres, models.RolePolsek))
 		{
 			viewRoutes.GET("/dashboard", func(c *gin.Context) {
 				user, _ := c.Get("user")
+				userData := user.(models.User)
+				
 				c.JSON(200, gin.H{
-					"message":   "Dashboard Data",
-					"user_name": user.(models.User).Name,
-					"role":      user.(models.User).Role,
+					"message":       "Dashboard Data",
+					"nama_lengkap":  userData.NamaLengkap,
+					"nrp":           userData.NRP,
+					"jabatan":       userData.Jabatan,
+					"role":          userData.Role,
+					"status":        userData.Status, // Penting agar Frontend tahu statusnya
 				})
 			})
 		}

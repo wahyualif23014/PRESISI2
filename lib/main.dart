@@ -1,33 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider Lama
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // TAMBAHAN: Riverpod
+import 'package:provider/provider.dart'; // State Management Legacy
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // State Management Modern
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Import File Anda
 import 'auth/provider/auth_provider.dart';
 import './router/router_provider.dart';
-
 import 'features/admin/dashboard/providers/dashboard_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Setup Tanggal
+  // 1. Setup Format Tanggal (Indonesia)
   await initializeDateFormatting('id_ID');
-  
-  // 2. Setup Supabase
-  await Supabase.initialize(
-    url: 'https://hbrcteaygmjrzwjyuzje.supabase.co',
-    anonKey: 'sb_publishable_iSnXoF0gzV6j3A4-ynRwwQ_ck5tg477',
-  );
 
-  // 3. Setup Auth Provider (Legacy/Existing)
   final authProvider = AuthProvider();
   await authProvider.tryAutoLogin();
 
-  // 4. Setup Router
+  // 4. Setup Router (Dengan Redirect Logic)
   final appRouter = AppRouter(authProvider);
 
   // 5. Jalankan Aplikasi
@@ -36,6 +26,7 @@ Future<void> main() async {
       child: MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: authProvider),
+
           ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ],
         child: MyApp(appRouter: appRouter),
@@ -55,10 +46,10 @@ class MyApp extends StatelessWidget {
       title: 'Sistem Ketahanan Pangan Presisi',
       debugShowCheckedModeBanner: false,
 
-      // Konfigurasi Router
+      // Konfigurasi Router (GoRouter)
       routerConfig: appRouter.router,
 
-      // Localization
+      // Localization (Bahasa Indonesia)
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -67,11 +58,9 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       locale: const Locale('id', 'ID'),
 
-      // Theme
+      // Theme Configuration
       theme: _lightTheme,
       themeMode: ThemeMode.light,
-
-      // Error Handling yang Aman
       builder: (context, child) {
         ErrorWidget.builder = (details) => const _SafeErrorView();
         return child ?? const SizedBox.shrink();
@@ -83,7 +72,7 @@ class MyApp extends StatelessWidget {
 // --- CONFIG TEMA ---
 final ThemeData _lightTheme = ThemeData(
   useMaterial3: true,
-  fontFamily: 'Ramabhadra',
+  fontFamily: 'Ramabhadra', // Pastikan font terdaftar di pubspec.yaml
   colorScheme: ColorScheme.fromSeed(
     seedColor: Colors.orange,
     brightness: Brightness.light,

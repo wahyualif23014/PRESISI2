@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../../router/route_names.dart';
-import '../../../../auth/provider/auth_provider.dart';
 
-// Ganti import ini dengan path AppColors Anda
-// import '../../../../core/theme/app_colors.dart'; 
+// Import Route & Provider
+import '../../router/route_names.dart';
+import '../../auth/provider/auth_provider.dart';
 
 class CustomSplashScreen extends StatefulWidget {
   const CustomSplashScreen({super.key});
@@ -28,17 +27,10 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
   void initState() {
     super.initState();
 
+    // 1. Setup Controller
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    );
-
-    // Animasi Jatuh: Dari atas layar (-500) ke posisi 0 (Tengah)
-    _bounceAnimation = Tween<double>(begin: -600, end: 0).animate(
-      CurvedAnimation(
-        parent: _bounceController,
-        curve: Curves.bounceOut,
-      ),
     );
 
     _expandController = AnimationController(
@@ -46,7 +38,22 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
       duration: const Duration(milliseconds: 600),
     );
 
-    // Animasi Scale: Dari ukuran normal 1x menjadi sangat besar 35x
+    _logoController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+
+    // 2. Setup Animations
+    
+    // Animasi Jatuh: Dari atas layar (-600) ke posisi 0 (Tengah)
+    _bounceAnimation = Tween<double>(begin: -600, end: 0).animate(
+      CurvedAnimation(
+        parent: _bounceController,
+        curve: Curves.bounceOut,
+      ),
+    );
+
+    // Animasi Scale: Membesar memenuhi layar (Efek transisi background)
     _expandAnimation = Tween<double>(begin: 1.0, end: 35.0).animate(
       CurvedAnimation(
         parent: _expandController,
@@ -54,11 +61,7 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
       ),
     );
 
-    _logoController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    );
-
+    // Animasi Fade Logo
     _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoController,
@@ -66,19 +69,31 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
       ),
     );
 
+    // 3. Mulai Urutan Animasi
     _startAnimationSequence();
   }
 
   void _startAnimationSequence() async {
+    // Langkah 1: Bola Jatuh
     await _bounceController.forward();
     await Future.delayed(const Duration(milliseconds: 200));
+    
+    // Langkah 2: Bola Meledak/Expand (Jadi Background)
     await _expandController.forward();
+    
+    // Langkah 3: Logo Muncul
     await _logoController.forward();
+    
+    // Langkah 4: Tahan sebentar
     await Future.delayed(const Duration(seconds: 2));
     
     if (mounted) {
+      // Langkah 5: Cek Status Login (Go Backend)
+      // Kita menggunakan 'read' karena hanya butuh cek sekali, tidak perlu listen perubahan UI
       final auth = context.read<AuthProvider>();
-      if (auth.isAuth) {
+      
+      // Update: Menggunakan getter 'isAuthenticated' sesuai Provider baru
+      if (auth.isAuthenticated) {
         context.go(RouteNames.dashboard);
       } else {
         context.go(RouteNames.login);
@@ -96,45 +111,37 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    // Hardcode warna agar tidak perlu import AppColors jika belum ada
+    // Warna Hardcode (Sesuai request)
     const Color greenLight = Color(0xFF4ADE80);
-    const Color orangeAccent = Color(0xFFF97316);
-
+    const Color orangeAccent = Color(0xFFF97316); // Warna utama
     const List<Color> gradientColors = [greenLight, orangeAccent];
 
-    // Menggunakan LayoutBuilder agar ukuran layar didapat secara dinamis
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
-        final screenHeight = constraints.maxHeight;
         
-        // Ukuran bola awal (misal 100x100)
+        // Ukuran bola awal
         const double ballSize = 100;
 
         return Scaffold(
           backgroundColor: Colors.white,
           body: Stack(
-            // Stack Fit Expand memastikan children bisa memenuhi layar
             fit: StackFit.expand,
-            alignment: Alignment.center, // Kunci agar default child di tengah
+            alignment: Alignment.center,
             children: [
               
-              // LAYER 1: BOLA ANIMASI
+              // --- LAYER 1: BOLA ANIMASI (BACKGROUND) ---
               AnimatedBuilder(
                 animation: Listenable.merge([_bounceController, _expandController]),
                 builder: (context, child) {
-                  // Hitung Translation Y
-                  // Jika value -600 (awal), bola di atas layar.
-                  // Jika value 0 (akhir), bola di tengah layar.
                   final double translationY = _bounceAnimation.value;
-                  
                   final double scale = _expandAnimation.value;
 
                   return Transform.translate(
                     offset: Offset(0, translationY),
                     child: Transform.scale(
                       scale: scale,
-                      child: Center( // Center memastikan Container tetap di tengah sebelum transform
+                      child: Center(
                         child: Container(
                           width: ballSize,
                           height: ballSize,
@@ -153,28 +160,31 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
                 },
               ),
 
-              // LAYER 2: KONTEN (LOGO & TEXT)
-              // Center Widget digunakan untuk memastikan konten benar-benar di tengah
+              // --- LAYER 2: LOGO & TEXT (MUNCUL SETELAH EXPAND) ---
               Center(
                 child: FadeTransition(
                   opacity: _logoAnimation,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center, // Vertical Center
-                    crossAxisAlignment: CrossAxisAlignment.center, // Horizontal Center
-                    mainAxisSize: MainAxisSize.min, // Agar column setinggi konten saja
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // LOGO
                       Image.asset(
-                        'assets/image/logo.png',
-                        width: screenWidth * 0.4, // Lebar logo responsif (40% lebar layar)
+                        'assets/image/logo.png', // Pastikan path ini benar di pubspec.yaml
+                        width: screenWidth * 0.35,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => 
+                            const Icon(Icons.shield, size: 100, color: Colors.white),
                       ),
+                      
                       const SizedBox(height: 24),
+                      
+                      // JUDUL UTAMA
                       const Text(
                         "SIKAP PRESISI",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: Colors.white, // Putih karena background sudah orange/green
                           letterSpacing: 1.2,
                           shadows: [
                             Shadow(
@@ -186,7 +196,10 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      
                       const SizedBox(height: 8),
+                      
+                      // SUB JUDUL
                       const Text(
                         "SISTEM KETAHANAN PANGAN\nPOLDA JAWA TIMUR",
                         textAlign: TextAlign.center,
@@ -202,10 +215,10 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
                 ),
               ),
 
-              // LAYER 3: VERSI (Di Bawah)
+              // --- LAYER 3: VERSI APP ---
               Positioned(
                 bottom: 40,
-                left: 0, 
+                left: 0,
                 right: 0,
                 child: FadeTransition(
                   opacity: _logoAnimation,

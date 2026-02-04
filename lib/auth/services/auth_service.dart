@@ -1,104 +1,72 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../auth/models/auth_model.dart'; // Pastikan import path ini sesuai dengan file AuthModel Anda
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class AuthService {
-  // Instance Supabase Client
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final String baseUrl = 'http://172.29.164.231:8080'; 
 
-  // ------------------------------------------------------------------------
-  // 1. SIGN IN (LOGIN)
-  // ------------------------------------------------------------------------
-  Future<AuthModel> login(String email, String password) async {
+  // --- LOGIN ---
+  Future<Map<String, dynamic>> login(String nrp, String password) async {
     try {
-      print("Mencoba login ke Supabase: $email");
-
-      final AuthResponse res = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nrp': nrp,
+          'password': password,
+        }),
       );
 
-      final Session? session = res.session;
-      final User? user = res.user;
+      final data = jsonDecode(response.body);
 
-      if (session != null && user != null) {
-
-        return _mapUserToAuthModel(user, session.accessToken);
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data, // Berisi token & user
+        };
       } else {
-        throw 'Login gagal: Sesi tidak ditemukan.';
+        return {
+          'success': false,
+          'message': data['error'] ?? 'Terjadi kesalahan login',
+        };
       }
-    } on AuthException catch (e) {
-      print("Supabase Auth Error: ${e.message}");
-      throw e.message; 
     } catch (e) {
-      print("General Error: $e");
-      throw 'Terjadi kesalahan sistem.';
+      return {'success': false, 'message': 'Koneksi error: $e'};
     }
   }
 
-  // 2. SIGN UP (REGISTER - PENTING UNTUK 4 USER ANDA)
-
-  Future<void> signUp({
-    required String email,
-    required String password,
+  // --- REGISTER ---
+  Future<Map<String, dynamic>> register({
     required String nama,
+    required String nrp,
+    required String jabatan,
+    required String password,
     required String role,
-    required String satuanKerja,
   }) async {
     try {
-      await _supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'nama': nama,
+      final response = await http.post(
+        Uri.parse('$baseUrl/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nama_lengkap': nama, // Wajib sama dengan struct Go
+          'nrp': nrp,
+          'jabatan': jabatan,
+          'password': password,
           'role': role,
-          'satuan_kerja': satuanKerja,
-        },
+        }),
       );
-      print("User $email berhasil didaftarkan dengan role $role");
-    } on AuthException catch (e) {
-      throw e.message;
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {
+          'success': false, 
+          'message': data['error'] ?? 'Gagal mendaftar'
+        };
+      }
     } catch (e) {
-      throw 'Gagal mendaftar: $e';
+      return {'success': false, 'message': 'Koneksi error: $e'};
     }
-  }
-
-  // ------------------------------------------------------------------------
-  // 3. GET CURRENT USER (CEK SESSION SAAT APLIKASI DIBUKA)
-  // ------------------------------------------------------------------------
-  AuthModel? getCurrentUser() {
-    final session = _supabase.auth.currentSession;
-    final user = _supabase.auth.currentUser;
-
-    if (session != null && user != null) {
-      // Cek apakah token expired (opsional, supabase handle auto refresh biasanya)
-      if (session.isExpired) return null;
-      
-      return _mapUserToAuthModel(user, session.accessToken);
-    }
-    return null;
-  }
-
-  // ------------------------------------------------------------------------
-  // 4. SIGN OUT (LOGOUT)
-  // ------------------------------------------------------------------------
-  Future<void> signOut() async {
-    await _supabase.auth.signOut();
-  }
-
-  // ------------------------------------------------------------------------
-  // HELPER: MAPPING DATA SUPABASE -> AUTH MODEL
-  // ------------------------------------------------------------------------
-  AuthModel _mapUserToAuthModel(User user, String token) {
-    // Mengambil data dari user_metadata
-    final metadata = user.userMetadata ?? {};
-
-    return AuthModel.fromJson(
-      {
-        'nama': metadata['nama'],
-        'role': metadata['role'],
-        'satuan_kerja': metadata['satuan_kerja'],
-      },
-      token,
-    );
   }
 }

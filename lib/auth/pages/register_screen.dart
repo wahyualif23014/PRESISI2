@@ -12,13 +12,13 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controllers
+  // Controllers untuk data sesuai Backend Go
   final _namaController = TextEditingController();
-  final _nrpController = TextEditingController(); // Menggantikan Email
-  final _jabatanController = TextEditingController(); // Menggantikan Satker
+  final _nrpController = TextEditingController(); 
+  final _jabatanController = TextEditingController();
   final _passController = TextEditingController();
 
-  // Warna Tema
+  // Warna Tema (Konsisten dengan Login)
   final Color _primaryGold = const Color(0xFFC0A100);
   final Color _btnGreen = const Color(0xFF10B981);
 
@@ -31,30 +31,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // --- LOGIC INTEGRASI GO BACKEND ---
   void _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Tutup Keyboard
+    FocusScope.of(context).unfocus();
+
     final auth = context.read<AuthProvider>();
 
-    // Mapping data sesuai input UI baru ke fungsi register yang lama
-    final success = await auth.register(
-      email: _nrpController.text.trim(), // NRP digunakan sebagai identitas login
-      password: _passController.text.trim(),
+    // Panggil fungsi register di Provider
+    // Mengirim data sesuai struct JSON Go Backend
+    final String? error = await auth.register(
       nama: _namaController.text.trim(),
-      role: 'USER', // Default role user biasa
-      satuanKerja: _jabatanController.text.trim(),
+      nrp: _nrpController.text.trim(),
+      jabatan: _jabatanController.text.trim(),
+      password: _passController.text.trim(),
+      // Default Role untuk pendaftar umum (Sesuaikan dengan ENUM di Go: polsek/polres/view)
+      role: 'polsek', 
     );
 
     if (!mounted) return;
 
-    if (success) {
+    if (error == null) {
+      // --- SUKSES ---
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registrasi Berhasil! Silakan Login."), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text("Registrasi Berhasil! Silakan tunggu validasi Admin untuk Login."),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
       );
+      // Kembali ke Login Screen
       Navigator.pop(context); 
     } else {
+      // --- GAGAL ---
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.errorMessage ?? "Registrasi Gagal"), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(error), // Pesan error asli dari Backend (misal: NRP sudah ada)
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -88,10 +104,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // --- Header ---
                     _RegisterHeader(primaryGold: _primaryGold),
                     
                     const SizedBox(height: 30),
 
+                    // --- Input Nama Lengkap ---
                     _CustomLabelInput(
                       label: "Nama Lengkap",
                       hint: "Masukan Nama Lengkap Anda",
@@ -102,6 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
+                    // --- Input NRP ---
                     _CustomLabelInput(
                       label: "No NRP",
                       hint: "Masukan NRP Anda Disini",
@@ -113,9 +132,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
+                    // --- Input Jabatan ---
                     _CustomLabelInput(
                       label: "Jabatan",
-                      hint: "Masukan Jabatan Anda",
+                      hint: "Contoh: Kanit Reskrim",
                       controller: _jabatanController,
                       primaryColor: _primaryGold,
                       validator: (v) => v!.isEmpty ? "Jabatan wajib diisi" : null,
@@ -123,9 +143,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
+                    // --- Input Password ---
                     _CustomLabelInput(
                       label: "Kata Sandi",
-                      hint: "Masukan Kata Sandi Anda Disini",
+                      hint: "Buat Kata Sandi",
                       controller: _passController,
                       primaryColor: _primaryGold,
                       isPassword: true,
@@ -134,12 +155,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 30),
 
+                    // --- Action Buttons ---
                     Consumer<AuthProvider>(
                       builder: (context, auth, _) {
                         return Column(
                           children: [
+                            // Tombol Simpan
                             _ActionButton(
-                              text: "Simpan",
+                              text: "Daftar Sekarang",
                               color: _primaryGold,
                               isLoading: auth.isLoading,
                               onPressed: _handleRegister,
@@ -147,11 +170,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             
                             const SizedBox(height: 15),
                             
+                            // Tombol Kembali ke Login
                             _ActionButton(
-                              text: "Sudah Punya Akun? Login Di sini",
+                              text: "Sudah Punya Akun? Login",
                               color: _btnGreen,
-                              isLoading: false,
-                              onPressed: () => Navigator.pop(context),
+                              isLoading: false, // Tombol back tidak perlu loading
+                              onPressed: auth.isLoading ? null : () => Navigator.pop(context),
                             ),
                           ],
                         );
@@ -169,7 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 // =========================================================
-// WIDGET UI COMPONENTS
+// WIDGET UI COMPONENTS (Konsisten dengan Login Screen)
 // =========================================================
 
 class _RegisterHeader extends StatelessWidget {
@@ -182,26 +206,27 @@ class _RegisterHeader extends StatelessWidget {
       children: [
         Image.asset(
           'assets/image/logo.png', 
-          height: 100,
+          height: 80, // Sedikit lebih kecil dari login agar muat
           errorBuilder: (context, error, stackTrace) => 
-              const Icon(Icons.shield, size: 80, color: Colors.white),
+              const Icon(Icons.shield, size: 60, color: Colors.white),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 15),
         const Text(
-          "Selamat Datang",
+          "Registrasi Akun",
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         const Text(
-          "SIKAP PRESISI Polda Jawa Timur",
+          "Lengkapi data diri Anda dengan benar",
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Colors.white70,
           ),
         ),
       ],
@@ -245,7 +270,7 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: 15, // Sedikit lebih kecil agar compact
           ),
         ),
         const SizedBox(height: 8),
@@ -257,10 +282,10 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
           validator: widget.validator,
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: TextStyle(color: Colors.grey[400]),
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
             filled: true,
             fillColor: Colors.black.withOpacity(0.3),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide(color: widget.primaryColor, width: 1.5),
@@ -314,7 +339,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: 48,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -332,7 +357,7 @@ class _ActionButton extends StatelessWidget {
             : Text(
                 text,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
