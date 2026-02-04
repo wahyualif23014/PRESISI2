@@ -53,7 +53,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Membuat user baru dengan NRP dan Role tertentu (Langsung Active)",
+                "description": "Membuat user baru dengan NRP dan Role tertentu",
                 "consumes": [
                     "application/json"
                 ],
@@ -129,7 +129,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengupdate Nama, Jabatan, atau Role user",
+                "description": "Mengupdate Nama, Jabatan, atau Role user. Gunakan ini untuk mengubah role dari 'view' ke 'polsek/polres'.",
                 "consumes": [
                     "application/json"
                 ],
@@ -139,7 +139,7 @@ const docTemplate = `{
                 "tags": [
                     "admin-users"
                 ],
-                "summary": "Edit Data User",
+                "summary": "Edit Data User (Termasuk Upgrade Role)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -206,44 +206,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/admin/users/{id}/approve": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengubah status user dari pending menjadi active",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-users"
-                ],
-                "summary": "Setujui User (Validasi Akun)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -305,6 +267,15 @@ const docTemplate = `{
                 "polres",
                 "polsek"
             ],
+            "x-enum-comments": {
+                "RoleView": "Default untuk user baru (pengganti pending)"
+            },
+            "x-enum-descriptions": [
+                "",
+                "Default untuk user baru (pengganti pending)",
+                "",
+                ""
+            ],
             "x-enum-varnames": [
                 "RoleAdmin",
                 "RoleView",
@@ -324,12 +295,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.1",
+	Version:          "1.2",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Backend API Polres & Polsek (Sistem NRP)",
-	Description:      "API Service untuk Manajemen User (Login NRP), Validasi Akun, dan Pelaporan Data Kepolisian.",
+	Description:      "API Service untuk Manajemen User (Login NRP) dan Pelaporan Data Kepolisian.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

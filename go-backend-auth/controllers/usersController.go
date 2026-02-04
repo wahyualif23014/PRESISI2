@@ -29,7 +29,7 @@ type UpdateUserInput struct {
 
 // CreateUser godoc
 // @Summary      Tambah User Baru (Admin Only)
-// @Description  Membuat user baru dengan NRP dan Role tertentu (Langsung Active)
+// @Description  Membuat user baru dengan NRP dan Role tertentu
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
@@ -56,9 +56,8 @@ func CreateUser(c *gin.Context) {
 		NRP:         body.NRP,
 		Jabatan:     body.Jabatan,
 		Password:    string(hash),
-		Role:        body.Role,
+		Role:        body.Role, // Admin boleh menentukan Role saat membuat user
 		FotoProfil:  "",
-		Status:      "active", // KARENA ADMIN YANG BUAT, LANGSUNG AKTIF
 	}
 
 	result := initializers.DB.Create(&user)
@@ -69,34 +68,6 @@ func CreateUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User berhasil ditambahkan", "data": user})
-}
-
-// ApproveUser godoc
-// @Summary      Setujui User (Validasi Akun)
-// @Description  Mengubah status user dari pending menjadi active
-// @Tags         admin-users
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      int  true  "User ID"
-// @Success      200  {object}  map[string]interface{}
-// @Router       /admin/users/{id}/approve [put]
-func ApproveUser(c *gin.Context) {
-	id := c.Param("id")
-	var user models.User
-
-	if err := initializers.DB.First(&user, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
-		return
-	}
-
-	// Update status menjadi "active"
-	initializers.DB.Model(&user).Update("status", "active")
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User berhasil divalidasi dan diaktifkan",
-		"data":    user,
-	})
 }
 
 // GetUsers godoc
@@ -144,8 +115,8 @@ func GetUserByID(c *gin.Context) {
 }
 
 // UpdateUser godoc
-// @Summary      Edit Data User
-// @Description  Mengupdate Nama, Jabatan, atau Role user
+// @Summary      Edit Data User (Termasuk Upgrade Role)
+// @Description  Mengupdate Nama, Jabatan, atau Role user. Gunakan ini untuk mengubah role dari 'view' ke 'polsek/polres'.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
@@ -170,10 +141,11 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	// Update data
 	initializers.DB.Model(&user).Updates(models.User{
 		NamaLengkap: body.NamaLengkap,
 		Jabatan:     body.Jabatan,
-		Role:        body.Role,
+		Role:        body.Role, // Di sini Admin mengubah role User
 	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate", "data": user})

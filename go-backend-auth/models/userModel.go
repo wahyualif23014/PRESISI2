@@ -4,11 +4,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// Definisi Role sebagai ENUM
 type Role string
 
 const (
 	RoleAdmin  Role = "admin"
-	RoleView   Role = "view"
+	RoleView   Role = "view"   // Default untuk user baru (pengganti pending)
 	RolePolres Role = "polres"
 	RolePolsek Role = "polsek"
 )
@@ -19,10 +20,12 @@ type User struct {
 	NRP         string `gorm:"unique;not null" json:"nrp"`
 	Jabatan     string `json:"jabatan"`
 	Password    string `json:"-"`
-	Role        Role   `json:"role"`
-	FotoProfil  string `json:"foto_profil"`
 	
 	// UPDATE DI SINI:
-	// Kita tambahkan tag gorm type:enum agar sinkron dengan database
-	Status      string `json:"status" gorm:"type:enum('active', 'pending');default:'pending'"` 
+	// 1. Type data Enum di MySQL ('admin','view','polres','polsek')
+	// 2. Default value adalah 'view'
+	Role        Role   `json:"role" gorm:"type:enum('admin','view','polres','polsek');default:'view'"`
+	
+	FotoProfil  string `json:"foto_profil"`
+
 }

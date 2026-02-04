@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  final String baseUrl = 'http://172.29.164.231:8080'; 
+  final String baseUrl = 'http://10.16.2.163:8080'; 
 
   // --- LOGIN ---
   Future<Map<String, dynamic>> login(String nrp, String password) async {
@@ -16,12 +16,13 @@ class AuthService {
         }),
       );
 
+      // Decode response body
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'data': data, // Berisi token & user
+          'data': data, // Berisi token & user object
         };
       } else {
         return {
@@ -30,7 +31,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Koneksi error: $e'};
+      return {'success': false, 'message': 'Gagal terhubung ke server ($e)'};
     }
   }
 
@@ -47,7 +48,7 @@ class AuthService {
         Uri.parse('$baseUrl/signup'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'nama_lengkap': nama, // Wajib sama dengan struct Go
+          'nama_lengkap': nama, // Key JSON harus sama dengan struct Go
           'nrp': nrp,
           'jabatan': jabatan,
           'password': password,
@@ -66,7 +67,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Koneksi error: $e'};
+      return {'success': false, 'message': 'Gagal terhubung ke server ($e)'};
     }
   }
 }

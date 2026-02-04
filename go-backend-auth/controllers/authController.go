@@ -12,16 +12,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Input Register sesuai Database baru
+// Input Register
 type RegisterInput struct {
-	NamaLengkap string      `json:"nama_lengkap" binding:"required"`
-	NRP         string      `json:"nrp" binding:"required"`
-	Jabatan     string      `json:"jabatan" binding:"required"`
-	Password    string      `json:"password" binding:"required"`
-	Role        models.Role `json:"role" binding:"required"`
+	NamaLengkap string `json:"nama_lengkap" binding:"required"`
+	NRP         string `json:"nrp" binding:"required"`
+	Jabatan     string `json:"jabatan" binding:"required"`
+	Password    string `json:"password" binding:"required"`
+	// Role tidak wajib di-bind dari JSON saat Signup publik, 
+	// karena kita akan paksa jadi 'view'
 }
 
-// Input Login menggunakan NRP
+// Input Login
 type LoginInput struct {
 	NRP      string `json:"nrp" binding:"required"`
 	Password string `json:"password" binding:"required"`
@@ -48,19 +49,22 @@ func Signup(c *gin.Context) {
 		NRP:         body.NRP,
 		Jabatan:     body.Jabatan,
 		Password:    string(hash),
-		Role:        body.Role,
-		FotoProfil:  "",        // Default kosong saat register
-		Status:      "pending", // Set status PENDING karena daftar sendiri
+		// FORCE DEFAULT ROLE: VIEW
+		// User yang daftar sendiri hanya bisa melihat data dashboard umum.
+		// Admin harus meng-update role mereka nanti menjadi 'polsek'/'polres'.
+		Role:        models.RoleView, 
+		FotoProfil:  "",
 	}
 
 	result := initializers.DB.Create(&user)
 
 	if result.Error != nil {
+		// Error biasanya karena NRP Duplicate
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal mendaftar. NRP mungkin sudah terdaftar."})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Registrasi berhasil. Silakan hubungi Admin untuk validasi akun."})
+	c.JSON(http.StatusOK, gin.H{"message": "Registrasi berhasil. Silakan Login."})
 }
 
 func Login(c *gin.Context) {
@@ -79,16 +83,6 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "NRP atau Password salah"})
 		return
 	}
-
-	// --- VALIDASI STATUS AKUN ---
-	if user.Status != "active" {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error":   "Akun belum aktif",
-			"message": "Akun Anda masih dalam status pending. Hubungi admin untuk persetujuan.",
-		})
-		return
-	}
-	// ---------------------------
 
 	// 2. Cek Password
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))

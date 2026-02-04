@@ -21,7 +21,7 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 2. Support format "Bearer <token>" (Standar Industri)
+	// 2. Support format "Bearer <token>"
 	tokenString := authHeader
 	if len(strings.Split(authHeader, " ")) == 2 {
 		tokenString = strings.Split(authHeader, " ")[1]
@@ -53,9 +53,9 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 5. Query DB (OPTIMIZED SELECT)
-	// Kita hanya mengambil kolom yang ada di struct User baru (NamaLengkap, NRP, Jabatan)
-	// Password tidak diambil demi keamanan.
+	// 5. Query DB (OPTIMIZED)
+	// Kita ambil data user berdasarkan ID dari token.
+	// Field 'status' sudah tidak perlu diambil karena sudah dihapus dari Model.
 	var user models.User
 	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "role", "jabatan").First(&user, claims["sub"])
 
@@ -97,7 +97,7 @@ func RequireRoles(allowedRoles ...models.Role) gin.HandlerFunc {
 		if !isAllowed {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error":   "Access denied",
-				"message": fmt.Sprintf("Role '%s' tidak diizinkan mengakses resource ini", user.Role),
+				"message": fmt.Sprintf("Role '%s' tidak diizinkan mengakses resource ini. Hubungi Admin.", user.Role),
 			})
 			return
 		}

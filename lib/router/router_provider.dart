@@ -45,10 +45,6 @@ class AppRouter {
       final isLoggedIn = authProvider.isAuthenticated;
       final location = state.matchedLocation;
 
-      // A. LOGIC SPLASH SCREEN (PENTING)
-      // Jika sedang di Splash Screen, JANGAN redirect apapun.
-      // Biarkan Splash Screen menyelesaikan animasinya sendiri, 
-      // lalu Splash Screen yang akan memanggil context.go() secara manual.
       if (location == RouteNames.splash) {
         return null; 
       }
@@ -56,21 +52,15 @@ class AppRouter {
       // Cek apakah user sedang berada di halaman Login atau Register
       final isAuthRoute = location == RouteNames.login || location == RouteNames.register;
 
-      // B. JIKA SUDAH LOGIN (Logic yang Anda Minta)
       if (isLoggedIn) {
-        // Jika user sudah login, TAPI user berada di halaman Login/Register
-        // Maka PAKSA arahkan ke Dashboard
         if (isAuthRoute) {
           return RouteNames.dashboard;
         }
-        // Jika user sudah login dan berada di halaman lain (dashboard dll), biarkan.
         return null;
       }
 
       // C. JIKA BELUM LOGIN
       if (!isLoggedIn) {
-        // Jika user belum login, dan mencoba mengakses halaman selain Login/Register/Splash
-        // Maka PAKSA arahkan ke Login
         if (!isAuthRoute) {
           return RouteNames.login;
         }

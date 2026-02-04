@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
+  // Gunakan const constructor untuk performa
   final _storage = const FlutterSecureStorage();
 
   UserModel? _user;
@@ -17,7 +18,13 @@ class AuthProvider with ChangeNotifier {
   UserModel? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
-  bool get isAuthenticated => _token != null;
+  
+  // Logic Authenticated: Token ada DAN tidak expired
+  bool get isAuthenticated {
+    if (_token == null) return false;
+    // Optional: Tambahan safety check (meski biasanya sudah dicek saat load)
+    return !JwtDecoder.isExpired(_token!);
+  }
 
   // --- LOGIN LOGIC ---
   Future<String?> login(String nrp, String password) async {
@@ -39,11 +46,11 @@ class AuthProvider with ChangeNotifier {
       
       _isLoading = false;
       notifyListeners();
-      return null; // Null artinya sukses tanpa error message
+      return null; // Sukses (Null Error)
     } else {
       _isLoading = false;
       notifyListeners();
-      return result['message']; // Return pesan error
+      return result['message']; // Return pesan error dari Backend
     }
   }
 
@@ -80,20 +87,32 @@ class AuthProvider with ChangeNotifier {
   Future<void> tryAutoLogin() async {
     final savedToken = await _storage.read(key: 'jwt_token');
     
-    if (savedToken == null) return;
+    if (savedToken == null) {
+      // Pastikan state bersih jika tidak ada token
+      _token = null;
+      _user = null;
+      notifyListeners();
+      return;
+    }
 
-    // Cek Expired Token
+    // Cek apakah token expired?
     if (JwtDecoder.isExpired(savedToken)) {
+      // Jika expired, hapus semua data login
       await logout();
       return;
     }
 
+    // Jika token Valid, load data
     _token = savedToken;
-    
-    // Load User Data
     final userString = await _storage.read(key: 'user_data');
     if (userString != null) {
-      _user = UserModel.fromJson(jsonDecode(userString));
+      try {
+        _user = UserModel.fromJson(jsonDecode(userString));
+      } catch (e) {
+        // Jika data user corrupt, logout paksa
+        await logout();
+        return;
+      }
     }
 
     notifyListeners();
@@ -103,7 +122,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _user = null;
-    await _storage.deleteAll();
+    await _storage.deleteAll(); // Hapus semua data di Secure Storage
     notifyListeners();
   }
 }
