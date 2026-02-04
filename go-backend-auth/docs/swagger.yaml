@@ -1,0 +1,181 @@
+basePath: /
+definitions:
+  controllers.CreateUserInput:
+    properties:
+      email:
+        example: kapolres@polri.go.id
+        type: string
+      nama:
+        example: Kapolres A
+        type: string
+      password:
+        example: rahasia123
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/models.Role'
+        example: polres
+      satuan_kerja:
+        example: POLRES JOMBANG
+        type: string
+    type: object
+  controllers.UpdateUserInput:
+    properties:
+      nama:
+        example: Kapolres A Edit
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/models.Role'
+        example: polres
+      satuan_kerja:
+        example: POLRES JOMBANG
+        type: string
+    type: object
+  models.Role:
+    enum:
+    - admin
+    - view
+    - polres
+    - polsek
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleView
+    - RolePolres
+    - RolePolsek
+host: localhost:8080
+info:
+  contact:
+    email: admin@polri.go.id
+    name: Tim IT Support
+  description: API Service untuk Manajemen User dan Pelaporan Data Kepolisian.
+  termsOfService: http://swagger.io/terms/
+  title: Backend API Polres & Polsek
+  version: "1.0"
+paths:
+  /admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil list semua user yang terdaftar
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Semua User
+      tags:
+      - admin-users
+    post:
+      consumes:
+      - application/json
+      description: Membuat user baru dengan role tertentu
+      parameters:
+      - description: Data User Baru
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tambah User Baru (Admin Only)
+      tags:
+      - admin-users
+  /admin/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete user berdasarkan ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hapus User
+      tags:
+      - admin-users
+    get:
+      consumes:
+      - application/json
+      description: Mengambil data user berdasarkan ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Detail User
+      tags:
+      - admin-users
+    put:
+      consumes:
+      - application/json
+      description: Mengupdate Nama, Role, atau Satuan Kerja user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data Update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Edit Data User
+      tags:
+      - admin-users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

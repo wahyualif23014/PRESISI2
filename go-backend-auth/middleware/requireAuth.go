@@ -2,25 +2,33 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/wahyualif23014/backendGO/initializers"
-	"github.com/wahyualif23014/backendGO/models"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wahyualif23014/backendGO/initializers"
+	"github.com/wahyualif23014/backendGO/models"
 )
 
 func RequireAuth(c *gin.Context) {
-	tokenString, err := c.Cookie("Authorization")
-
-	if err != nil {
-		c.AbortWithStatus(http.StatusUnauthorized)
+	// 1. Ambil header Authorization
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
 		return
 	}
 
-	// Parse Token
+	// 2. Support format "Bearer <token>" (Standar Industri)
+	// Jika header berisi "Bearer eyJ...", kita ambil bagian tokennya saja.
+	tokenString := authHeader
+	if len(strings.Split(authHeader, " ")) == 2 {
+		tokenString = strings.Split(authHeader, " ")[1]
+	}
+
+	// 3. Parse Token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -28,43 +36,54 @@ func RequireAuth(c *gin.Context) {
 		return []byte(os.Getenv("SECRET")), nil
 	})
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		// Cek Expiration
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		// Cari user di DB based on subject (sub)
-		var user models.User
-		initializers.DB.First(&user, claims["sub"])
-
-		if user.ID == 0 {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		// Attach user ke context request agar bisa diakses di controller
-		c.Set("user", user)
-
-		c.Next()
-	} else {
-		c.AbortWithStatus(http.StatusUnauthorized)
+	// Jika parsing gagal atau token invalid
+	if err != nil || !token.Valid {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		return
 	}
+
+	// 4. Validasi Claims & Expiration
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
+	}
+
+	if float64(time.Now().Unix()) > claims["exp"].(float64) {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+		return
+	}
+
+	var user models.User
+	result := initializers.DB.Select("id", "name", "email", "role", "satuan_kerja").First(&user, claims["sub"])
+
+	if result.Error != nil || user.ID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or deleted"})
+		return
+	}
+
+	// 6. Set user ke context
+	c.Set("user", user)
+	c.Next()
 }
 
 func RequireRoles(allowedRoles ...models.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Ambil user yang sudah di-set di middleware RequireAuth sebelumnya
+		// 1. Ambil user dari context dengan aman
 		userValue, exists := c.Get("user")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized session"})
 			return
 		}
 
-		user := userValue.(models.User)
+		// 2. Type Assertion (Memastikan data user valid)
+		user, ok := userValue.(models.User)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "User context error"})
+			return
+		}
 
-		// Cek apakah role user ada di dalam list allowedRoles
+		// 3. Cek Role
 		isAllowed := false
 		for _, role := range allowedRoles {
 			if user.Role == role {
@@ -74,7 +93,10 @@ func RequireRoles(allowedRoles ...models.Role) gin.HandlerFunc {
 		}
 
 		if !isAllowed {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access denied for your role"})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error":   "Access denied",
+				"message": fmt.Sprintf("Role '%s' tidak diizinkan mengakses resource ini", user.Role),
+			})
 			return
 		}
 
