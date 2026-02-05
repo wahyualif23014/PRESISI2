@@ -18,6 +18,7 @@ type CreateUserInput struct {
 	Jabatan     string      `json:"jabatan" binding:"required" example:"Kanit Reskrim"`
 	Password    string      `json:"password" binding:"required" example:"rahasia123"`
 	Role        models.Role `json:"role" binding:"required" example:"polres"` // Admin wajib isi Role
+	NoTelp      string      `json:"no_telp" binding:"required" example:"08123456789"`
 }
 
 // UpdateUserInput digunakan oleh Admin untuk edit user
@@ -25,7 +26,7 @@ type UpdateUserInput struct {
 	NamaLengkap string      `json:"nama_lengkap" binding:"omitempty" example:"Budi Santoso S.H."`
 	Jabatan     string      `json:"jabatan" binding:"omitempty" example:"Kapolsek"`
 	Role        models.Role `json:"role" binding:"omitempty" example:"polres"`
-	// Password sebaiknya dipisah endpointnya atau handle logic khusus jika kosong
+	NoTelp      string      `json:"no_telp" binding:"omitempty"`
 }
 
 // --- HANDLERS ---
@@ -49,7 +50,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	// Validasi Role (Optional but recommended)
+	// Validasi Role
 	switch body.Role {
 	case models.RoleAdmin, models.RoleView, models.RolePolres, models.RolePolsek:
 		// Valid
@@ -68,9 +69,10 @@ func CreateUser(c *gin.Context) {
 		NamaLengkap: body.NamaLengkap,
 		NRP:         body.NRP,
 		Jabatan:     body.Jabatan,
-		Password:    string(hash),
+		KataSandi:    string(hash),
 		Role:        body.Role, // Admin menentukan Role
 		FotoProfil:  "",
+		NoTelp:      body.NoTelp,
 	}
 
 	result := initializers.DB.Create(&user)
@@ -95,8 +97,8 @@ func CreateUser(c *gin.Context) {
 // @Router       /admin/users [get]
 func GetUsers(c *gin.Context) {
 	var users []models.User
-	// Select specific fields to avoid sending passwords (even though hashed) or massive data
-	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "jabatan", "role", "foto_profil").Find(&users)
+	// Select specific fields to avoid sending passwords
+	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "jabatan", "role", "foto_profil", "no_telp").Find(&users)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
@@ -120,9 +122,9 @@ func GetUsers(c *gin.Context) {
 func GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
-	
+
 	// Gunakan Select agar lebih efisien dan aman
-	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "jabatan", "role", "foto_profil").First(&user, id)
+	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "jabatan", "role", "foto_profil", "no_telp").First(&user, id)
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
@@ -134,7 +136,7 @@ func GetUserByID(c *gin.Context) {
 
 // UpdateUser godoc
 // @Summary      Edit Data User (Termasuk Upgrade Role)
-// @Description  Mengupdate Nama, Jabatan, atau Role user.
+// @Description  Mengupdate Nama, Jabatan, Role, atau No Telp user.
 // @Tags         admin-users
 // @Accept       json
 // @Produce      json
@@ -160,8 +162,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Persiapkan data update. Gunakan map agar hanya field yang dikirim yang diupdate.
-	// Jika menggunakan struct, field kosong ("") bisa menimpa data yang ada.
+	// Gunakan map untuk update parsial
 	updates := make(map[string]interface{})
 
 	if body.NamaLengkap != "" {
@@ -169,6 +170,9 @@ func UpdateUser(c *gin.Context) {
 	}
 	if body.Jabatan != "" {
 		updates["jabatan"] = body.Jabatan
+	}
+	if body.NoTelp != "" {
+		updates["no_telp"] = body.NoTelp
 	}
 	if body.Role != "" {
 		// Validasi Role
@@ -183,7 +187,7 @@ func UpdateUser(c *gin.Context) {
 
 	initializers.DB.Model(&user).Updates(updates)
 
-	// Fetch updated user to return
+	// Ambil data terbaru setelah update
 	initializers.DB.First(&user, id)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate", "data": user})

@@ -1,3 +1,4 @@
+import 'package:KETAHANANPANGAN/presentation/profile/profile_page.dart';
 import 'package:KETAHANANPANGAN/splash/pages/custom_splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,7 @@ import '../../features/admin/land_management/Potensi_lahan/potensi_page.dart';
 import '../../features/admin/land_management/kelola_lahan/Kelola_lahan_page.dart';
 import '../../features/admin/land_management/riwayat_lahan/riwayat_lahan_page.dart';
 
+
 class AppRouter {
   final AuthProvider authProvider;
 
@@ -33,38 +35,24 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    
-    // 1. Initial Location tetap Splash
-    initialLocation: RouteNames.splash, 
-    
-    // 2. Dengarkan perubahan di AuthProvider (Login/Logout)
+    initialLocation: RouteNames.splash,
     refreshListenable: authProvider,
 
-    // 3. Logic Redirect (Penjaga Pintu)
     redirect: (context, state) {
       final isLoggedIn = authProvider.isAuthenticated;
       final location = state.matchedLocation;
 
-      if (location == RouteNames.splash) {
-        return null; 
-      }
+      if (location == RouteNames.splash) return null;
 
-      // Cek apakah user sedang berada di halaman Login atau Register
       final isAuthRoute = location == RouteNames.login || location == RouteNames.register;
 
       if (isLoggedIn) {
-        if (isAuthRoute) {
-          return RouteNames.dashboard;
-        }
+        if (isAuthRoute) return RouteNames.dashboard;
         return null;
       }
 
-      // C. JIKA BELUM LOGIN
       if (!isLoggedIn) {
-        if (!isAuthRoute) {
-          return RouteNames.login;
-        }
-        // Jika user memang di halaman login/register, biarkan.
+        if (!isAuthRoute) return RouteNames.login;
         return null;
       }
 
@@ -72,13 +60,13 @@ class AppRouter {
     },
 
     routes: [
-      // --- SPLASH SCREEN ---
+      // --- SPLASH ---
       GoRoute(
         path: RouteNames.splash,
         builder: (context, state) => const CustomSplashScreen(),
       ),
 
-      // --- AUTH ROUTES ---
+      // --- AUTH ---
       GoRoute(
         path: RouteNames.login,
         parentNavigatorKey: _rootNavigatorKey,
@@ -90,26 +78,26 @@ class AppRouter {
         builder: (_, __) => const RegisterScreen(),
       ),
 
-      // --- MAIN APP SHELL (Bottom Navbar / Sidebar) ---
+      // --- MAIN APP (BOTTOM NAVBAR) ---
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
           return MainLayout(child: child);
         },
         routes: [
-          // 1. Dashboard
+          // Dashboard
           GoRoute(
             path: RouteNames.dashboard,
             pageBuilder: (_, __) => const NoTransitionPage(child: DashboardPage()),
           ),
           
-          // 2. Personel
+          // Personel
           GoRoute(
             path: RouteNames.personnel,
             pageBuilder: (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
           
-          // 3. Data Utama (Nested Shell)
+          // Data Utama (Nested)
           ShellRoute(
             builder: (context, state, child) => MainDataShellPage(child: child),
             routes: [
@@ -121,7 +109,7 @@ class AppRouter {
             ],
           ),
 
-          // 4. Manajemen Lahan (Nested Shell)
+          // Manajemen Lahan (Nested)
           ShellRoute(
             builder: (context, state, child) => LandShellPage(child: child),
             routes: [
@@ -132,12 +120,20 @@ class AppRouter {
             ],
           ),
 
-          // 5. Rekap
+          // Rekap
           GoRoute(
             path: RouteNames.recap,
             pageBuilder: (_, __) => const NoTransitionPage(child: PageRecap()),
           ),
         ],
+      ),
+
+      // --- NEW: PROFILE PAGE (Di luar ShellRoute agar Full Screen) ---
+      GoRoute(
+        // Pastikan Anda sudah membuat static const profile = '/profile'; di RouteNames
+        path: RouteNames.profile, 
+        parentNavigatorKey: _rootNavigatorKey, // Menutupi BottomNavbar
+        builder: (_, __) => const ProfilePage(),
       ),
     ],
   );

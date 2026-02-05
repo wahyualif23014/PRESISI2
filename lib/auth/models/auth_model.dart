@@ -4,8 +4,10 @@ class UserModel {
   final String nrp;
   final String jabatan;
   final String role;
-  // Field 'status' DIHAPUS karena di backend sudah tidak ada
   final String? fotoProfil;
+  
+  // TAMBAHAN: Field Nomor Telepon
+  final String? noTelp; 
 
   UserModel({
     required this.id,
@@ -14,20 +16,24 @@ class UserModel {
     required this.jabatan,
     required this.role,
     this.fotoProfil,
+    this.noTelp, // Masukkan ke constructor
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['ID'] ?? json['id'] ?? 0, 
+      id: json['ID'] ?? json['id'] ?? 0,
       namaLengkap: json['nama_lengkap'] ?? '',
       nrp: json['nrp'] ?? '',
       jabatan: json['jabatan'] ?? '',
-      role: json['role'] ?? 'view', // Default role jika null
+      role: json['role'] ?? 'view',
       fotoProfil: json['foto_profil'],
+      
+      // Mapping dari JSON backend (snake_case) ke variable Dart (camelCase)
+      noTelp: json['no_telp'], 
     );
   }
 
-  // Method untuk mengubah Object -> JSON (jika perlu disimpan ke storage HP)
+  // Method untuk mengubah Object -> JSON
   Map<String, dynamic> toJson() {
     return {
       'ID': id,
@@ -36,6 +42,7 @@ class UserModel {
       'jabatan': jabatan,
       'role': role,
       'foto_profil': fotoProfil,
+      'no_telp': noTelp, // Simpan ke JSON
     };
   }
 }

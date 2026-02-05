@@ -21,7 +21,7 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 2. Support format "Bearer <token>"
+	// 2. Support format "Bearer <token>" (Standar Industri)
 	tokenString := authHeader
 	if len(strings.Split(authHeader, " ")) == 2 {
 		tokenString = strings.Split(authHeader, " ")[1]
@@ -53,11 +53,11 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 5. Query DB (OPTIMIZED)
+	// 5. Query DB (OPTIMIZED SELECT)
 	// Kita ambil data user berdasarkan ID dari token.
-	// Field 'status' sudah tidak perlu diambil karena sudah dihapus dari Model.
+	// UPDATE: Menambahkan no_telp dan foto_profil agar data user di context lengkap (tanpa password)
 	var user models.User
-	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "role", "jabatan").First(&user, claims["sub"])
+	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "role", "jabatan", "foto_profil", "no_telp").First(&user, claims["sub"])
 
 	if result.Error != nil || user.ID == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or deleted"})

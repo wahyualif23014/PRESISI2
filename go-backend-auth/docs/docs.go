@@ -156,7 +156,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengupdate Nama, Jabatan, atau Role user.",
+                "description": "Mengupdate Nama, Jabatan, Role, atau No Telp user.",
                 "consumes": [
                     "application/json"
                 ],
@@ -340,6 +340,7 @@ const docTemplate = `{
             "required": [
                 "jabatan",
                 "nama_lengkap",
+                "no_telp",
                 "nrp",
                 "password",
                 "role"
@@ -352,6 +353,10 @@ const docTemplate = `{
                 "nama_lengkap": {
                     "type": "string",
                     "example": "Budi Santoso"
+                },
+                "no_telp": {
+                    "type": "string",
+                    "example": "08123456789"
                 },
                 "nrp": {
                     "type": "string",
@@ -394,6 +399,7 @@ const docTemplate = `{
             "required": [
                 "jabatan",
                 "nama_lengkap",
+                "no_telp",
                 "nrp",
                 "password"
             ],
@@ -405,6 +411,11 @@ const docTemplate = `{
                 "nama_lengkap": {
                     "type": "string",
                     "example": "Budi Santoso"
+                },
+                "no_telp": {
+                    "description": "Tambahan",
+                    "type": "string",
+                    "example": "08123456789"
                 },
                 "nrp": {
                     "type": "string",
@@ -427,6 +438,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Budi Santoso S.H."
                 },
+                "no_telp": {
+                    "type": "string"
+                },
                 "role": {
                     "allOf": [
                         {
@@ -446,11 +460,11 @@ const docTemplate = `{
                 "polsek"
             ],
             "x-enum-comments": {
-                "RoleView": "Default untuk user baru (pengganti pending)"
+                "RoleView": "Default untuk user baru"
             },
             "x-enum-descriptions": [
                 "",
-                "Default untuk user baru (pengganti pending)",
+                "Default untuk user baru",
                 "",
                 ""
             ],
@@ -473,7 +487,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.2",
+	Version:          "1.3",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},

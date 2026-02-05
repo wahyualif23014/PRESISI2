@@ -12,13 +12,13 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controllers untuk data sesuai Backend Go
+  // Controllers
   final _namaController = TextEditingController();
   final _nrpController = TextEditingController(); 
+  final _phoneController = TextEditingController(); // TAMBAHAN: Controller HP
   final _jabatanController = TextEditingController();
   final _passController = TextEditingController();
 
-  // Warna Tema (Konsisten dengan Login)
   final Color _primaryGold = const Color(0xFFC0A100);
   final Color _btnGreen = const Color(0xFF10B981);
 
@@ -26,12 +26,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _namaController.dispose();
     _nrpController.dispose();
+    _phoneController.dispose(); // Dispose Controller HP
     _jabatanController.dispose();
     _passController.dispose();
     super.dispose();
   }
 
-  // --- LOGIC INTEGRASI GO BACKEND ---
+  // --- LOGIC REGISTER ---
   void _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -40,15 +41,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final auth = context.read<AuthProvider>();
 
-    // Panggil fungsi register di Provider
-    // Mengirim data sesuai struct JSON Go Backend
+    // Panggil Provider (Kirim semua data termasuk noTelp)
     final String? error = await auth.register(
       nama: _namaController.text.trim(),
       nrp: _nrpController.text.trim(),
       jabatan: _jabatanController.text.trim(),
       password: _passController.text.trim(),
-      // Default Role untuk pendaftar umum (Sesuaikan dengan ENUM di Go: polsek/polres/view)
-      role: 'polsek', 
+      role: 'view', // Default Role untuk user baru
+      noTelp: _phoneController.text.trim(), // TAMBAHAN: Kirim No Telp
     );
 
     if (!mounted) return;
@@ -57,18 +57,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // --- SUKSES ---
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Registrasi Berhasil! Silakan tunggu validasi Admin untuk Login."),
+          content: Text("Registrasi Berhasil! Silakan Login."),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
       );
-      // Kembali ke Login Screen
-      Navigator.pop(context); 
+      Navigator.pop(context); // Kembali ke Login
     } else {
       // --- GAGAL ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error), // Pesan error asli dari Backend (misal: NRP sudah ada)
+          content: Text(error),
           backgroundColor: Colors.red,
         ),
       );
@@ -80,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Background Layer
+          // 1. Background
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -90,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
           
-          // 2. Overlay Layer
+          // 2. Overlay
           Container(
             color: Colors.black.withOpacity(0.6),
           ),
@@ -104,12 +103,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // --- Header ---
-                    _RegisterHeader(primaryGold: _primaryGold),
+                    _AuthHeader(primaryGold: _primaryGold, title: "Registrasi Akun"),
                     
                     const SizedBox(height: 30),
 
-                    // --- Input Nama Lengkap ---
                     _CustomLabelInput(
                       label: "Nama Lengkap",
                       hint: "Masukan Nama Lengkap Anda",
@@ -120,7 +117,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
-                    // --- Input NRP ---
                     _CustomLabelInput(
                       label: "No NRP",
                       hint: "Masukan NRP Anda Disini",
@@ -132,7 +128,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
-                    // --- Input Jabatan ---
+                    // --- INPUT NOMOR TELEPON BARU ---
+                    _CustomLabelInput(
+                      label: "Nomor Telepon",
+                      hint: "Contoh: 08123456789",
+                      controller: _phoneController,
+                      primaryColor: _primaryGold,
+                      inputType: TextInputType.phone,
+                      validator: (v) => v!.isEmpty ? "No Telp wajib diisi" : null,
+                    ),
+
+                    const SizedBox(height: 15),
+
                     _CustomLabelInput(
                       label: "Jabatan",
                       hint: "Contoh: Kanit Reskrim",
@@ -143,7 +150,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
-                    // --- Input Password ---
                     _CustomLabelInput(
                       label: "Kata Sandi",
                       hint: "Buat Kata Sandi",
@@ -155,26 +161,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 30),
 
-                    // --- Action Buttons ---
                     Consumer<AuthProvider>(
                       builder: (context, auth, _) {
                         return Column(
                           children: [
-                            // Tombol Simpan
                             _ActionButton(
                               text: "Daftar Sekarang",
                               color: _primaryGold,
+                              textColor: Colors.white,
+                              isFilled: true,
                               isLoading: auth.isLoading,
                               onPressed: _handleRegister,
                             ),
-                            
                             const SizedBox(height: 15),
-                            
-                            // Tombol Kembali ke Login
                             _ActionButton(
                               text: "Sudah Punya Akun? Login",
                               color: _btnGreen,
-                              isLoading: false, // Tombol back tidak perlu loading
+                              textColor: Colors.white,
+                              isFilled: true,
+                              isLoading: false,
                               onPressed: auth.isLoading ? null : () => Navigator.pop(context),
                             ),
                           ],
@@ -193,12 +198,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 // =========================================================
-// WIDGET UI COMPONENTS (Konsisten dengan Login Screen)
+// WIDGET UI COMPONENTS (DIGUNAKAN OLEH KEDUA SCREEN)
+// Anda bisa memindahkan ini ke file terpisah, misal: auth_widgets.dart
 // =========================================================
 
-class _RegisterHeader extends StatelessWidget {
+class _AuthHeader extends StatelessWidget {
   final Color primaryGold;
-  const _RegisterHeader({required this.primaryGold});
+  final String title;
+  const _AuthHeader({required this.primaryGold, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -206,28 +213,20 @@ class _RegisterHeader extends StatelessWidget {
       children: [
         Image.asset(
           'assets/image/logo.png', 
-          height: 80, // Sedikit lebih kecil dari login agar muat
+          height: 90,
           errorBuilder: (context, error, stackTrace) => 
-              const Icon(Icons.shield, size: 60, color: Colors.white),
+              const Icon(Icons.shield, size: 80, color: Colors.white),
         ),
         const SizedBox(height: 15),
-        const Text(
-          "Registrasi Akun",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 5),
         const Text(
-          "Lengkapi data diri Anda dengan benar",
+          "SIKAP PRESISI Polda Jawa Timur",
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Colors.white70,
-          ),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white70),
         ),
       ],
     );
@@ -244,12 +243,8 @@ class _CustomLabelInput extends StatefulWidget {
   final String? Function(String?)? validator;
 
   const _CustomLabelInput({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    required this.primaryColor,
-    this.isPassword = false,
-    this.inputType = TextInputType.text,
+    required this.label, required this.hint, required this.controller,
+    required this.primaryColor, this.isPassword = false, this.inputType = TextInputType.text,
     this.validator,
   });
 
@@ -267,11 +262,7 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 15, // Sedikit lebih kecil agar compact
-          ),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -304,15 +295,8 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
             ),
             suffixIcon: widget.isPassword
                 ? IconButton(
-                    icon: Icon(
-                      _obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
+                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                    onPressed: () => setState(() => _obscureText = !_obscureText),
                   )
                 : null,
           ),
@@ -325,14 +309,14 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
 class _ActionButton extends StatelessWidget {
   final String text;
   final Color color;
+  final Color textColor;
+  final bool isFilled;
   final bool isLoading;
   final VoidCallback? onPressed;
 
   const _ActionButton({
-    required this.text,
-    required this.color,
-    required this.isLoading,
-    required this.onPressed,
+    required this.text, required this.color, required this.textColor,
+    required this.isFilled, required this.isLoading, required this.onPressed,
   });
 
   @override
@@ -340,29 +324,25 @@ class _ActionButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 48,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+      child: isFilled
+          ? ElevatedButton(
+              onPressed: isLoading ? null : onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-      ),
+              child: isLoading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+            )
+          : OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: color, width: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+            ),
     );
   }
 }

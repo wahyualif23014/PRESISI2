@@ -1,6 +1,11 @@
+import 'package:KETAHANANPANGAN/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:KETAHANANPANGAN/presentation/profile/repos/profile_repository.dart';
-import 'models/profile_model.dart'; // Sesuaikan path import
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../router/route_names.dart';
+import '../../auth/provider/auth_provider.dart';
+
+// Pastikan import file AppColors Anda. 
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -10,301 +15,396 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // 1. Variabel State
-  late ProfileModel profile;
-  final ProfileRepository _repo = ProfileRepository();
-  bool isEditing = false; // Penanda mode edit
-  bool isLoading = false; // Penanda loading saat simpan
+  // --- 1. Variabel State ---
+  bool isEditing = false;
+  bool isLoading = false;
 
-  // 2. Controllers untuk Input Text
+  // --- 2. Controllers ---
   late TextEditingController _nameController;
   late TextEditingController _nrpController;
-  late TextEditingController _positionController;
-  late TextEditingController _locationController;
+  late TextEditingController _jabatanController;
+  late TextEditingController _roleController;
+  late TextEditingController _phoneController;
 
   @override
   void initState() {
     super.initState();
-    // Load data awal
-    profile = _repo.getProfileData();
-    
-    // Inisialisasi controller dengan data awal
-    _nameController = TextEditingController(text: profile.fullName);
-    _nrpController = TextEditingController(text: profile.nrp);
-    _positionController = TextEditingController(text: profile.position);
-    _locationController = TextEditingController(text: profile.location);
+    final user = context.read<AuthProvider>().user;
+
+    _nameController = TextEditingController(text: user?.namaLengkap ?? '');
+    _nrpController = TextEditingController(text: user?.nrp ?? '');
+    _jabatanController = TextEditingController(text: user?.jabatan ?? '');
+    _roleController = TextEditingController(text: user?.role ?? '');
+    _phoneController = TextEditingController(text: user?.noTelp ?? '');
   }
 
   @override
   void dispose() {
-    // Wajib dispose controller agar tidak memory leak
     _nameController.dispose();
     _nrpController.dispose();
-    _positionController.dispose();
-    _locationController.dispose();
+    _jabatanController.dispose();
+    _roleController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
-  // 3. Fungsi untuk Menyimpan Data
+  // --- 3. Logic Functions ---
+
+  void _handleLogout() async {
+    await context.read<AuthProvider>().logout();
+    if (!mounted) return;
+    context.go(RouteNames.login);
+  }
+
   Future<void> _saveProfile() async {
     setState(() => isLoading = true);
+    
+    // Simulasi delay request API
+    await Future.delayed(const Duration(seconds: 2));
 
-    // Buat object model baru dari inputan user
-    final newProfile = ProfileModel(
-      fullName: _nameController.text,
-      nrp: _nrpController.text,
-      position: _positionController.text,
-      location: _locationController.text,
-      imageUrl: profile.imageUrl, // Gambar dianggap tetap dulu
+    if (!mounted) return;
+    setState(() {
+      isEditing = false;
+      isLoading = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Data berhasil diperbarui!"),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
-
-    // Panggil Repository
-    final success = await _repo.updateProfileData(newProfile);
-
-    if (success) {
-      if (!mounted) return;
-      setState(() {
-        profile = newProfile; // Update data tampilan utama
-        isEditing = false;    // Kembali ke mode lihat
-        isLoading = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profil berhasil diperbarui!"), backgroundColor: Colors.green),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAF0F9),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1D2730),
-        elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        centerTitle: true,
-        title: Text(
-          isEditing ? "Edit Profile" : "MY Profile", // Judul berubah dinamis
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            const Text(
-              "Profile Personel",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 20),
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        final user = auth.user;
 
-            // --- AVATAR SECTION ---
-            Stack(
+        return Scaffold(
+          backgroundColor: AppColors.slate50, // Background utama bersih
+          
+          // --- APP BAR PROFESIONAL ---
+          appBar: AppBar(
+            backgroundColor: AppColors.slate800,
+            elevation: 0,
+            centerTitle: true,
+            title: Text(
+              isEditing ? "Edit Profil" : "Profil Saya",
+              style: const TextStyle(
+                fontWeight: FontWeight.w600, 
+                color: AppColors.white,
+                letterSpacing: 0.5
+              ),
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.white),
+              onPressed: () {
+                // Logic Back yang Aman
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.dashboard);
+                }
+              },
+            ),
+          ),
+
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
               children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.lightBlueAccent,
-                    shape: BoxShape.circle,
-                    image: profile.imageUrl.isNotEmpty
-                        ? DecorationImage(image: AssetImage(profile.imageUrl))
-                        : null,
-                  ),
-                  child: profile.imageUrl.isEmpty
-                      ? const Icon(Icons.person, size: 80, color: Colors.white)
-                      : null,
-                ),
-                // Icon upload hanya muncul/bisa diklik jika sedang edit (opsional)
-                if (isEditing)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: InkWell(
-                      onTap: () {
-                         // Logika ganti foto
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
+                // --- 1. HEADER PROFILE (AVATAR) ---
+                Center(
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 110,
+                        height: 110,
                         decoration: BoxDecoration(
-                          color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300),
+                          color: AppColors.slate200,
+                          border: Border.all(color: AppColors.white, width: 4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.slate900.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                          image: (user?.fotoProfil != null && user!.fotoProfil!.isNotEmpty)
+                              ? DecorationImage(
+                                  image: NetworkImage(user.fotoProfil!),
+                                  fit: BoxFit.cover)
+                              : null,
                         ),
-                        child: const Icon(Icons.camera_alt, size: 20, color: Colors.blue),
+                        child: (user?.fotoProfil == null || user!.fotoProfil!.isEmpty)
+                            ? const Icon(Icons.person, size: 60, color: AppColors.slate400)
+                            : null,
                       ),
-                    ),
+                      
+                      // Edit Badge Camera
+                      if (isEditing)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            height: 36,
+                            width: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.slate600,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.white, width: 2),
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.camera_alt, size: 18, color: AppColors.white),
+                              onPressed: () {
+                                // TODO: Logic Upload Foto
+                              },
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                ),
+                
+                const SizedBox(height: 16),
+                Text(
+                  user?.namaLengkap ?? "Pengguna",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.slate800,
+                  ),
+                ),
+                Text(
+                  user?.role?.toUpperCase() ?? "VIEWER",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.greenPrimary,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // --- 2. FORM DATA ---
+                _buildSectionHeader("Informasi Pribadi"),
+                const SizedBox(height: 12),
+                
+                _buildProfileField(
+                  label: "Nama Lengkap",
+                  controller: _nameController,
+                  icon: Icons.person_outline,
+                ),
+                _buildProfileField(
+                  label: "Nomor NRP",
+                  controller: _nrpController,
+                  icon: Icons.badge_outlined,
+                  isNumber: true,
+                  isReadOnly: true, // NRP tidak boleh diedit sembarangan
+                ),
+                _buildProfileField(
+                  label: "Nomor Telepon",
+                  controller: _phoneController,
+                  icon: Icons.phone_android_outlined,
+                  isNumber: true,
+                ),
+
+                const SizedBox(height: 24),
+                _buildSectionHeader("Informasi Jabatan"),
+                const SizedBox(height: 12),
+
+                _buildProfileField(
+                  label: "Jabatan",
+                  controller: _jabatanController,
+                  icon: Icons.work_outline,
+                ),
+                _buildProfileField(
+                  label: "Akses Role",
+                  controller: _roleController,
+                  icon: Icons.security_outlined,
+                  isReadOnly: true,
+                ),
+
+                const SizedBox(height: 40),
+
+                // --- 3. ACTION BUTTONS ---
+                if (isLoading)
+                  const Center(child: CircularProgressIndicator(color: AppColors.greenPrimary))
+                else if (isEditing)
+                  // MODE EDIT: Batal & Simpan
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildButton(
+                          text: "Batal",
+                          color: AppColors.slate200,
+                          textColor: AppColors.slate700,
+                          icon: Icons.close,
+                          onPressed: () {
+                            setState(() {
+                              isEditing = false;
+                              // Reset values
+                              _nameController.text = user?.namaLengkap ?? '';
+                              _phoneController.text = user?.noTelp ?? '';
+                              _jabatanController.text = user?.jabatan ?? '';
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildButton(
+                          text: "Simpan",
+                          color: AppColors.greenPrimary,
+                          textColor: AppColors.white,
+                          icon: Icons.check,
+                          onPressed: _saveProfile,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  // MODE VIEW: Logout & Edit
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: _buildButton(
+                          text: "Edit Profil",
+                          color: AppColors.white,
+                          textColor: AppColors.greenPrimary,
+                          icon: Icons.edit_outlined,
+                          isOutlined: true,
+                          onPressed: () => setState(() => isEditing = true),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: _buildButton(
+                          text: "Logout",
+                          color: AppColors.errorBg,
+                          textColor: AppColors.errorText,
+                          icon: Icons.logout,
+                          onPressed: _handleLogout,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                const SizedBox(height: 30),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              profile.fullName,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 30),
+          ),
+        );
+      },
+    );
+  }
 
-            // --- FORM FIELDS (Pass Controller ke Helper) ---
-            _buildInfoTile("Nama Lengkap", _nameController),
-            _buildInfoTile("NRP", _nrpController, isNumber: true),
-            _buildInfoTile("Jabatan", _positionController),
-            _buildInfoTile("Lokasi", _locationController),
+  // --- WIDGET HELPER UI ---
 
-            const SizedBox(height: 20),
-
-            // --- BUTTONS LOGIC ---
-            if (isLoading)
-              const CircularProgressIndicator()
-            else if (isEditing)
-              // TAMPILAN SAAT EDIT (Tombol Batal & Simpan)
-              Row(
-                children: [
-                   Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          isEditing = false;
-                          // Reset controller ke data asli jika batal
-                          _nameController.text = profile.fullName;
-                          _nrpController.text = profile.nrp;
-                          _positionController.text = profile.position;
-                          _locationController.text = profile.location;
-                        });
-                      },
-                      child: const Text("Batal", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: _saveProfile,
-                      child: const Text("Simpan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              )
-            else
-              // TAMPILAN SAAT VIEW (Tombol Logout & Update)
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        // Logic Logout
-                      },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.logout, size: 20, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text("Logout", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          isEditing = true; // Aktifkan mode edit
-                        });
-                      },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.edit, size: 20, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text("Update Profile", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 30),
-          ],
+  Widget _buildSectionHeader(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.slate500,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  // --- HELPER WIDGET DINAMIS ---
-  // Sekarang menerima TextEditingController
-  Widget _buildInfoTile(String label, TextEditingController controller, {bool isNumber = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+  Widget _buildProfileField({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    bool isNumber = false,
+    bool isReadOnly = false,
+  }) {
+    final bool isEnabled = isEditing && !isReadOnly;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isEnabled ? AppColors.white : AppColors.slate100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isEnabled ? AppColors.greenPrimary : AppColors.transparent,
+          width: 1.5
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          // Jika editing, padding diatur oleh TextFormField, jika tidak pakai padding container
-          padding: isEditing ? const EdgeInsets.symmetric(horizontal: 16) : const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: isEditing ? Border.all(color: Colors.blueAccent, width: 1.5) : null, // Highlight saat edit
+        boxShadow: isEnabled 
+          ? [BoxShadow(color: AppColors.greenPrimary.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))]
+          : [],
+      ),
+      child: TextFormField(
+        controller: controller,
+        enabled: isEnabled,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        style: TextStyle(
+          color: isReadOnly ? AppColors.slate500 : AppColors.slate800,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            color: isEnabled ? AppColors.greenPrimary : AppColors.slate400,
           ),
-          child: isEditing
-              ? TextFormField(
-                  controller: controller,
-                  keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none, // Hilangkan garis default input
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  style: const TextStyle(fontSize: 15, color: Colors.black87),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      controller.text, // Tampilkan text dari controller/data
-                      style: const TextStyle(fontSize: 15, color: Colors.black87),
-                    ),
-                    const Icon(Icons.lock_outline, size: 16, color: Colors.grey), // Indikator read-only
-                  ],
-                ),
+          prefixIcon: Icon(
+            icon, 
+            color: isEnabled ? AppColors.greenPrimary : AppColors.slate400,
+            size: 22,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        const SizedBox(height: 16),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    required String text,
+    required Color color,
+    required Color textColor,
+    required IconData icon,
+    required VoidCallback onPressed,
+    bool isOutlined = false,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isOutlined ? Colors.transparent : color,
+        elevation: isOutlined ? 0 : 2,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isOutlined ? BorderSide(color: AppColors.greenPrimary, width: 2) : BorderSide.none,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: textColor, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+

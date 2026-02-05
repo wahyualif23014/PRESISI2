@@ -8,7 +8,7 @@
             "name": "Tim IT Support",
             "email": "admin@polri.go.id"
         },
-        "version": "1.2"
+        "version": "1.3"
     },
     "host": "localhost:8080",
     "basePath": "/",
@@ -150,7 +150,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mengupdate Nama, Jabatan, atau Role user.",
+                "description": "Mengupdate Nama, Jabatan, Role, atau No Telp user.",
                 "consumes": [
                     "application/json"
                 ],
@@ -334,6 +334,7 @@
             "required": [
                 "jabatan",
                 "nama_lengkap",
+                "no_telp",
                 "nrp",
                 "password",
                 "role"
@@ -346,6 +347,10 @@
                 "nama_lengkap": {
                     "type": "string",
                     "example": "Budi Santoso"
+                },
+                "no_telp": {
+                    "type": "string",
+                    "example": "08123456789"
                 },
                 "nrp": {
                     "type": "string",
@@ -388,6 +393,7 @@
             "required": [
                 "jabatan",
                 "nama_lengkap",
+                "no_telp",
                 "nrp",
                 "password"
             ],
@@ -399,6 +405,11 @@
                 "nama_lengkap": {
                     "type": "string",
                     "example": "Budi Santoso"
+                },
+                "no_telp": {
+                    "description": "Tambahan",
+                    "type": "string",
+                    "example": "08123456789"
                 },
                 "nrp": {
                     "type": "string",
@@ -421,6 +432,9 @@
                     "type": "string",
                     "example": "Budi Santoso S.H."
                 },
+                "no_telp": {
+                    "type": "string"
+                },
                 "role": {
                     "allOf": [
                         {
@@ -440,11 +454,11 @@
                 "polsek"
             ],
             "x-enum-comments": {
-                "RoleView": "Default untuk user baru (pengganti pending)"
+                "RoleView": "Default untuk user baru"
             },
             "x-enum-descriptions": [
                 "",
-                "Default untuk user baru (pengganti pending)",
+                "Default untuk user baru",
                 "",
                 ""
             ],

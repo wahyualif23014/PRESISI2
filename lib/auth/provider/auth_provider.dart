@@ -37,7 +37,7 @@ class AuthProvider with ChangeNotifier {
       final data = result['data'];
       _token = data['token'];
       
-      // Convert JSON user ke Object UserModel
+      // Convert JSON user ke Object UserModel (termasuk no_telp jika ada)
       _user = UserModel.fromJson(data['user']);
 
       // Simpan Token & User Data ke HP (Persistent)
@@ -54,23 +54,26 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- REGISTER LOGIC ---
+  // --- REGISTER LOGIC (UPDATE) ---
   Future<String?> register({
     required String nama,
     required String nrp,
     required String jabatan,
     required String password,
     required String role,
+    required String noTelp, // Tambahan Parameter Wajib
   }) async {
     _isLoading = true;
     notifyListeners();
 
+    // Meneruskan data (termasuk noTelp) ke AuthService
     final result = await _authService.register(
       nama: nama,
       nrp: nrp,
       jabatan: jabatan,
       password: password,
       role: role,
+      noTelp: noTelp, 
     );
 
     _isLoading = false;
@@ -88,7 +91,6 @@ class AuthProvider with ChangeNotifier {
     final savedToken = await _storage.read(key: 'jwt_token');
     
     if (savedToken == null) {
-      // Pastikan state bersih jika tidak ada token
       _token = null;
       _user = null;
       notifyListeners();

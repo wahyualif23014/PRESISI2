@@ -28,7 +28,7 @@ func init() {
 }
 
 // @title           Backend API Polres & Polsek (Sistem NRP)
-// @version         1.2
+// @version         1.3
 // @description     API Service untuk Manajemen User (Login NRP) dan Pelaporan Data Kepolisian.
 // @termsOfService  http://swagger.io/terms/
 
@@ -46,7 +46,7 @@ func main() {
 
 	// --- 1. Konfigurasi CORS ---
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Ganti domain saat production
+		AllowOrigins:     []string{"*"}, // Ubah ke domain spesifik saat production
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -76,15 +76,14 @@ func main() {
 		adminRoutes := authorized.Group("/admin")
 		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
-			adminRoutes.POST("/users", controllers.CreateUser)       // Create User dengan Role Tertentu
+			adminRoutes.POST("/users", controllers.CreateUser)       // Create User
 			adminRoutes.GET("/users", controllers.GetUsers)          // Read All
 			adminRoutes.GET("/users/:id", controllers.GetUserByID)   // Read One
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)    // Update Data & Upgrade Role
 			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Soft Delete
-
-			// HAPUS ROUTE APPROVE (Sudah tidak dipakai)
 		}
 
+		// B. INPUT GROUP: Input Laporan
 		inputRoutes := authorized.Group("/input")
 		inputRoutes.Use(middleware.RequireRoles(models.RolePolres, models.RolePolsek, models.RoleAdmin))
 		{
@@ -98,20 +97,27 @@ func main() {
 		viewRoutes.Use(middleware.RequireRoles(models.RoleView, models.RoleAdmin, models.RolePolres, models.RolePolsek))
 		{
 			viewRoutes.GET("/dashboard", func(c *gin.Context) {
+				// Mengambil data user dari Middleware (RequireAuth)
 				user, _ := c.Get("user")
 				userData := user.(models.User)
 
 				c.JSON(200, gin.H{
 					"message":      "Dashboard Data",
+					"id":           userData.ID,
 					"nama_lengkap": userData.NamaLengkap,
 					"nrp":          userData.NRP,
 					"jabatan":      userData.Jabatan,
 					"role":         userData.Role,
-					// Status dihapus karena semua user login dianggap aktif
+					
+					// Menambahkan field baru agar bisa ditampilkan di Profil Flutter
+					"no_telp":      userData.NoTelp,
+					"foto_profil":  userData.FotoProfil,
 				})
 			})
 		}
 	}
 
-	r.Run() // Default port 8080
+	// Menjalankan server di 0.0.0.0 agar bisa diakses dari HP / Jaringan Luar
+	// r.Run("0.0.0.0:8080") 
+	r.Run()
 }

@@ -1,7 +1,7 @@
-import 'package:KETAHANANPANGAN/router/route_names.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart'; // Tambahkan untuk navigasi jika pakai GoRouter
+import 'package:go_router/go_router.dart'; 
+import '../../router/route_names.dart';
 import '../provider/auth_provider.dart';
 import 'register_screen.dart';
 
@@ -13,11 +13,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Hanya butuh Controller untuk NRP dan Password
   final _nrpController = TextEditingController();
   final _passController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // Warna tema sesuai gambar (Emas/Kuning Gelap)
+  // Warna tema (Emas Gelap)
   final Color _primaryGold = const Color(0xFFC0A100);
 
   @override
@@ -27,19 +28,18 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // --- LOGIC UTAMA INTEGRASI GO BACKEND ---
+  // --- LOGIC LOGIN ---
   void _handleLogin() async {
-    // 1. Validasi Form UI
+    // 1. Validasi Input UI
     if (!_formKey.currentState!.validate()) return;
 
-    // 2. Tutup Keyboard
+    // 2. Tutup Keyboard agar rapi
     FocusScope.of(context).unfocus();
 
     // 3. Panggil Auth Provider
     final auth = context.read<AuthProvider>();
 
-    // Memanggil fungsi login ke Go Backend
-    // Return value: String? (null jika SUKSES, String error jika GAGAL)
+    // 4. Request Login ke Backend (Cukup NRP & Password)
     final String? errorMessage = await auth.login(
       _nrpController.text.trim(),
       _passController.text.trim(),
@@ -47,24 +47,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    // 4. Cek Hasil Login
+    // 5. Cek Hasil
     if (errorMessage == null) {
       // --- SUKSES ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          // Mengambil nama dari User Model yang sudah di-load Provider
-          content: Text("Login Berhasil. Selamat Datang, ${auth.user?.namaLengkap ?? 'User'}"),
+          content: Text("Login Berhasil. Halo, ${auth.user?.namaLengkap ?? 'User'}"),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      // --- NAVIGASI KE DASHBOARD ---
+      // Navigasi ke Dashboard
       context.go(RouteNames.dashboard); 
     } else {
+      // --- GAGAL ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage),
+          content: Text(errorMessage), // Pesan error dari backend
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Background Image Layer
+          // 1. Background Image
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -94,12 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // 2. Overlay Layer
+          // 2. Overlay Gelap
           Container(
             color: Colors.black.withOpacity(0.6),
           ),
 
-          // 3. Content Layer
+          // 3. Form Content
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 30.0),
@@ -119,6 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       hint: "Masukan NRP Anda Disini",
                       controller: _nrpController,
                       primaryColor: _primaryGold,
+                      inputType: TextInputType.number,
                       validator: (val) => val!.isEmpty ? 'NRP wajib diisi' : null,
                     ),
 
@@ -136,13 +137,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 40),
 
+                    // --- Tombol Aksi ---
                     Consumer<AuthProvider>(
                       builder: (context, auth, _) {
                         return Column(
                           children: [
                             _LoginButton(
                               text: "Login",
-                              isLoading: auth.isLoading, 
+                              isLoading: auth.isLoading,
                               onPressed: _handleLogin,
                               color: _primaryGold,
                               textColor: Colors.white,
@@ -164,10 +166,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 20),
 
-                    // --- Forgot Password ---
+                    // --- Lupa Password ---
                     TextButton(
                       onPressed: () {
-                        // TODO: Implementasi Lupa Password
+                        // TODO: Implementasi Lupa Password nanti
                       },
                       child: Text(
                         "Lupa Kata Sandi",
@@ -189,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// --- WIDGET PENDUKUNG (TIDAK ADA PERUBAHAN DARI KODE ANDA) ---
+// --- WIDGET PENDUKUNG (Konsisten dengan Register) ---
 
 class _LoginHeader extends StatelessWidget {
   final Color primaryGold;
@@ -208,20 +210,12 @@ class _LoginHeader extends StatelessWidget {
         const SizedBox(height: 20),
         const Text(
           "Selamat Datang",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 8),
         const Text(
           "SIKAP PRESISI Polda Jawa Timur",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white),
         ),
       ],
     );
@@ -234,14 +228,12 @@ class _CustomLabelInput extends StatefulWidget {
   final TextEditingController controller;
   final Color primaryColor;
   final bool isPassword;
+  final TextInputType inputType;
   final String? Function(String?)? validator;
 
   const _CustomLabelInput({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    required this.primaryColor,
-    this.isPassword = false,
+    required this.label, required this.hint, required this.controller,
+    required this.primaryColor, this.isPassword = false, this.inputType = TextInputType.text,
     this.validator,
   });
 
@@ -259,16 +251,13 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: widget.controller,
           obscureText: widget.isPassword ? _obscureText : false,
+          keyboardType: widget.inputType,
           style: const TextStyle(color: Colors.white),
           validator: widget.validator,
           decoration: InputDecoration(
@@ -295,15 +284,8 @@ class _CustomLabelInputState extends State<_CustomLabelInput> {
             ),
             suffixIcon: widget.isPassword
                 ? IconButton(
-                    icon: Icon(
-                      _obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
+                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                    onPressed: () => setState(() => _obscureText = !_obscureText),
                   )
                 : null,
           ),
@@ -322,12 +304,8 @@ class _LoginButton extends StatelessWidget {
   final bool isLoading;
 
   const _LoginButton({
-    required this.text,
-    required this.onPressed,
-    required this.color,
-    required this.textColor,
-    required this.isFilled,
-    required this.isLoading,
+    required this.text, required this.onPressed, required this.color,
+    required this.textColor, required this.isFilled, required this.isLoading,
   });
 
   @override
@@ -340,41 +318,19 @@ class _LoginButton extends StatelessWidget {
               onPressed: isLoading ? null : onPressed,
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : Text(
-                      text,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(text, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
             )
           : OutlinedButton(
               onPressed: onPressed,
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: color, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
+              child: Text(text, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
             ),
     );
   }

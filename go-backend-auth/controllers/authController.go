@@ -19,6 +19,7 @@ type RegisterInput struct {
 	NRP         string `json:"nrp" binding:"required" example:"12345678"`
 	Jabatan     string `json:"jabatan" binding:"required" example:"Anggota Sabhara"`
 	Password    string `json:"password" binding:"required" example:"password123"`
+	NoTelp      string `json:"no_telp" binding:"required" example:"08123456789"` // Tambahan
 }
 
 // LoginInput defines the payload for login
@@ -57,9 +58,10 @@ func Signup(c *gin.Context) {
 		NamaLengkap: body.NamaLengkap,
 		NRP:         body.NRP,
 		Jabatan:     body.Jabatan,
-		Password:    string(hash),
+		KataSandi:    string(hash),
 		Role:        models.RoleView, // FORCE DEFAULT ROLE: VIEW
 		FotoProfil:  "",
+		NoTelp:      body.NoTelp,     // Simpan No Telp
 	}
 
 	// 3. Save to DB
@@ -102,7 +104,7 @@ func Login(c *gin.Context) {
 	}
 
 	// 2. Cek Password
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
+	err := bcrypt.CompareHashAndPassword([]byte(user.KataSandi), []byte(body.Password))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "NRP atau Password salah"})
 		return
@@ -121,7 +123,6 @@ func Login(c *gin.Context) {
 	}
 
 	// Response Login (User + Token)
-	// Kita kembalikan user data juga agar frontend bisa langsung simpan state
 	c.JSON(http.StatusOK, gin.H{
 		"token": tokenString,
 		"user": gin.H{
@@ -131,6 +132,7 @@ func Login(c *gin.Context) {
 			"jabatan":      user.Jabatan,
 			"role":         user.Role,
 			"foto_profil":  user.FotoProfil,
+			"no_telp":      user.NoTelp,
 		},
 	})
 }

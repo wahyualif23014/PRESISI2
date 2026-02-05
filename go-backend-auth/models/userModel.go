@@ -9,7 +9,7 @@ type Role string
 
 const (
 	RoleAdmin  Role = "admin"
-	RoleView   Role = "view" // Default untuk user baru (pengganti pending)
+	RoleView   Role = "view"   // Default untuk user baru
 	RolePolres Role = "polres"
 	RolePolsek Role = "polsek"
 )
@@ -19,9 +19,12 @@ type User struct {
 	NamaLengkap string `json:"nama_lengkap"`
 	NRP         string `gorm:"unique;not null" json:"nrp"`
 	Jabatan     string `json:"jabatan"`
-	Password    string `json:"-"`
+	KataSandi    string `json:"-"` // Kata Sandi tidak dikirim balik ke JSON response
 
+	// Role Enum
 	Role Role `json:"role" gorm:"type:enum('admin','view','polres','polsek');default:'view'"`
 
+	// Profil Tambahan
 	FotoProfil string `json:"foto_profil"`
+	NoTelp     string `json:"no_telp"` // Tambahan baru (String/Varchar)
 }
