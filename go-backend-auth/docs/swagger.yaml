@@ -111,6 +111,118 @@ info:
   title: Backend API Polres & Polsek (Sistem NRP)
   version: "1.3"
 paths:
+  /admin/polres:
+    get:
+      description: Mengambil list semua Polres beserta detail Wilayahnya
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Semua Polres
+      tags:
+      - Master Data (Polres)
+    post:
+      consumes:
+      - application/json
+      description: Membuat data Polres dengan referensi ID Wilayah
+      parameters:
+      - description: Data Polres
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            kapolres:
+              type: string
+            nama_polres:
+              type: string
+            no_telp_polres:
+              type: string
+            wilayah_id:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tambah Polres Baru
+      tags:
+      - Master Data (Polres)
+  /admin/polsek:
+    get:
+      description: Mengambil list semua Polsek beserta detail Polres dan Wilayahnya
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Semua Polsek
+      tags:
+      - Master Data (Polsek)
+    post:
+      consumes:
+      - application/json
+      description: Membuat data Polsek dengan referensi ID Polres dan ID Wilayah
+      parameters:
+      - description: Data Polsek
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            kapolsek:
+              type: string
+            kode:
+              type: string
+            nama_polsek:
+              type: string
+            no_telp_polsek:
+              type: string
+            polres_id:
+              type: integer
+            wilayah_id:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tambah Polsek Baru
+      tags:
+      - Master Data (Polsek)
   /admin/users:
     get:
       consumes:
@@ -254,6 +366,60 @@ paths:
       summary: Edit Data User (Termasuk Upgrade Role)
       tags:
       - admin-users
+  /admin/wilayah:
+    get:
+      description: Mengambil list semua wilayah yang terdaftar
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Semua Wilayah
+      tags:
+      - Master Data (Wilayah)
+    post:
+      consumes:
+      - application/json
+      description: Membuat data master wilayah (Kecamatan/Kabupaten)
+      parameters:
+      - description: Data Wilayah
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            kabupaten:
+              type: string
+            kecamatan:
+              type: string
+            latitude:
+              type: number
+            longitude:
+              type: number
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tambah Wilayah Baru
+      tags:
+      - Master Data (Wilayah)
   /login:
     post:
       consumes:

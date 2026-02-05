@@ -13,6 +13,182 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/admin/polres": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil list semua Polres beserta detail Wilayahnya",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Master Data (Polres)"
+                ],
+                "summary": "Lihat Semua Polres",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat data Polres dengan referensi ID Wilayah",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Master Data (Polres)"
+                ],
+                "summary": "Tambah Polres Baru",
+                "parameters": [
+                    {
+                        "description": "Data Polres",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "kapolres": {
+                                    "type": "string"
+                                },
+                                "nama_polres": {
+                                    "type": "string"
+                                },
+                                "no_telp_polres": {
+                                    "type": "string"
+                                },
+                                "wilayah_id": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/polsek": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil list semua Polsek beserta detail Polres dan Wilayahnya",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Master Data (Polsek)"
+                ],
+                "summary": "Lihat Semua Polsek",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat data Polsek dengan referensi ID Polres dan ID Wilayah",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Master Data (Polsek)"
+                ],
+                "summary": "Tambah Polsek Baru",
+                "parameters": [
+                    {
+                        "description": "Data Polsek",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "kapolsek": {
+                                    "type": "string"
+                                },
+                                "kode": {
+                                    "type": "string"
+                                },
+                                "nama_polsek": {
+                                    "type": "string"
+                                },
+                                "no_telp_polsek": {
+                                    "type": "string"
+                                },
+                                "polres_id": {
+                                    "type": "integer"
+                                },
+                                "wilayah_id": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "security": [
@@ -232,6 +408,91 @@
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/wilayah": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mengambil list semua wilayah yang terdaftar",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Master Data (Wilayah)"
+                ],
+                "summary": "Lihat Semua Wilayah",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Membuat data master wilayah (Kecamatan/Kabupaten)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Master Data (Wilayah)"
+                ],
+                "summary": "Tambah Wilayah Baru",
+                "parameters": [
+                    {
+                        "description": "Data Wilayah",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "kabupaten": {
+                                    "type": "string"
+                                },
+                                "kecamatan": {
+                                    "type": "string"
+                                },
+                                "latitude": {
+                                    "type": "number"
+                                },
+                                "longitude": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }

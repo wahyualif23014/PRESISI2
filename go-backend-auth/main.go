@@ -71,16 +71,27 @@ func main() {
 	authorized.Use(middleware.RequireAuth)
 
 	{
-		// A. ADMIN GROUP: Manajemen User
-		// Hanya bisa diakses oleh Role "admin"
 		adminRoutes := authorized.Group("/admin")
 		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
+			// --- User Management ---
 			adminRoutes.POST("/users", controllers.CreateUser)       // Create User
 			adminRoutes.GET("/users", controllers.GetUsers)          // Read All
 			adminRoutes.GET("/users/:id", controllers.GetUserByID)   // Read One
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)    // Update Data & Upgrade Role
 			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Soft Delete
+
+			// 1. Wilayah
+			adminRoutes.POST("/wilayah", controllers.CreateWilayah)
+			adminRoutes.GET("/wilayah", controllers.GetWilayah)
+
+			// 2. Polres
+			adminRoutes.POST("/polres", controllers.CreatePolres)
+			adminRoutes.GET("/polres", controllers.GetPolres)
+
+			// 3. Polsek
+			adminRoutes.POST("/polsek", controllers.CreatePolsek)
+			adminRoutes.GET("/polsek", controllers.GetPolsek)
 		}
 
 		// B. INPUT GROUP: Input Laporan
@@ -108,16 +119,14 @@ func main() {
 					"nrp":          userData.NRP,
 					"jabatan":      userData.Jabatan,
 					"role":         userData.Role,
-					
-					// Menambahkan field baru agar bisa ditampilkan di Profil Flutter
-					"no_telp":      userData.NoTelp,
-					"foto_profil":  userData.FotoProfil,
+
+					"no_telp":     userData.NoTelp,
+					"foto_profil": userData.FotoProfil,
 				})
 			})
 		}
 	}
 
-	// Menjalankan server di 0.0.0.0 agar bisa diakses dari HP / Jaringan Luar
-	// r.Run("0.0.0.0:8080") 
+	// Menjalankan server
 	r.Run()
 }
