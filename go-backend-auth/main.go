@@ -16,7 +16,6 @@ import (
 	"github.com/wahyualif23014/backendGO/middleware"
 	"github.com/wahyualif23014/backendGO/models"
 
-	// Import Docs
 	_ "github.com/wahyualif23014/backendGO/docs"
 )
 
@@ -27,9 +26,9 @@ func init() {
 	initializers.SyncDatabase()
 }
 
-// @title           Backend API Polres & Polsek (Sistem NRP)
-// @version         1.3
-// @description     API Service untuk Manajemen User (Login NRP) dan Pelaporan Data Kepolisian.
+// @title           Backend API Kepolisian (Sistem Anggota & Laporan)
+// @version         2.0
+// @description     API Service untuk Manajemen Anggota (Login via Username) dan Pelaporan Data Kepolisian.
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name    Tim IT Support
@@ -46,7 +45,7 @@ func main() {
 
 	// --- 1. Konfigurasi CORS ---
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Ubah ke domain spesifik saat production
+		AllowOrigins:     []string{"*"}, 
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -60,7 +59,7 @@ func main() {
 
 	// --- 3. Public Routes ---
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
+		c.JSON(200, gin.H{"message": "pong - Backend v2.0 Online"})
 	})
 
 	r.POST("/signup", controllers.Signup) // Register (Default Role: View)
@@ -68,9 +67,10 @@ func main() {
 
 	// --- 4. Protected Routes ---
 	authorized := r.Group("/")
-	authorized.Use(middleware.RequireAuth)
+	authorized.Use(middleware.RequireAuth) // Middleware Cek Token & User Aktif
 
 	{
+		// A. ADMIN GROUP (Hanya Role '1')
 		adminRoutes := authorized.Group("/admin")
 		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
@@ -79,54 +79,58 @@ func main() {
 			adminRoutes.GET("/users", controllers.GetUsers)          // Read All
 			adminRoutes.GET("/users/:id", controllers.GetUserByID)   // Read One
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)    // Update Data & Upgrade Role
-			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Soft Delete
+			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Soft Delete (deletestatus='1')
 
-			// 1. Wilayah
+			// --- Master Data (Wilayah, Polres, Polsek) ---
+			// Pastikan controller ini sudah disesuaikan juga nanti
 			adminRoutes.POST("/wilayah", controllers.CreateWilayah)
 			adminRoutes.GET("/wilayah", controllers.GetWilayah)
 
-			// 2. Polres
 			adminRoutes.POST("/polres", controllers.CreatePolres)
 			adminRoutes.GET("/polres", controllers.GetPolres)
 
-			// 3. Polsek
 			adminRoutes.POST("/polsek", controllers.CreatePolsek)
 			adminRoutes.GET("/polsek", controllers.GetPolsek)
 		}
 
-		// B. INPUT GROUP: Input Laporan
 		inputRoutes := authorized.Group("/input")
-		inputRoutes.Use(middleware.RequireRoles(models.RolePolres, models.RolePolsek, models.RoleAdmin))
+		inputRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres))
 		{
 			inputRoutes.POST("/laporan", func(c *gin.Context) {
-				// TODO: Sambungkan ke controller laporan nanti
 				c.JSON(200, gin.H{"message": "Laporan berhasil diinput"})
 			})
 		}
 
+		// C. VIEW GROUP (Semua User Aktif: '1', '2', '3')
 		viewRoutes := authorized.Group("/view")
-		viewRoutes.Use(middleware.RequireRoles(models.RoleView, models.RoleAdmin, models.RolePolres, models.RolePolsek))
+		viewRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres, models.RoleView))
 		{
 			viewRoutes.GET("/dashboard", func(c *gin.Context) {
-				// Mengambil data user dari Middleware (RequireAuth)
-				user, _ := c.Get("user")
-				userData := user.(models.User)
+				userValue, exists := c.Get("user")
+				if !exists {
+					c.JSON(401, gin.H{"error": "Unauthorized"})
+					return
+				}
+				
+				// Casting ke model User yang baru
+				userData := userValue.(models.User)
 
 				c.JSON(200, gin.H{
-					"message":      "Dashboard Data",
-					"id":           userData.ID,
-					"nama_lengkap": userData.NamaLengkap,
-					"nrp":          userData.NRP,
-					"jabatan":      userData.Jabatan,
-					"role":         userData.Role,
-
-					"no_telp":     userData.NoTelp,
-					"foto_profil": userData.FotoProfil,
+					"message": "Dashboard Data Loaded",
+					"user_info": gin.H{
+						"id":           userData.ID,           // idanggota
+						"nama_lengkap": userData.NamaLengkap, // nama
+						"id_tugas":     userData.IDTugas,     // idtugas
+						"username":     userData.Username,    // username
+						"id_jabatan":   userData.JabatanID,   // idjabatan
+						"role":         userData.Role,        // statusadmin (1/2/3)
+						"no_telp":      userData.NoTelp,      // hp
+					},
 				})
 			})
 		}
 	}
 
 	// Menjalankan server
-	r.Run()
+	r.Run() // Default port 8080
 }

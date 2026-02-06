@@ -21,7 +21,7 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 2. Support format "Bearer <token>" (Standar Industri)
+	// 2. Format "Bearer <token>"
 	tokenString := authHeader
 	if len(strings.Split(authHeader, " ")) == 2 {
 		tokenString = strings.Split(authHeader, " ")[1]
@@ -35,7 +35,6 @@ func RequireAuth(c *gin.Context) {
 		return []byte(os.Getenv("SECRET")), nil
 	})
 
-	// Jika parsing gagal atau token invalid
 	if err != nil || !token.Valid {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 		return
@@ -53,14 +52,17 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 5. Query DB (OPTIMIZED SELECT)
-	// Kita ambil data user berdasarkan ID dari token.
-	// UPDATE: Menambahkan no_telp dan foto_profil agar data user di context lengkap (tanpa password)
+	// 5. Query DB (Disetujui dengan Model Baru)
 	var user models.User
-	result := initializers.DB.Select("id", "nama_lengkap", "nrp", "role", "jabatan", "foto_profil", "no_telp").First(&user, claims["sub"])
+
+	result := initializers.DB.
+		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
+		Where("idanggota = ?", claims["sub"]).           // Cari berdasarkan ID (Sub)
+		Where("deletestatus = ?", models.StatusActive). // Pastikan user aktif ('2')
+		First(&user)
 
 	if result.Error != nil || user.ID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or deleted"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or inactive"})
 		return
 	}
 
@@ -69,9 +71,8 @@ func RequireAuth(c *gin.Context) {
 	c.Next()
 }
 
-func RequireRoles(allowedRoles ...models.Role) gin.HandlerFunc {
+func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. Ambil user dari context dengan aman
 		userValue, exists := c.Get("user")
 		if !exists {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized session"})
@@ -95,9 +96,19 @@ func RequireRoles(allowedRoles ...models.Role) gin.HandlerFunc {
 		}
 
 		if !isAllowed {
+			roleLabel := "Unknown"
+			switch user.Role {
+			case models.RoleAdmin:
+				roleLabel = "Admin"
+			case models.RolePolres:
+				roleLabel = "Polres"
+			case models.RoleView:
+				roleLabel = "View"
+			}
+
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error":   "Access denied",
-				"message": fmt.Sprintf("Role '%s' tidak diizinkan mengakses resource ini. Hubungi Admin.", user.Role),
+				"message": fmt.Sprintf("Role Level '%s' (%s) tidak diizinkan mengakses resource ini.", user.Role, roleLabel),
 			})
 			return
 		}

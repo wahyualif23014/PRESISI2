@@ -195,230 +195,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/users": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengambil list semua user yang terdaftar.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-users"
-                ],
-                "summary": "Lihat Semua User",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Membuat user baru dengan NRP dan Role tertentu.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-users"
-                ],
-                "summary": "Tambah User Baru (Admin Only)",
-                "parameters": [
-                    {
-                        "description": "Data User Baru",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controllers.CreateUserInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/users/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengambil data user berdasarkan ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-users"
-                ],
-                "summary": "Lihat Detail User",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengupdate Nama, Jabatan, Role, atau No Telp user.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-users"
-                ],
-                "summary": "Edit Data User (Termasuk Upgrade Role)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Data Update",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controllers.UpdateUserInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Soft delete user berdasarkan ID.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin-users"
-                ],
-                "summary": "Hapus User",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/admin/wilayah": {
             "get": {
                 "security": [
@@ -506,7 +282,7 @@ const docTemplate = `{
         },
         "/login": {
             "post": {
-                "description": "Login menggunakan NRP dan Password untuk mendapatkan Token JWT.",
+                "description": "Login menggunakan Username dan Password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -550,7 +326,7 @@ const docTemplate = `{
         },
         "/signup": {
             "post": {
-                "description": "Mendaftar akun baru. Default role adalah 'view'.",
+                "description": "Mendaftar akun baru dengan status 'View' (3).",
                 "consumes": [
                     "application/json"
                 ],
@@ -596,145 +372,63 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "controllers.CreateUserInput": {
-            "type": "object",
-            "required": [
-                "jabatan",
-                "nama_lengkap",
-                "no_telp",
-                "nrp",
-                "password",
-                "role"
-            ],
-            "properties": {
-                "jabatan": {
-                    "type": "string",
-                    "example": "Kanit Reskrim"
-                },
-                "nama_lengkap": {
-                    "type": "string",
-                    "example": "Budi Santoso"
-                },
-                "no_telp": {
-                    "type": "string",
-                    "example": "08123456789"
-                },
-                "nrp": {
-                    "type": "string",
-                    "example": "87011234"
-                },
-                "password": {
-                    "type": "string",
-                    "example": "rahasia123"
-                },
-                "role": {
-                    "description": "Admin wajib isi Role",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Role"
-                        }
-                    ],
-                    "example": "polres"
-                }
-            }
-        },
         "controllers.LoginInput": {
             "type": "object",
             "required": [
-                "nrp",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "nrp": {
-                    "type": "string",
-                    "example": "12345678"
-                },
                 "password": {
                     "type": "string",
                     "example": "password123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "budi87"
                 }
             }
         },
         "controllers.RegisterInput": {
             "type": "object",
             "required": [
-                "jabatan",
+                "id_jabatan",
+                "id_tugas",
                 "nama_lengkap",
                 "no_telp",
-                "nrp",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "jabatan": {
+                "id_jabatan": {
+                    "description": "Kolom idjabatan (BigInt)",
+                    "type": "integer",
+                    "example": 1
+                },
+                "id_tugas": {
+                    "description": "Kolom idtugas",
                     "type": "string",
-                    "example": "Anggota Sabhara"
+                    "example": "87011234"
                 },
                 "nama_lengkap": {
                     "type": "string",
                     "example": "Budi Santoso"
                 },
                 "no_telp": {
-                    "description": "Tambahan",
+                    "description": "Kolom hp",
                     "type": "string",
                     "example": "08123456789"
-                },
-                "nrp": {
-                    "type": "string",
-                    "example": "12345678"
                 },
                 "password": {
                     "type": "string",
                     "example": "password123"
+                },
+                "username": {
+                    "description": "Kolom username",
+                    "type": "string",
+                    "example": "budi87"
                 }
             }
-        },
-        "controllers.UpdateUserInput": {
-            "type": "object",
-            "properties": {
-                "jabatan": {
-                    "type": "string",
-                    "example": "Kapolsek"
-                },
-                "nama_lengkap": {
-                    "type": "string",
-                    "example": "Budi Santoso S.H."
-                },
-                "no_telp": {
-                    "type": "string"
-                },
-                "role": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Role"
-                        }
-                    ],
-                    "example": "polres"
-                }
-            }
-        },
-        "models.Role": {
-            "type": "string",
-            "enum": [
-                "admin",
-                "view",
-                "polres",
-                "polsek"
-            ],
-            "x-enum-comments": {
-                "RoleView": "Default untuk user baru"
-            },
-            "x-enum-descriptions": [
-                "",
-                "Default untuk user baru",
-                "",
-                ""
-            ],
-            "x-enum-varnames": [
-                "RoleAdmin",
-                "RoleView",
-                "RolePolres",
-                "RolePolsek"
-            ]
         }
     },
     "securityDefinitions": {
@@ -748,12 +442,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.3",
+	Version:          "2.0",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Backend API Polres & Polsek (Sistem NRP)",
-	Description:      "API Service untuk Manajemen User (Login NRP) dan Pelaporan Data Kepolisian.",
+	Title:            "Backend API Kepolisian (Sistem Anggota & Laporan)",
+	Description:      "API Service untuk Manajemen Anggota (Login via Username) dan Pelaporan Data Kepolisian.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
