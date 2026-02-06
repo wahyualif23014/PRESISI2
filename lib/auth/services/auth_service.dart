@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class AuthService {
   // Pastikan IP ini sesuai dengan IP Laptop Anda
-  final String baseUrl = 'http://10.16.15.29:8080';
+  final String baseUrl = 'http://10.16.9.44:8080';
 
   // --- LOGIN ---
   Future<Map<String, dynamic>> login(String nrp, String password) async {

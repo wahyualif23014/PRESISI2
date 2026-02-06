@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../model/personel_model.dart'; // Pastikan path import model benar
 
 class PersonelService {
-  final String baseUrl = 'http://10.16.15.29:8080'; 
+  final String baseUrl = 'http://10.16.9.44:8080'; 
   final _storage = const FlutterSecureStorage();
 
   // Helper untuk mengambil Token Header
