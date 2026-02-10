@@ -1,36 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // State Management Legacy
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // State Management Modern
+import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+// --- IMPORTS ---
 import 'auth/provider/auth_provider.dart';
 import './router/router_provider.dart';
 import 'features/admin/dashboard/providers/dashboard_provider.dart';
+import 'features/admin/personnel/providers/personel_provider.dart'; // [NEW] Import PersonelProvider
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Setup Format Tanggal (Indonesia)
+  // 1. Setup Date Format (Indonesia)
   await initializeDateFormatting('id_ID');
 
+  // 2. Initialize Auth & Check Login Status
   final authProvider = AuthProvider();
   await authProvider.tryAutoLogin();
 
-  // 4. Setup Router (Dengan Redirect Logic)
+  // 3. Setup Router with Redirect Logic
   final appRouter = AppRouter(authProvider);
 
-  // 5. Jalankan Aplikasi
+  // 4. Run App
   runApp(
-    ProviderScope(
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: authProvider),
+    MultiProvider(
+      providers: [
+        // Auth Provider (Value Provider because it's already created above)
+        ChangeNotifierProvider.value(value: authProvider),
 
-          ChangeNotifierProvider(create: (_) => DashboardProvider()),
-        ],
-        child: MyApp(appRouter: appRouter),
-      ),
+        // Dashboard Provider
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
+
+        // [FIX] Personel Provider (Added here so PersonelPage works)
+        ChangeNotifierProvider(create: (_) => PersonelProvider()),
+      ],
+      child: MyApp(appRouter: appRouter),
     ),
   );
 }
@@ -46,10 +51,10 @@ class MyApp extends StatelessWidget {
       title: 'Sistem Ketahanan Pangan Presisi',
       debugShowCheckedModeBanner: false,
 
-      // Konfigurasi Router (GoRouter)
+      // Router Config
       routerConfig: appRouter.router,
 
-      // Localization (Bahasa Indonesia)
+      // Localization
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -58,23 +63,28 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       locale: const Locale('id', 'ID'),
 
-      // Theme Configuration
+      // Theme
       theme: _lightTheme,
       themeMode: ThemeMode.light,
+
+      // Global Error Builder
       builder: (context, child) {
-        ErrorWidget.builder = (details) => const _SafeErrorView();
+        ErrorWidget.builder = (FlutterErrorDetails details) {
+          // Pass the actual error message to the view
+          return _SafeErrorView(errorMessage: details.exceptionAsString());
+        };
         return child ?? const SizedBox.shrink();
       },
     );
   }
 }
 
-// --- CONFIG TEMA ---
+// --- THEME CONFIGURATION ---
 final ThemeData _lightTheme = ThemeData(
   useMaterial3: true,
-  fontFamily: 'Ramabhadra', // Pastikan font terdaftar di pubspec.yaml
+  fontFamily: 'Ramabhadra',
   colorScheme: ColorScheme.fromSeed(
-    seedColor: Colors.orange,
+    seedColor: const Color(0xFF00A7C4), // Consistent with your UI color
     brightness: Brightness.light,
   ),
   appBarTheme: const AppBarTheme(
@@ -89,9 +99,11 @@ final ThemeData _lightTheme = ThemeData(
   ),
 );
 
-// --- ERROR UI AMAN ---
+// --- SAFE ERROR VIEW (DEBUG MODE) ---
 class _SafeErrorView extends StatelessWidget {
-  const _SafeErrorView();
+  final String? errorMessage;
+
+  const _SafeErrorView({this.errorMessage});
 
   @override
   Widget build(BuildContext context) {
@@ -104,21 +116,42 @@ class _SafeErrorView extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(
-                  Icons.warning_amber_rounded,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
                   size: 64,
-                  color: Colors.orange,
+                  color: Colors.redAccent,
                 ),
-                SizedBox(height: 16),
-                Text(
-                  'Sedang Memuat Aplikasi...',
+                const SizedBox(height: 16),
+                const Text(
+                  'Terjadi Kesalahan Aplikasi',
                   style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                     decoration: TextDecoration.none,
                   ),
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    errorMessage ?? 'Unknown Error',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.red,
+                      fontFamily: 'Courier', // Monospace for code font
+                      decoration: TextDecoration.none,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

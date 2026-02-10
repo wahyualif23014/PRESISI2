@@ -1,54 +1,64 @@
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:KETAHANANPANGAN/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/model/personel_model.dart';
-import '../../data/model/role_enum.dart';
-import '../../providers/personel_provider.dart';
+import 'package:provider/provider.dart';
 
-class AddPersonelDialog extends ConsumerStatefulWidget {
+// Import Provider & Model yang benar
+import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
+
+class AddPersonelDialog extends StatefulWidget {
   const AddPersonelDialog({super.key});
 
   @override
-  ConsumerState<AddPersonelDialog> createState() => _AddPersonelDialogState();
+  State<AddPersonelDialog> createState() => _AddPersonelDialogState();
 }
 
-class _AddPersonelDialogState extends ConsumerState<AddPersonelDialog> {
+class _AddPersonelDialogState extends State<AddPersonelDialog> {
   final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
   final _nameController = TextEditingController();
-  final _nrpController = TextEditingController();
+  final _idTugasController = TextEditingController(); // Ganti NRP -> ID Tugas
   final _jabatanController = TextEditingController();
   final _telpController = TextEditingController();
   final _passwordController = TextEditingController();
-  UserRole _selectedRole = UserRole.view;
+  final _usernameController = TextEditingController(); // Tambahan Username (Wajib buat login)
+
+  // State Dropdown (Default '3' = View Only)
+  String _selectedRole = '3'; 
 
   @override
   void dispose() {
     _nameController.dispose();
-    _nrpController.dispose();
+    _idTugasController.dispose();
     _jabatanController.dispose();
     _telpController.dispose();
     _passwordController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
+      // Tutup dialog dulu agar UX lebih cepat
       Navigator.pop(context);
 
       try {
-        final newPersonel = Personel(
-          id: 0,
+        // Buat Object UserModel Baru
+        // ID dikosongkan (0) karena auto-increment di DB
+        final newUser = UserModel(
+          id: 0, 
           namaLengkap: _nameController.text,
-          nrp: _nrpController.text,
-          jabatan: _jabatanController.text,
-          role: _selectedRole,
-          noTelp: _telpController.text.isNotEmpty ? _telpController.text : null,
-          fotoProfil: null,
+          idTugas: _idTugasController.text,
+          username: _usernameController.text,
+          idJabatan: 0, 
+          role: _selectedRole, // Kirim '1', '2', atau '3'
+          noTelp: _telpController.text.isNotEmpty ? _telpController.text : "-",
+          fotoProfil: "", // Kosongkan dulu
         );
 
-        await ref
-            .read(personelProvider.notifier)
-            .add(newPersonel, _passwordController.text);
+        // Panggil Provider untuk Add Data
+        await context.read<PersonelProvider>().addPersonel(newUser, _passwordController.text);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -112,16 +122,23 @@ class _AddPersonelDialogState extends ConsumerState<AddPersonelDialog> {
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
-                  controller: _nrpController,
-                  label: "NRP",
+                  controller: _usernameController,
+                  label: "Username",
+                  icon: Icons.account_circle_outlined,
+                  validator: (v) => v!.isEmpty ? "Username wajib diisi" : null,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _idTugasController,
+                  label: "ID Tugas / NRP",
                   icon: Icons.badge_outlined,
                   isNumber: true,
-                  validator: (v) => v!.isEmpty ? "NRP wajib diisi" : null,
+                  validator: (v) => v!.isEmpty ? "ID Tugas wajib diisi" : null,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   controller: _jabatanController,
-                  label: "Jabatan",
+                  label: "Jabatan (Teks)",
                   icon: Icons.work_outline,
                   validator: (v) => v!.isEmpty ? "Jabatan wajib diisi" : null,
                 ),
@@ -133,7 +150,10 @@ class _AddPersonelDialogState extends ConsumerState<AddPersonelDialog> {
                   isNumber: true,
                 ),
                 const SizedBox(height: 16),
+                
+                // Dropdown Role String
                 _buildDropdownField(),
+                
                 const SizedBox(height: 16),
                 _buildTextField(
                   controller: _passwordController,
@@ -243,12 +263,12 @@ class _AddPersonelDialogState extends ConsumerState<AddPersonelDialog> {
   }
 
   Widget _buildDropdownField() {
-    return DropdownButtonFormField<UserRole>(
+    return DropdownButtonFormField<String>(
       value: _selectedRole,
       style: const TextStyle(
         color: AppColors.slate800,
         fontWeight: FontWeight.w500,
-        fontFamily: 'Roboto', 
+        fontFamily: 'Roboto',
       ),
       icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.slate400),
       decoration: InputDecoration(
@@ -273,14 +293,17 @@ class _AddPersonelDialogState extends ConsumerState<AddPersonelDialog> {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      items: UserRole.values.map((role) {
-        return DropdownMenuItem(
-          value: role,
-          child: Text(role.label.toUpperCase()),
-        );
-      }).toList(),
-      onChanged: (val) => setState(() => _selectedRole = val!),
+      // Item Dropdown Manual sesuai Logic Database ('1','2','3')
+      items: const [
+        DropdownMenuItem(value: '1', child: Text("ADMINISTRATOR")),
+        DropdownMenuItem(value: '2', child: Text("OPERATOR")),
+        DropdownMenuItem(value: '3', child: Text("VIEW ONLY")),
+      ],
+      onChanged: (val) {
+        if (val != null) {
+          setState(() => _selectedRole = val);
+        }
+      },
     );
   }
 }
-

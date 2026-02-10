@@ -24,8 +24,6 @@ class Personel {
   // ============================
   factory Personel.fromJson(Map<String, dynamic> json) {
     return Personel(
-      // Backend GORM biasanya mengirim 'ID' atau 'id' (tergantung config), 
-      // kita pakai fallback agar aman.
       id: json['ID'] ?? json['id'] ?? 0, 
       
       // Kunci JSON harus SAMA PERSIS dengan struct tag Golang (`json:"..."`)

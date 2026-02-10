@@ -1,60 +1,90 @@
-import 'package:KETAHANANPANGAN/features/admin/personnel/data/model/personel_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/personnel/data/model/role_enum.dart'; // Pastikan import Enum Role ada
-import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
+
+// Import Provider & Model yang sudah diperbaiki
+import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
 
 import 'widgets/personel_card.dart';
 import 'widgets/personel_toolbar.dart';
 
-class PersonelPage extends ConsumerWidget {
+class PersonelPage extends StatefulWidget {
   const PersonelPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final personelAsync = ref.watch(personelProvider);
+  State<PersonelPage> createState() => _PersonelPageState();
+}
 
+class _PersonelPageState extends State<PersonelPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch data saat halaman pertama kali dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PersonelProvider>().fetchPersonel();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Menggunakan Consumer dari package:provider
     return Scaffold(
       backgroundColor: const Color(0xFFEAF0F9),
       body: Column(
         children: [
           const PersonelToolbar(),
 
-          // List Data Personel
           Expanded(
-            child: personelAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                    const SizedBox(height: 16),
-                    Text('Terjadi kesalahan\n$e', textAlign: TextAlign.center),
-                    ElevatedButton(
-                      onPressed: () => ref.refresh(personelProvider),
-                      child: const Text("Coba Lagi"),
-                    )
-                  ],
-                ),
-              ),
-              data: (personelList) {
-                if (personelList.isEmpty) return _buildEmptyState();
+            child: Consumer<PersonelProvider>(
+              builder: (context, provider, child) {
+                // 1. Loading State
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
+                // 2. Error State
+                if (provider.errorMessage != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Terjadi kesalahan:\n${provider.errorMessage}',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () => provider.fetchPersonel(),
+                          child: const Text("Coba Lagi"),
+                        )
+                      ],
+                    ),
+                  );
+                }
+
+                // 3. Empty State
+                if (provider.personelList.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                // 4. Data List State
                 return RefreshIndicator(
-                  onRefresh: () => ref.read(personelProvider.notifier).refresh(),
+                  onRefresh: () => provider.fetchPersonel(),
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: personelList.length,
+                    itemCount: provider.personelList.length,
                     separatorBuilder: (ctx, index) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final personel = personelList[index];
+                      final UserModel user = provider.personelList[index];
+                      
                       return PersonelCard(
-                        personel: personel,
-                        onTap: () => _navigateToDetail(context, personel),
-                        onEdit: () => _showEditDialog(context, ref, personel),
-                        onDelete: () => _onDelete(context, ref, personel),
+                        personel: user, 
+                        onTap: () => _navigateToDetail(context, user),
+                        onEdit: () => _showEditDialog(context, user),
+                        onDelete: () => _onDelete(context, user),
                       );
                     },
                   ),
@@ -83,27 +113,26 @@ class PersonelPage extends ConsumerWidget {
     );
   }
 
-  void _navigateToDetail(BuildContext context, Personel personel) {
+  void _navigateToDetail(BuildContext context, UserModel user) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Detail: ${personel.namaLengkap}")),
+      SnackBar(content: Text("Detail: ${user.namaLengkap}")),
     );
   }
 
-  // =========================================================================
-  // FOKUS OPTIMALISASI UI & LOGIC ROLE DI SINI
-  // =========================================================================
-  void _showEditDialog(BuildContext context, WidgetRef ref, Personel personel) {
+
+  void _showEditDialog(BuildContext context, UserModel user) {
     // 1. Setup Controller
-    final nameController = TextEditingController(text: personel.namaLengkap);
-    final jabatanController = TextEditingController(text: personel.jabatan);
-    final phoneController = TextEditingController(text: personel.noTelp ?? "");
+    final nameController = TextEditingController(text: user.namaLengkap);
     
-    // 2. Setup Variable State untuk Role (Default ambil dari data lama)
-    UserRole selectedRole = personel.role;
+
+    final jabatanController = TextEditingController(text: user.jabatanDetail?.namaJabatan ?? '');
+    
+    final phoneController = TextEditingController(text: user.noTelp);
+    
+    // 2. Setup Variable State untuk Role (Default ambil dari data lama '1','2', atau '3')
+    String selectedRole = user.role; 
 
     final formKey = GlobalKey<FormState>();
-
-    // Palet Warna
     const primaryDark = Color(0xFF1E293B); 
     const inputFillColor = Color(0xFFF8FAFC); 
 
@@ -111,14 +140,12 @@ class PersonelPage extends ConsumerWidget {
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        // PENTING: Gunakan StatefulBuilder agar Dropdown bisa berubah saat dipilih
         return StatefulBuilder(
           builder: (context, setState) {
             return Dialog(
               elevation: 8,
               backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              clipBehavior: Clip.antiAlias,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 450),
                 child: SingleChildScrollView(
@@ -141,7 +168,6 @@ class PersonelPage extends ConsumerWidget {
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
-                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ),
@@ -172,46 +198,43 @@ class PersonelPage extends ConsumerWidget {
                               ),
                               const SizedBox(height: 16),
                               
+                              // Catatan: Idealnya ini Dropdown ID Jabatan
                               _buildStyledField(
                                 controller: jabatanController,
-                                hint: "Jabatan",
+                                hint: "Jabatan (Teks)",
                                 icon: Icons.work_outline,
                                 fillColor: inputFillColor,
                               ),
 
                               const SizedBox(height: 24),
-                              _buildLabel("HAK AKSES (ROLE)"), // Label Section Baru
+                              _buildLabel("HAK AKSES (ROLE)"),
                               const SizedBox(height: 8),
 
-                              // --- DROPDOWN ROLE ---
+                              // --- DROPDOWN ROLE (STRING) ---
                               Container(
                                 decoration: BoxDecoration(
                                   color: inputFillColor,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: DropdownButtonFormField<UserRole>(
+                                child: DropdownButtonFormField<String>(
                                   value: selectedRole,
                                   decoration: InputDecoration(
                                     labelText: "Pilih Role",
-                                    labelStyle: TextStyle(color: Colors.grey.shade600),
                                     prefixIcon: Icon(Icons.admin_panel_settings_outlined, color: Colors.grey.shade500, size: 22),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                   ),
                                   icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                                  items: UserRole.values.map((role) {
-                                    return DropdownMenuItem(
-                                      value: role,
-                                      child: Text(
-                                        role.label.toUpperCase(), // Pastikan enum punya .label atau .name
-                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (UserRole? newValue) {
+                                  // Item Dropdown Manual sesuai Logic Database
+                                  items: const [
+                                    DropdownMenuItem(value: '1', child: Text("ADMINISTRATOR")),
+                                    DropdownMenuItem(value: '2', child: Text("OPERATOR")),
+                                    DropdownMenuItem(value: '3', child: Text("VIEW ONLY")),
+                                  ],
+                                  onChanged: (String? newValue) {
                                     if (newValue != null) {
                                       setState(() {
-                                        selectedRole = newValue; // Update State Lokal Dialog
+                                        selectedRole = newValue;
                                       });
                                     }
                                   },
@@ -263,22 +286,25 @@ class PersonelPage extends ConsumerWidget {
                                         Navigator.pop(ctx);
 
                                         try {
-                                          final updated = Personel(
-                                            id: personel.id,
+                                          // Update data menggunakan UserModel
+                                          final updatedUser = UserModel(
+                                            id: user.id,
                                             namaLengkap: nameController.text,
-                                            nrp: personel.nrp,
-                                            jabatan: jabatanController.text,
-                                            role: selectedRole, // <--- UPDATE ROLE BARU DI SINI
+                                            idTugas: user.idTugas, // ID Tugas biasanya tidak diedit di sini
+                                            username: user.username,
+                                            idJabatan: user.idJabatan, // Harusnya ID Jabatan, sementara pakai yg lama
+                                            role: selectedRole, // Role Baru ('1','2','3')
                                             noTelp: phoneController.text,
-                                            fotoProfil: personel.fotoProfil,
+                                            fotoProfil: user.fotoProfil,
+                                            jabatanDetail: user.jabatanDetail,
                                           );
 
-                                          await ref.read(personelProvider.notifier).updatePersonel(updated);
+                                          await context.read<PersonelProvider>().updatePersonel(updatedUser);
 
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context).showSnackBar(
                                               SnackBar(
-                                                content: const Text("Data & Role berhasil diperbarui"),
+                                                content: const Text("Data berhasil diperbarui"),
                                                 backgroundColor: Colors.green[700],
                                                 behavior: SnackBarBehavior.floating,
                                               ),
@@ -336,9 +362,6 @@ class PersonelPage extends ConsumerWidget {
         fillColor: fillColor,
         contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF1E293B), width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.redAccent, width: 1)),
       ),
     );
   }
@@ -355,12 +378,12 @@ class PersonelPage extends ConsumerWidget {
     );
   }
 
-  void _onDelete(BuildContext context, WidgetRef ref, Personel personel) {
+  void _onDelete(BuildContext context, UserModel user) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Hapus Data"),
-        content: Text("Yakin ingin menghapus ${personel.namaLengkap}?"),
+        content: Text("Yakin ingin menghapus ${user.namaLengkap}?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -371,7 +394,7 @@ class PersonelPage extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(personelProvider.notifier).delete(personel.id);
+                await context.read<PersonelProvider>().deletePersonel(user.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Data telah dihapus")),

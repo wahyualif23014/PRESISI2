@@ -1,9 +1,9 @@
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:flutter/material.dart';
-import '../../data/model/personel_model.dart';
-import '../../data/model/role_enum.dart'; 
+// Pastikan import ini mengarah ke file UserModel yang benar
 
 class PersonelCard extends StatelessWidget {
-  final Personel personel;
+  final UserModel personel; // Menggunakan UserModel
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
@@ -18,16 +18,24 @@ class PersonelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. LOGIC SAFE ACCESS UNTUK JABATAN
+    // Jika jabatanDetail ada, ambil namanya. Jika null, tampilkan '-'
+    final String displayJabatan = personel.jabatanDetail?.namaJabatan ?? '-';
+
+    // 2. LOGIC SAFE ACCESS UNTUK NO TELP
+    // Cek apakah tidak null DAN tidak kosong
+    final bool hasPhone = personel.noTelp != null && personel.noTelp!.isNotEmpty;
+    final String displayPhone = hasPhone ? personel.noTelp! : "-";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        // Border tipis tapi tegas (Slate-200) untuk kesan rapi & kokoh
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        borderRadius: BorderRadius.circular(12), // Radius sedikit lebih tajam (12 vs 16)
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.06), // Slate-900 shadow (Darker)
+            color: const Color(0xFF0F172A).withOpacity(0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -45,21 +53,19 @@ class PersonelCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. AVATAR (Square-ish untuk kesan maskulin/teknis)
+                // 1. AVATAR
                 _AvatarSection(
                   name: personel.namaLengkap,
                   photoUrl: personel.fotoProfil,
                 ),
 
-                // Spacer "Agak ke kanan" sesuai request
-                const SizedBox(width: 20), 
+                const SizedBox(width: 20),
 
                 // 2. INFORMASI UTAMA & DATA
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Row: Nama & Menu di baris yang sama
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,20 +78,20 @@ class PersonelCard extends StatelessWidget {
                                   personel.namaLengkap,
                                   style: const TextStyle(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.w800, // Extra Bold
-                                    color: Color(0xFF1E293B), // Slate-800
-                                    height: 1.1, // Rapat
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1E293B),
+                                    height: 1.1,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  personel.jabatan.toUpperCase(), // Uppercase biar gahar
+                                  displayJabatan.toUpperCase(), // Gunakan variabel yang sudah diamankan
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF64748B), // Slate-500
+                                    color: Color(0xFF64748B),
                                     letterSpacing: 0.5,
                                   ),
                                   maxLines: 1,
@@ -94,46 +100,35 @@ class PersonelCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          // Menu Geser ke Pojok Kanan Atas
                           _ActionMenu(onEdit: onEdit, onDelete: onDelete),
                         ],
                       ),
 
                       const SizedBox(height: 12),
-
-                      // GARIS TYPOGRAFI (Separator)
-                      Container(
-                        height: 1,
-                        width: double.infinity,
-                        color: const Color(0xFFF1F5F9), // Slate-100
-                      ),
-
+                      Container(height: 1, color: const Color(0xFFF1F5F9)),
                       const SizedBox(height: 12),
 
-                      // DATA SECTION (NRP & HP)
-                      // Menggunakan Layout Teknis
+                      // DATA SECTION (ID TUGAS & HP)
                       _TechnicalDataRow(
-                        label: "NRP",
-                        value: personel.nrp,
+                        label: "ID TUGAS",
+                        value: personel.idTugas,
                         icon: Icons.badge_rounded,
                       ),
-                      
-                      const SizedBox(height: 6), // Jarak Rapat
+
+                      const SizedBox(height: 6),
 
                       _TechnicalDataRow(
                         label: "TEL",
-                        value: (personel.noTelp != null && personel.noTelp!.isNotEmpty) 
-                            ? personel.noTelp! 
-                            : "-",
+                        value: displayPhone, // Gunakan variabel safe phone
                         icon: Icons.phone_iphone_rounded,
-                        isPlaceholder: personel.noTelp == null || personel.noTelp!.isEmpty,
+                        isPlaceholder: !hasPhone,
                       ),
 
                       const SizedBox(height: 14),
 
-                      // ROLE BADGE (Bottom Alignment)
                       Align(
                         alignment: Alignment.centerLeft,
+                        // Kirim Role String ('1','2','3') ke Badge
                         child: _RoleBadge(role: personel.role),
                       ),
                     ],
@@ -148,9 +143,68 @@ class PersonelCard extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// SUB-WIDGETS (HIGH CONTRAST & TECHNICAL)
-// =============================================================================
+// --- SUB WIDGETS ---
+
+class _RoleBadge extends StatelessWidget {
+  final String role; 
+
+  const _RoleBadge({required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor;
+    Color textColor;
+    Color borderColor;
+    String label;
+
+    switch (role) {
+      case '1':
+        bgColor = const Color(0xFFFEF2F2);
+        textColor = const Color(0xFFB91C1C);
+        borderColor = const Color(0xFFFECACA);
+        label = "ADMINISTRATOR";
+        break;
+      case '2':
+        bgColor = const Color(0xFFFFF7ED);
+        textColor = const Color(0xFFC2410C);
+        borderColor = const Color(0xFFFED7AA);
+        label = "OPERATOR";
+        break;
+      case '3':
+        bgColor = const Color(0xFFF3E8FF);
+        textColor = const Color(0xFF7E22CE);
+        borderColor = const Color(0xFFE9D5FF);
+        label = "VIEW ONLY";
+        break;
+      default:
+        bgColor = const Color(0xFFF1F5F9);
+        textColor = const Color(0xFF475569);
+        borderColor = const Color(0xFFE2E8F0);
+        label = "UNKNOWN";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+// --- WIDGET HELPER LAINNYA TIDAK BERUBAH ---
+// (Copy paste _TechnicalDataRow, _AvatarSection, _ActionMenu dari kode sebelumnya)
 
 class _TechnicalDataRow extends StatelessWidget {
   final String label;
@@ -169,28 +223,18 @@ class _TechnicalDataRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Icon Kecil
-        Icon(icon, size: 14, color: const Color(0xFF94A3B8)), // Slate-400
-        
+        Icon(icon, size: 14, color: const Color(0xFF94A3B8)),
         const SizedBox(width: 8),
-        
-        Container(
-          width: 1, 
-          height: 12, 
-          color: const Color(0xFFE2E8F0), // Slate-200
-        ),
-        
+        Container(width: 1, height: 12, color: const Color(0xFFE2E8F0)),
         const SizedBox(width: 8),
-
-        // Value Data
         Expanded(
           child: Text(
             value,
             style: TextStyle(
               fontSize: 13,
-              fontFamily: 'Ramabadra', 
+              fontFamily: 'Ramabadra',
               fontWeight: FontWeight.w600,
-              color: isPlaceholder ? const Color(0xFFCBD5E1) : const Color(0xFF334155), // Slate-700
+              color: isPlaceholder ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
               letterSpacing: -0.2,
             ),
           ),
@@ -212,11 +256,11 @@ class _AvatarSection extends StatelessWidget {
     final bool hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
 
     return Container(
-      width: 56, // Sedikit lebih besar
+      width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC), // Slate-50
-        borderRadius: BorderRadius.circular(10), // Square rounded (Gahar)
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
         image: hasPhoto
             ? DecorationImage(
@@ -232,65 +276,11 @@ class _AvatarSection extends StatelessWidget {
                 initial,
                 style: const TextStyle(
                   fontSize: 24,
-                  fontWeight: FontWeight.w800, // Extra Bold
-                  color: Color(0xFF64748B), // Slate-500
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF64748B),
                 ),
               ),
             ),
-    );
-  }
-}
-
-class _RoleBadge extends StatelessWidget {
-  final UserRole role;
-
-  const _RoleBadge({required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color textColor;
-    Color borderColor;
-
-    // Warna Solid & Kontras
-    switch (role) {
-      case UserRole.admin:
-        bgColor = const Color(0xFFFEF2F2); 
-        textColor = const Color(0xFFB91C1C); // Dark Red
-        borderColor = const Color(0xFFFECACA);
-        break;
-      case UserRole.polres:
-        bgColor = const Color(0xFFFFF7ED);
-        textColor = const Color(0xFFC2410C); // Dark Orange
-        borderColor = const Color(0xFFFED7AA);
-        break;
-      case UserRole.polsek:
-        bgColor = const Color(0xFFF3E8FF); // Purple-100
-        textColor = const Color(0xFF7E22CE); // Purple-700
-        borderColor = const Color(0xFFE9D5FF);
-        break;
-      default:
-        bgColor = const Color(0xFFF1F5F9); 
-        textColor = const Color(0xFF475569); 
-        borderColor = const Color(0xFFE2E8F0);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor), // Tambah border agar tegas
-      ),
-      child: Text(
-        role.label.toUpperCase(),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w800, // Bold
-          letterSpacing: 0.8,
-        ),
-      ),
     );
   }
 }
@@ -308,7 +298,7 @@ class _ActionMenu extends StatelessWidget {
       height: 24,
       child: PopupMenuButton<String>(
         padding: EdgeInsets.zero,
-        icon: const Icon(Icons.more_horiz, color: Color(0xFF94A3B8)), // Icon horizontal agar modern
+        icon: const Icon(Icons.more_horiz, color: Color(0xFF94A3B8)),
         elevation: 4,
         color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

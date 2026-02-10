@@ -81,7 +81,6 @@ func main() {
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)    // Update Data & Upgrade Role
 			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Soft Delete (deletestatus='1')
 
-			// --- Master Data JABATAN (Tambahan Baru) ---
 			adminRoutes.GET("/jabatan", controllers.GetJabatan)           // Lihat Semua Jabatan
 			adminRoutes.POST("/jabatan", controllers.CreateJabatan)       // Tambah Jabatan
 			adminRoutes.PUT("/jabatan/:id", controllers.UpdateJabatan)    // Edit Jabatan

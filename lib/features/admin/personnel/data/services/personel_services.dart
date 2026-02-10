@@ -1,15 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:KETAHANANPANGAN/features/admin/personnel/data/model/role_enum.dart';
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../model/personel_model.dart'; // Pastikan path import model benar
+// IMPORT UserModel DARI AUTH
+
 
 class PersonelService {
+  // Ganti baseUrl sesuai config Anda
   final String baseUrl = 'http://10.16.0.85:8080'; 
   final _storage = const FlutterSecureStorage();
 
-  // Helper untuk mengambil Token Header
   Future<Map<String, String>> _getHeaders() async {
     String? token = await _storage.read(key: 'jwt_token');
     return {
@@ -18,44 +19,46 @@ class PersonelService {
     };
   }
 
-  // --- GET ALL PERSONEL (GET /admin/users) ---
-  Future<List<Personel>> getAllPersonel() async {
+  // --- GET ALL (Return List<UserModel>) ---
+  Future<List<UserModel>> getAllPersonel() async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/admin/users'),
+        Uri.parse('$baseUrl/admin/users'), // Endpoint GET All Users
         headers: headers,
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        final List<dynamic> data = jsonResponse['data']; // Backend Go membungkus data dalam key "data"
+        final List<dynamic> data = jsonResponse['data'];
         
-        return data.map((json) => Personel.fromJson(json)).toList();
+        // Mapping ke UserModel
+        return data.map((json) => UserModel.fromJson(json)).toList();
       } else {
         throw Exception('Gagal mengambil data: ${response.statusCode}');
       }
     } on SocketException {
       throw Exception('Tidak ada koneksi internet');
     } catch (e) {
-      throw Exception('Error: $e');
+      rethrow;
     }
   }
 
-  // --- ADD PERSONEL (POST /admin/users) ---
-  Future<void> addPersonel(Personel personel, String password) async {
+  // --- ADD PERSONEL ---
+  Future<void> addPersonel(UserModel user, String password) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$baseUrl/admin/users'),
         headers: headers,
         body: jsonEncode({
-          "nama_lengkap": personel.namaLengkap,
-          "nrp": personel.nrp,
-          "jabatan": personel.jabatan,
-          "role": personel.role.label, // Mengirim string 'admin', 'polsek', dll
-          "no_telp": personel.noTelp,
-          "password": password, // Password wajib dikirim saat create
+          "nama_lengkap": user.namaLengkap,
+          "id_tugas": user.idTugas, // Konsisten ID TUGAS
+          "username": user.username,
+          "id_jabatan": user.idJabatan, // Kirim ID Jabatan (int)
+          "role": user.role, // Kirim string '1', '2', '3'
+          "no_telp": user.noTelp,
+          "password": password, 
         }),
       );
 
@@ -68,19 +71,20 @@ class PersonelService {
     }
   }
 
-  // --- UPDATE PERSONEL (PUT /admin/users/:id) ---
-  Future<void> updatePersonel(Personel personel) async {
+  // --- UPDATE PERSONEL ---
+  Future<void> updatePersonel(UserModel user) async {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$baseUrl/admin/users/${personel.id}'),
+        Uri.parse('$baseUrl/admin/users/${user.id}'),
         headers: headers,
         body: jsonEncode({
-          "nama_lengkap": personel.namaLengkap,
-          "jabatan": personel.jabatan,
-          "role": personel.role.label,
-          "no_telp": personel.noTelp,
-          // NRP biasanya tidak diupdate sembarangan, tapi jika perlu bisa ditambahkan
+          "nama_lengkap": user.namaLengkap,
+          "id_tugas": user.idTugas,
+          "username": user.username,
+          "id_jabatan": user.idJabatan,
+          "role": user.role,
+          "no_telp": user.noTelp,
         }),
       );
 
@@ -93,7 +97,7 @@ class PersonelService {
     }
   }
 
-  // --- DELETE PERSONEL (DELETE /admin/users/:id) ---
+  // --- DELETE PERSONEL ---
   Future<void> deletePersonel(int id) async {
     try {
       final headers = await _getHeaders();
@@ -108,18 +112,5 @@ class PersonelService {
     } catch (e) {
       rethrow;
     }
-  }
-
-  // --- SEARCH (Client Side Filtering) ---
-  // Karena backend GetUsers mengembalikan semua data, kita filter di sisi Flutter saja agar cepat
-  Future<List<Personel>> searchPersonel(String keyword, List<Personel> allData) async {
-    if (keyword.isEmpty) return allData;
-    
-    final query = keyword.toLowerCase();
-    return allData.where((p) {
-      return p.namaLengkap.toLowerCase().contains(query) ||
-             p.nrp.toLowerCase().contains(query) ||
-             p.jabatan.toLowerCase().contains(query);
-    }).toList();
   }
 }

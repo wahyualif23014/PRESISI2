@@ -9,18 +9,17 @@ import (
 	"github.com/wahyualif23014/backendGO/models"
 )
 
-// --- DTO (Data Transfer Object) ---
+// --- DTO ---
 type JabatanInput struct {
 	NamaJabatan string `json:"nama_jabatan" binding:"required"`
 }
 
-// 1. GET ALL JABATAN (Untuk Dropdown Menu)
+// 1. GET JABATAN (Hanya yang Aktif)
 func GetJabatan(c *gin.Context) {
 	var jabatan []models.Jabatan
 
-	result := initializers.DB.
-		Where("deletestatus = ?", "2").
-		Find(&jabatan)
+	// Filter deletestatus = '2' (Aktif)
+	result := initializers.DB.Where("deletestatus = ?", "2").Find(&jabatan)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data jabatan"})
@@ -30,7 +29,7 @@ func GetJabatan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": jabatan})
 }
 
-// 2. CREATE JABATAN (Tambah Jabatan Baru)
+// 2. CREATE JABATAN
 func CreateJabatan(c *gin.Context) {
 	var body JabatanInput
 
@@ -38,16 +37,20 @@ func CreateJabatan(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Input harus berisi nama_jabatan"})
 		return
 	}
-
-	// Siapkan data model
-	jabatan := models.Jabatan{
-		NamaJabatan:     body.NamaJabatan,
-		DeleteStatus:    "2", // Default Aktif
-		DateTransaction: time.Now(),
-		// IDAnggota bisa diisi dari token user yang login jika perlu (middleware)
+	var idPembuat uint64 = 0
+	if user, exists := c.Get("user"); exists {
+		if u, ok := user.(models.User); ok {
+			idPembuat = u.ID
+		}
 	}
 
-	// Simpan ke DB
+	jabatan := models.Jabatan{
+		NamaJabatan:     body.NamaJabatan,
+		DeleteStatus:    "2", 
+		DateTransaction: time.Now(),
+		IDAnggota:       &idPembuat, // Simpan ID User (Pointer)
+	}
+
 	result := initializers.DB.Create(&jabatan)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan jabatan"})
@@ -65,21 +68,23 @@ func UpdateJabatan(c *gin.Context) {
 	id := c.Param("id")
 	var body JabatanInput
 
-	// Validasi Input
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Input salah"})
 		return
 	}
 
-	// Cari Data & Update
 	var jabatan models.Jabatan
-	if err := initializers.DB.First(&jabatan, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Jabatan tidak ditemukan"})
+	
+	if err := initializers.DB.Where("idjabatan = ? AND deletestatus = ?", id, "2").First(&jabatan).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Jabatan tidak ditemukan atau sudah dihapus"})
 		return
 	}
 
-	// Update Nama
-	initializers.DB.Model(&jabatan).Update("namajabatan", body.NamaJabatan)
+	// Update Data
+	initializers.DB.Model(&jabatan).Updates(models.Jabatan{
+		NamaJabatan: body.NamaJabatan,
+		DateTransaction: time.Now(), 
+	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Jabatan berhasil diupdate", "data": jabatan})
 }
@@ -88,13 +93,18 @@ func UpdateJabatan(c *gin.Context) {
 func DeleteJabatan(c *gin.Context) {
 	id := c.Param("id")
 
-	// Ubah deletestatus jadi '1' (Deleted)
+	// Ubah deletestatus jadi '1'
 	result := initializers.DB.Model(&models.Jabatan{}).
-		Where("idjabatan = ?", id).
+		Where("idjabatan = ? AND deletestatus = ?", id, "2"). // Pastikan hanya hapus yg statusnya '2'
 		Update("deletestatus", "1")
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus jabatan"})
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan atau sudah terhapus"})
 		return
 	}
 

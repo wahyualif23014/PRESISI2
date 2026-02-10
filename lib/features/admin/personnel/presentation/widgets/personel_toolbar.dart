@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/personnel/presentation/widgets/add_personel_dialog.dart';
+import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
 
-import '../../providers/personel_provider.dart';
-
-class PersonelToolbar extends ConsumerWidget {
+class PersonelToolbar extends StatelessWidget {
   const PersonelToolbar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 16, left: 16, right: 16, top: 16),
@@ -26,16 +25,13 @@ class PersonelToolbar extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ==========================================
-          // BARIS 1: SEARCH BAR (Full Width)
-          // ==========================================
           TextField(
             decoration: InputDecoration(
               hintText: 'Cari nama, NRP, atau jabatan...',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
               prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
               filled: true,
-              fillColor: Colors.grey.shade50, // Background abu sangat muda
+              fillColor: Colors.grey.shade50,
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 0,
                 horizontal: 12,
@@ -54,19 +50,14 @@ class PersonelToolbar extends ConsumerWidget {
               ),
             ),
             onChanged: (value) {
-              // Panggil fungsi search di provider
-              ref.read(personelProvider.notifier).search(value);
+              context.read<PersonelProvider>().search(value);
             },
           ),
 
           const SizedBox(height: 16),
 
-          // ==========================================
-          // BARIS 2: ACTIONS & PAGINATION
-          // ==========================================
           Row(
             children: [
-              // --- Dropdown Jumlah Data ---
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
@@ -84,7 +75,7 @@ class PersonelToolbar extends ConsumerWidget {
                       DropdownMenuItem(value: 50, child: Text('Show 50')),
                     ],
                     onChanged: (val) {
-                      // Todo: Implementasi update limit pagination
+                      // Implementasi update limit pagination jika diperlukan
                     },
                   ),
                 ),
@@ -110,17 +101,14 @@ class PersonelToolbar extends ConsumerWidget {
                     'Tambah',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  // --- BAGIAN INI YANG DIUBAH ---
                   onPressed: () {
                     showDialog(
                       context: context,
                       builder: (context) {
-                        // Memanggil Widget Dialog UI yang sudah dibuat
                         return const AddPersonelDialog();
                       },
                     );
                   },
-                  // -----------------------------
                 ),
               ),
 
