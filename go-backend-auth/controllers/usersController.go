@@ -10,15 +10,14 @@ import (
 )
 
 // --- STRUCTS (DTO) ---
-// Kita sesuaikan input JSON dengan field model baru
 
 type CreateUserInput struct {
 	NamaLengkap string `json:"nama_lengkap" binding:"required"`
-	IDTugas     string `json:"id_tugas" binding:"required"`    
-	Username    string `json:"username" binding:"required"`     
-	JabatanID   uint64 `json:"id_jabatan" binding:"required"`   
+	IDTugas     string `json:"id_tugas" binding:"required"`
+	Username    string `json:"username" binding:"required"`
+	JabatanID   uint64 `json:"id_jabatan" binding:"required"`
 	Password    string `json:"password" binding:"required"`
-	Role        string `json:"role" binding:"required"`         // "1", "2", "3"
+	Role        string `json:"role" binding:"required"` // '1', '2', '3'
 	NoTelp      string `json:"no_telp" binding:"required"`
 }
 
@@ -31,7 +30,7 @@ type UpdateUserInput struct {
 
 // --- HANDLERS ---
 
-// CreateUser (Admin Only)
+// 1. CreateUser (Admin Only)
 func CreateUser(c *gin.Context) {
 	var body CreateUserInput
 
@@ -56,7 +55,7 @@ func CreateUser(c *gin.Context) {
 		Role:         body.Role,
 		NoTelp:       body.NoTelp,
 		DeleteStatus: models.StatusActive, // Default '2'
-		IDPengguna:   1,                   // Default Admin ID
+		IDPengguna:   1,                   // Default Admin ID (sementara hardcode)
 	}
 
 	result := initializers.DB.Create(&user)
@@ -65,17 +64,21 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User berhasil ditambahkan", "data": user})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User berhasil ditambahkan",
+		"data":    user,
+	})
 }
 
-// GetUsers - INI YANG BERFUNGSI MEMBACA DATA DI GAMBAR
+// 2. GetUsers (Read All Active Users)
 func GetUsers(c *gin.Context) {
 	var users []models.User
 
-
+	// Preload("Jabatan") -> Join tabel Jabatan otomatis
 	result := initializers.DB.
+		Preload("Jabatan").
 		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
-		Where("deletestatus = ?", models.StatusActive). // Hanya ambil yg aktif ('2')
+		Where("deletestatus = ?", models.StatusActive).
 		Find(&users)
 
 	if result.Error != nil {
@@ -83,29 +86,31 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 
-	// Mapping result agar JSON response rapi
+	// Mapping result agar JSON response rapi & menyertakan detail jabatan
 	var responseData []gin.H
 	for _, u := range users {
 		responseData = append(responseData, gin.H{
-			"id":           u.ID,           // idanggota
-			"nama_lengkap": u.NamaLengkap, // nama
-			"id_tugas":     u.IDTugas,     // idtugas
-			"username":     u.Username,    // username
-			"role":         u.Role,        // statusadmin (1/2/3)
-			"no_telp":      u.NoTelp,      // hp
-			"id_jabatan":   u.JabatanID,   // idjabatan
+			"id":             u.ID,          // idanggota
+			"nama_lengkap":   u.NamaLengkap, // nama
+			"id_tugas":       u.IDTugas,     // idtugas
+			"username":       u.Username,    // username
+			"role":           u.Role,        // statusadmin
+			"no_telp":        u.NoTelp,      // hp
+			"id_jabatan":     u.JabatanID,   // idjabatan (FK)
+			"jabatan_detail": u.Jabatan,     // Object Jabatan (Relasi)
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": responseData})
 }
 
-// GetUserByID
+// 3. GetUserByID (Read Single User)
 func GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
 
 	result := initializers.DB.
+		Preload("Jabatan").
 		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
 		Where("idanggota = ? AND deletestatus = ?", id, models.StatusActive).
 		First(&user)
@@ -117,18 +122,19 @@ func GetUserByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"id":           user.ID,
-			"nama_lengkap": user.NamaLengkap,
-			"id_tugas":     user.IDTugas,
-			"username":     user.Username,
-			"role":         user.Role,
-			"no_telp":      user.NoTelp,
-			"id_jabatan":   user.JabatanID,
+			"id":             user.ID,
+			"nama_lengkap":   user.NamaLengkap,
+			"id_tugas":       user.IDTugas,
+			"username":       user.Username,
+			"role":           user.Role,
+			"no_telp":        user.NoTelp,
+			"id_jabatan":     user.JabatanID,
+			"jabatan_detail": user.Jabatan, // Object Jabatan
 		},
 	})
 }
 
-// UpdateUser
+// 4. UpdateUser
 func UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
@@ -145,7 +151,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Update Map
+	// Update Map (Hanya field yang dikirim yang diupdate)
 	updates := make(map[string]interface{})
 	if body.NamaLengkap != "" {
 		updates["nama"] = body.NamaLengkap
@@ -164,10 +170,10 @@ func UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate"})
 }
 
-// DeleteUser (Soft Delete)
+// 5. DeleteUser (Soft Delete)
 func DeleteUser(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	// Set deletestatus = '1'
 	result := initializers.DB.Model(&models.User{}).
 		Where("idanggota = ?", id).

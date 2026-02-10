@@ -1,11 +1,10 @@
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:KETAHANANPANGAN/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../router/route_names.dart';
 import '../../auth/provider/auth_provider.dart';
-
-// Pastikan import file AppColors Anda. 
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,13 +14,12 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // --- 1. Variabel State ---
   bool isEditing = false;
   bool isLoading = false;
 
-  // --- 2. Controllers ---
   late TextEditingController _nameController;
-  late TextEditingController _nrpController;
+  late TextEditingController _idTugasController;
+  late TextEditingController _usernameController;
   late TextEditingController _jabatanController;
   late TextEditingController _roleController;
   late TextEditingController _phoneController;
@@ -29,26 +27,43 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    final user = context.read<AuthProvider>().user;
+    final UserModel? user = context.read<AuthProvider>().user;
 
     _nameController = TextEditingController(text: user?.namaLengkap ?? '');
-    _nrpController = TextEditingController(text: user?.nrp ?? '');
-    _jabatanController = TextEditingController(text: user?.jabatan ?? '');
-    _roleController = TextEditingController(text: user?.role ?? '');
+    _idTugasController = TextEditingController(text: user?.idTugas ?? '');
+    _usernameController = TextEditingController(text: user?.username ?? '');
     _phoneController = TextEditingController(text: user?.noTelp ?? '');
+    
+    _jabatanController = TextEditingController(
+      text: user?.jabatanDetail?.namaJabatan ?? user?.idJabatan.toString() ?? '-',
+    );
+
+    _roleController = TextEditingController(text: _getRoleDisplay(user?.role));
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _nrpController.dispose();
+    _idTugasController.dispose();
+    _usernameController.dispose();
     _jabatanController.dispose();
     _roleController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
 
-  // --- 3. Logic Functions ---
+  String _getRoleDisplay(String? role) {
+    switch (role) {
+      case '1':
+        return 'Administrator';
+      case '2':
+        return 'Operator';
+      case '3':
+        return 'View Only';
+      default:
+        return 'Unknown Role';
+    }
+  }
 
   void _handleLogout() async {
     await context.read<AuthProvider>().logout();
@@ -58,8 +73,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _saveProfile() async {
     setState(() => isLoading = true);
-    
-    // Simulasi delay request API
+
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
@@ -81,12 +95,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, child) {
-        final user = auth.user;
+        final UserModel? user = auth.user;
 
         return Scaffold(
-          backgroundColor: AppColors.slate50, // Background utama bersih
-          
-          // --- APP BAR PROFESIONAL ---
+          backgroundColor: AppColors.slate50,
           appBar: AppBar(
             backgroundColor: AppColors.slate800,
             elevation: 0,
@@ -94,15 +106,18 @@ class _ProfilePageState extends State<ProfilePage> {
             title: Text(
               isEditing ? "Edit Profil" : "Profil Saya",
               style: const TextStyle(
-                fontWeight: FontWeight.w600, 
+                fontWeight: FontWeight.w600,
                 color: AppColors.white,
-                letterSpacing: 0.5
+                letterSpacing: 0.5,
               ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.white),
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 20,
+                color: AppColors.white,
+              ),
               onPressed: () {
-                // Logic Back yang Aman
                 if (context.canPop()) {
                   context.pop();
                 } else {
@@ -111,12 +126,10 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             ),
           ),
-
           body: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
               children: [
-                // --- 1. HEADER PROFILE (AVATAR) ---
                 Center(
                   child: Stack(
                     children: [
@@ -134,18 +147,18 @@ class _ProfilePageState extends State<ProfilePage> {
                               offset: const Offset(0, 5),
                             ),
                           ],
-                          image: (user?.fotoProfil != null && user!.fotoProfil!.isNotEmpty)
-                              ? DecorationImage(
-                                  image: NetworkImage(user.fotoProfil!),
-                                  fit: BoxFit.cover)
-                              : null,
                         ),
-                        child: (user?.fotoProfil == null || user!.fotoProfil!.isEmpty)
-                            ? const Icon(Icons.person, size: 60, color: AppColors.slate400)
-                            : null,
+                        child: (user?.fotoProfil ?? '').isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  user!.fotoProfil!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.person, size: 50, color: AppColors.slate400),
+                                ),
+                              )
+                            : const Icon(Icons.person, size: 60, color: AppColors.slate400),
                       ),
-                      
-                      // Edit Badge Camera
                       if (isEditing)
                         Positioned(
                           bottom: 0,
@@ -156,21 +169,25 @@ class _ProfilePageState extends State<ProfilePage> {
                             decoration: BoxDecoration(
                               color: AppColors.slate600,
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.white, width: 2),
+                              border: Border.all(
+                                color: AppColors.white,
+                                width: 2,
+                              ),
                             ),
                             child: IconButton(
                               padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.camera_alt, size: 18, color: AppColors.white),
-                              onPressed: () {
-                                // TODO: Logic Upload Foto
-                              },
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: AppColors.white,
+                              ),
+                              onPressed: () {},
                             ),
                           ),
                         ),
                     ],
                   ),
                 ),
-                
                 const SizedBox(height: 16),
                 Text(
                   user?.namaLengkap ?? "Pengguna",
@@ -181,7 +198,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 Text(
-                  user?.role?.toUpperCase() ?? "VIEWER",
+                  _getRoleDisplay(user?.role).toUpperCase(),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -189,24 +206,25 @@ class _ProfilePageState extends State<ProfilePage> {
                     letterSpacing: 1.0,
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
-                // --- 2. FORM DATA ---
                 _buildSectionHeader("Informasi Pribadi"),
                 const SizedBox(height: 12),
-                
                 _buildProfileField(
                   label: "Nama Lengkap",
                   controller: _nameController,
                   icon: Icons.person_outline,
                 ),
                 _buildProfileField(
-                  label: "Nomor NRP",
-                  controller: _nrpController,
+                  label: "ID Tugas",
+                  controller: _idTugasController,
                   icon: Icons.badge_outlined,
-                  isNumber: true,
-                  isReadOnly: true, // NRP tidak boleh diedit sembarangan
+                  isReadOnly: true,
+                ),
+                _buildProfileField(
+                  label: "Username",
+                  controller: _usernameController,
+                  icon: Icons.account_circle_outlined,
+                  isReadOnly: true,
                 ),
                 _buildProfileField(
                   label: "Nomor Telepon",
@@ -214,30 +232,29 @@ class _ProfilePageState extends State<ProfilePage> {
                   icon: Icons.phone_android_outlined,
                   isNumber: true,
                 ),
-
                 const SizedBox(height: 24),
                 _buildSectionHeader("Informasi Jabatan"),
                 const SizedBox(height: 12),
-
                 _buildProfileField(
                   label: "Jabatan",
                   controller: _jabatanController,
                   icon: Icons.work_outline,
+                  isReadOnly: true,
                 ),
                 _buildProfileField(
-                  label: "Akses Role",
+                  label: "Hak Akses",
                   controller: _roleController,
                   icon: Icons.security_outlined,
                   isReadOnly: true,
                 ),
-
                 const SizedBox(height: 40),
-
-                // --- 3. ACTION BUTTONS ---
                 if (isLoading)
-                  const Center(child: CircularProgressIndicator(color: AppColors.greenPrimary))
+                  const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.greenPrimary,
+                    ),
+                  )
                 else if (isEditing)
-                  // MODE EDIT: Batal & Simpan
                   Row(
                     children: [
                       Expanded(
@@ -249,10 +266,12 @@ class _ProfilePageState extends State<ProfilePage> {
                           onPressed: () {
                             setState(() {
                               isEditing = false;
-                              // Reset values
                               _nameController.text = user?.namaLengkap ?? '';
                               _phoneController.text = user?.noTelp ?? '';
-                              _jabatanController.text = user?.jabatan ?? '';
+                              _idTugasController.text = user?.idTugas ?? '';
+                              _usernameController.text = user?.username ?? '';
+                              _jabatanController.text = user?.jabatanDetail?.namaJabatan ?? user?.idJabatan.toString() ?? '';
+                              _roleController.text = _getRoleDisplay(user?.role);
                             });
                           },
                         ),
@@ -270,7 +289,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   )
                 else
-                  // MODE VIEW: Logout & Edit
                   Column(
                     children: [
                       SizedBox(
@@ -297,7 +315,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-                  
                 const SizedBox(height: 30),
               ],
             ),
@@ -306,8 +323,6 @@ class _ProfilePageState extends State<ProfilePage> {
       },
     );
   }
-
-  // --- WIDGET HELPER UI ---
 
   Widget _buildSectionHeader(String title) {
     return Align(
@@ -339,11 +354,17 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEnabled ? AppColors.greenPrimary : AppColors.transparent,
-          width: 1.5
+          width: 1.5,
         ),
-        boxShadow: isEnabled 
-          ? [BoxShadow(color: AppColors.greenPrimary.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))]
-          : [],
+        boxShadow: isEnabled
+            ? [
+                BoxShadow(
+                  color: AppColors.greenPrimary.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : [],
       ),
       child: TextFormField(
         controller: controller,
@@ -359,12 +380,15 @@ class _ProfilePageState extends State<ProfilePage> {
             color: isEnabled ? AppColors.greenPrimary : AppColors.slate400,
           ),
           prefixIcon: Icon(
-            icon, 
+            icon,
             color: isEnabled ? AppColors.greenPrimary : AppColors.slate400,
             size: 22,
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
@@ -386,7 +410,9 @@ class _ProfilePageState extends State<ProfilePage> {
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: isOutlined ? BorderSide(color: AppColors.greenPrimary, width: 2) : BorderSide.none,
+          side: isOutlined
+              ? BorderSide(color: AppColors.greenPrimary, width: 2)
+              : BorderSide.none,
         ),
       ),
       child: Row(
@@ -407,4 +433,3 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-

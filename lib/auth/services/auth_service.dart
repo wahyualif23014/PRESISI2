@@ -1,19 +1,17 @@
 import 'dart:convert';
-import 'dart:io'; // Import untuk SocketException
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // Pastikan IP ini sesuai dengan IP Laptop Anda
-  final String baseUrl = 'http://10.16.9.44:8080';
+  final String baseUrl = 'http://10.16.0.85:8080';
 
-  // --- LOGIN ---
-  Future<Map<String, dynamic>> login(String nrp, String password) async {
+  Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'nrp': nrp,
+          'username': username,
           'password': password,
         }),
       );
@@ -23,47 +21,46 @@ class AuthService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'data': data, // Berisi token & user object
+          'data': data,
         };
       } else {
         return {
           'success': false,
-          'message': data['error'] ?? 'Terjadi kesalahan login',
+          'message': data['error'] ?? 'Login failed',
         };
       }
     } on SocketException {
       return {
         'success': false,
-        'message': 'Tidak dapat terhubung ke server. Periksa koneksi internet atau IP server.',
+        'message': 'No internet connection or server unreachable',
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: $e',
+        'message': 'Error: $e',
       };
     }
   }
 
-  // --- REGISTER ---
   Future<Map<String, dynamic>> register({
-    required String nama,
-    required String nrp,
-    required String jabatan,
+    required String namaLengkap,
+    required String idTugas,
+    required String username,
+    required int idJabatan,
     required String password,
-    required String role,
-    required String noTelp, // Tambahan parameter No Telp
+    required String noTelp,
   }) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/signup'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'nama_lengkap': nama,
-          'nrp': nrp,
-          'jabatan': jabatan,
+          'nama_lengkap': namaLengkap,
+          'id_tugas': idTugas,
+          'username': username,
+          'id_jabatan': idJabatan,
           'password': password,
-          'role': role,
-          'no_telp': noTelp, // Kirim ke Backend (sesuai JSON tag di Go)
+          'no_telp': noTelp,
         }),
       );
 
@@ -72,23 +69,23 @@ class AuthService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'message': data['message'] ?? 'Registrasi berhasil',
+          'message': data['message'] ?? 'Registration successful',
         };
       } else {
         return {
           'success': false,
-          'message': data['error'] ?? 'Gagal mendaftar',
+          'message': data['error'] ?? 'Registration failed',
         };
       }
     } on SocketException {
       return {
         'success': false,
-        'message': 'Tidak dapat terhubung ke server. Periksa koneksi internet atau IP server.',
+        'message': 'No internet connection or server unreachable',
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan: $e',
+        'message': 'Error: $e',
       };
     }
   }

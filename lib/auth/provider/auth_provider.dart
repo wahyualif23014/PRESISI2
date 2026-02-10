@@ -7,89 +7,78 @@ import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  // Gunakan const constructor untuk performa
   final _storage = const FlutterSecureStorage();
 
   UserModel? _user;
   String? _token;
   bool _isLoading = false;
 
-  // Getters
   UserModel? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
-  
-  // Logic Authenticated: Token ada DAN tidak expired
+
   bool get isAuthenticated {
     if (_token == null) return false;
-    // Optional: Tambahan safety check (meski biasanya sudah dicek saat load)
     return !JwtDecoder.isExpired(_token!);
   }
 
-  // --- LOGIN LOGIC ---
-  Future<String?> login(String nrp, String password) async {
+  Future<String?> login(String username, String password) async {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _authService.login(nrp, password);
+    final result = await _authService.login(username, password);
 
     if (result['success']) {
       final data = result['data'];
       _token = data['token'];
-      
-      // Convert JSON user ke Object UserModel (termasuk no_telp jika ada)
       _user = UserModel.fromJson(data['user']);
 
-      // Simpan Token & User Data ke HP (Persistent)
       await _storage.write(key: 'jwt_token', value: _token);
       await _storage.write(key: 'user_data', value: jsonEncode(_user!.toJson()));
-      
+
       _isLoading = false;
       notifyListeners();
-      return null; // Sukses (Null Error)
+      return null;
     } else {
       _isLoading = false;
       notifyListeners();
-      return result['message']; // Return pesan error dari Backend
+      return result['message'];
     }
   }
 
-  // --- REGISTER LOGIC (UPDATE) ---
   Future<String?> register({
-    required String nama,
-    required String nrp,
-    required String jabatan,
+    required String namaLengkap,
+    required String idTugas,
+    required String username,
+    required int idJabatan,
     required String password,
-    required String role,
-    required String noTelp, // Tambahan Parameter Wajib
+    required String noTelp,
   }) async {
     _isLoading = true;
     notifyListeners();
 
-    // Meneruskan data (termasuk noTelp) ke AuthService
     final result = await _authService.register(
-      nama: nama,
-      nrp: nrp,
-      jabatan: jabatan,
+      namaLengkap: namaLengkap,
+      idTugas: idTugas,
+      username: username,
+      idJabatan: idJabatan,
       password: password,
-      role: role,
-      noTelp: noTelp, 
+      noTelp: noTelp,
     );
 
     _isLoading = false;
     notifyListeners();
 
     if (result['success']) {
-      return null; // Sukses
+      return null;
     } else {
-      return result['message']; // Return error
+      return result['message'];
     }
   }
 
-  // --- AUTO LOGIN (Saat App Dibuka) ---
   Future<void> tryAutoLogin() async {
     final savedToken = await _storage.read(key: 'jwt_token');
-    
+
     if (savedToken == null) {
       _token = null;
       _user = null;
@@ -97,21 +86,17 @@ class AuthProvider with ChangeNotifier {
       return;
     }
 
-    // Cek apakah token expired?
     if (JwtDecoder.isExpired(savedToken)) {
-      // Jika expired, hapus semua data login
       await logout();
       return;
     }
 
-    // Jika token Valid, load data
     _token = savedToken;
     final userString = await _storage.read(key: 'user_data');
     if (userString != null) {
       try {
         _user = UserModel.fromJson(jsonDecode(userString));
       } catch (e) {
-        // Jika data user corrupt, logout paksa
         await logout();
         return;
       }
@@ -120,11 +105,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // --- LOGOUT ---
   Future<void> logout() async {
     _token = null;
     _user = null;
-    await _storage.deleteAll(); // Hapus semua data di Secure Storage
+    await _storage.deleteAll();
     notifyListeners();
   }
 }

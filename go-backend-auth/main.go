@@ -45,7 +45,7 @@ func main() {
 
 	// --- 1. Konfigurasi CORS ---
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, 
+		AllowOrigins:     []string{"*"}, // Ganti dengan domain spesifik jika produksi
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -81,18 +81,18 @@ func main() {
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)    // Update Data & Upgrade Role
 			adminRoutes.DELETE("/users/:id", controllers.DeleteUser) // Soft Delete (deletestatus='1')
 
-			// --- Master Data (Wilayah, Polres, Polsek) ---
-			// Pastikan controller ini sudah disesuaikan juga nanti
+			// --- Master Data JABATAN (Tambahan Baru) ---
+			adminRoutes.GET("/jabatan", controllers.GetJabatan)           // Lihat Semua Jabatan
+			adminRoutes.POST("/jabatan", controllers.CreateJabatan)       // Tambah Jabatan
+			adminRoutes.PUT("/jabatan/:id", controllers.UpdateJabatan)    // Edit Jabatan
+			adminRoutes.DELETE("/jabatan/:id", controllers.DeleteJabatan) // Hapus Jabatan
+
 			adminRoutes.POST("/wilayah", controllers.CreateWilayah)
 			adminRoutes.GET("/wilayah", controllers.GetWilayah)
 
-			adminRoutes.POST("/polres", controllers.CreatePolres)
-			adminRoutes.GET("/polres", controllers.GetPolres)
-
-			adminRoutes.POST("/polsek", controllers.CreatePolsek)
-			adminRoutes.GET("/polsek", controllers.GetPolsek)
 		}
 
+		// B. INPUT GROUP (Admin & Polres)
 		inputRoutes := authorized.Group("/input")
 		inputRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres))
 		{
@@ -111,20 +111,21 @@ func main() {
 					c.JSON(401, gin.H{"error": "Unauthorized"})
 					return
 				}
-				
+
 				// Casting ke model User yang baru
 				userData := userValue.(models.User)
 
 				c.JSON(200, gin.H{
 					"message": "Dashboard Data Loaded",
 					"user_info": gin.H{
-						"id":           userData.ID,           // idanggota
+						"id":           userData.ID,          // idanggota
 						"nama_lengkap": userData.NamaLengkap, // nama
 						"id_tugas":     userData.IDTugas,     // idtugas
 						"username":     userData.Username,    // username
 						"id_jabatan":   userData.JabatanID,   // idjabatan
 						"role":         userData.Role,        // statusadmin (1/2/3)
 						"no_telp":      userData.NoTelp,      // hp
+						// Bisa tambahkan "jabatan_detail": userData.Jabatan jika diperlukan
 					},
 				})
 			})

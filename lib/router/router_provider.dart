@@ -63,12 +63,14 @@ class AppRouter {
       // --- SPLASH ---
       GoRoute(
         path: RouteNames.splash,
+        name: RouteNames.splash,
         builder: (context, state) => const CustomSplashScreen(),
       ),
 
       // --- AUTH ---
       GoRoute(
         path: RouteNames.login,
+        name: RouteNames.login,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, __) => const LoginScreen(),
       ),
@@ -88,12 +90,14 @@ class AppRouter {
           // Dashboard
           GoRoute(
             path: RouteNames.dashboard,
+            name: RouteNames.dashboard,
             pageBuilder: (_, __) => const NoTransitionPage(child: DashboardPage()),
           ),
           
           // Personel
           GoRoute(
             path: RouteNames.personnel,
+            name: RouteNames.personnel,
             pageBuilder: (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
           
@@ -123,6 +127,7 @@ class AppRouter {
           // Rekap
           GoRoute(
             path: RouteNames.recap,
+            name: RouteNames.recap,
             pageBuilder: (_, __) => const NoTransitionPage(child: PageRecap()),
           ),
         ],
@@ -130,10 +135,10 @@ class AppRouter {
 
       // --- NEW: PROFILE PAGE (Di luar ShellRoute agar Full Screen) ---
       GoRoute(
-        // Pastikan Anda sudah membuat static const profile = '/profile'; di RouteNames
-        path: RouteNames.profile, 
+        path: RouteNames.profile,
+        name: RouteNames.profile,
         parentNavigatorKey: _rootNavigatorKey, // Menutupi BottomNavbar
-        builder: (_, __) => const ProfilePage(),
+        builder: (_, __) => ProfilePage(),
       ),
     ],
   );

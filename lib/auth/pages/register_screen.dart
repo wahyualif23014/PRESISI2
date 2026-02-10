@@ -1,6 +1,7 @@
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../provider/auth_provider.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,11 +13,12 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controllers
+  // --- CONTROLLERS ---
   final _namaController = TextEditingController();
-  final _nrpController = TextEditingController(); 
-  final _phoneController = TextEditingController(); // TAMBAHAN: Controller HP
-  final _jabatanController = TextEditingController();
+  final _idTugasController = TextEditingController(); // Field Baru: ID Tugas
+  final _usernameController = TextEditingController(); // Field Baru: Username (Ganti NRP)
+  final _phoneController = TextEditingController();
+  final _jabatanController = TextEditingController(); // Input ID Jabatan (Angka)
   final _passController = TextEditingController();
 
   final Color _primaryGold = const Color(0xFFC0A100);
@@ -25,8 +27,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _namaController.dispose();
-    _nrpController.dispose();
-    _phoneController.dispose(); // Dispose Controller HP
+    _idTugasController.dispose();
+    _usernameController.dispose();
+    _phoneController.dispose();
     _jabatanController.dispose();
     _passController.dispose();
     super.dispose();
@@ -36,19 +39,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // VALIDASI KHUSUS: Pastikan ID Jabatan adalah Angka
+    // Karena Backend Go meminta (uint64/int), bukan string.
+    final int? idJabatanInt = int.tryParse(_jabatanController.text.trim());
+    if (idJabatanInt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("ID Jabatan harus berupa angka (Contoh: 1, 11)"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Tutup Keyboard
     FocusScope.of(context).unfocus();
 
     final auth = context.read<AuthProvider>();
 
-    // Panggil Provider (Kirim semua data termasuk noTelp)
+    // Panggil Provider (Sesuai parameter terbaru)
     final String? error = await auth.register(
-      nama: _namaController.text.trim(),
-      nrp: _nrpController.text.trim(),
-      jabatan: _jabatanController.text.trim(),
+      namaLengkap: _namaController.text.trim(),
+      idTugas: _idTugasController.text.trim(),   // Parameter Baru
+      username: _usernameController.text.trim(), // Parameter Baru
+      idJabatan: idJabatanInt,                   // Kirim sebagai Integer
       password: _passController.text.trim(),
-      role: 'view', // Default Role untuk user baru
-      noTelp: _phoneController.text.trim(), // TAMBAHAN: Kirim No Telp
+      noTelp: _phoneController.text.trim(),
     );
 
     if (!mounted) return;
@@ -76,10 +92,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Menggunakan Consumer agar loading state terupdate realtime
+    final isLoading = context.select<AuthProvider, bool>((p) => p.isLoading);
+
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Background
+          // 1. Background Image
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -89,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
           
-          // 2. Overlay
+          // 2. Overlay Gelap
           Container(
             color: Colors.black.withOpacity(0.6),
           ),
@@ -107,9 +126,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     
                     const SizedBox(height: 30),
 
+                    // INPUT 1: NAMA LENGKAP
                     _CustomLabelInput(
                       label: "Nama Lengkap",
-                      hint: "Masukan Nama Lengkap Anda",
+                      hint: "Masukan Nama Lengkap",
                       controller: _namaController,
                       primaryColor: _primaryGold,
                       validator: (v) => v!.isEmpty ? "Nama wajib diisi" : null,
@@ -117,18 +137,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
+                    // INPUT 2: ID TUGAS (BARU)
                     _CustomLabelInput(
-                      label: "No NRP",
-                      hint: "Masukan NRP Anda Disini",
-                      controller: _nrpController,
+                      label: "ID Tugas",
+                      hint: "Masukan ID Tugas",
+                      controller: _idTugasController,
                       primaryColor: _primaryGold,
-                      inputType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? "NRP wajib diisi" : null,
+                      validator: (v) => v!.isEmpty ? "ID Tugas wajib diisi" : null,
                     ),
 
                     const SizedBox(height: 15),
 
-                    // --- INPUT NOMOR TELEPON BARU ---
+                    // INPUT 3: USERNAME (PENGGANTI NRP)
+                    _CustomLabelInput(
+                      label: "Username / NRP",
+                      hint: "Masukan Username",
+                      controller: _usernameController,
+                      primaryColor: _primaryGold,
+                      validator: (v) => v!.isEmpty ? "Username wajib diisi" : null,
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // INPUT 4: NOMOR TELEPON
                     _CustomLabelInput(
                       label: "Nomor Telepon",
                       hint: "Contoh: 08123456789",
@@ -140,16 +171,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 15),
 
+                    // INPUT 5: ID JABATAN (ANGKA - WAJIB INT)
                     _CustomLabelInput(
-                      label: "Jabatan",
-                      hint: "Contoh: Kanit Reskrim",
+                      label: "ID Jabatan (Angka)",
+                      hint: "Masukan ID (Cth: 1)",
                       controller: _jabatanController,
                       primaryColor: _primaryGold,
-                      validator: (v) => v!.isEmpty ? "Jabatan wajib diisi" : null,
+                      inputType: TextInputType.number, // Wajib Angka
+                      validator: (v) {
+                        if (v!.isEmpty) return "ID Jabatan wajib diisi";
+                        if (int.tryParse(v) == null) return "Harus angka valid";
+                        return null;
+                      },
                     ),
 
                     const SizedBox(height: 15),
 
+                    // INPUT 6: PASSWORD
                     _CustomLabelInput(
                       label: "Kata Sandi",
                       hint: "Buat Kata Sandi",
@@ -161,30 +199,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 30),
 
-                    Consumer<AuthProvider>(
-                      builder: (context, auth, _) {
-                        return Column(
-                          children: [
-                            _ActionButton(
-                              text: "Daftar Sekarang",
-                              color: _primaryGold,
-                              textColor: Colors.white,
-                              isFilled: true,
-                              isLoading: auth.isLoading,
-                              onPressed: _handleRegister,
-                            ),
-                            const SizedBox(height: 15),
-                            _ActionButton(
-                              text: "Sudah Punya Akun? Login",
-                              color: _btnGreen,
-                              textColor: Colors.white,
-                              isFilled: true,
-                              isLoading: false,
-                              onPressed: auth.isLoading ? null : () => Navigator.pop(context),
-                            ),
-                          ],
-                        );
-                      },
+                    // TOMBOL REGISTER
+                    Column(
+                      children: [
+                        _ActionButton(
+                          text: "Daftar Sekarang",
+                          color: _primaryGold,
+                          textColor: Colors.white,
+                          isFilled: true,
+                          isLoading: isLoading,
+                          onPressed: _handleRegister,
+                        ),
+                        const SizedBox(height: 15),
+                        _ActionButton(
+                          text: "Sudah Punya Akun? Login",
+                          color: _btnGreen,
+                          textColor: Colors.white,
+                          isFilled: true,
+                          isLoading: false,
+                          onPressed: isLoading ? null : () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -198,8 +233,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 // =========================================================
-// WIDGET UI COMPONENTS (DIGUNAKAN OLEH KEDUA SCREEN)
-// Anda bisa memindahkan ini ke file terpisah, misal: auth_widgets.dart
+// WIDGET UI COMPONENTS (TIDAK BERUBAH)
 // =========================================================
 
 class _AuthHeader extends StatelessWidget {

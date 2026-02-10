@@ -1,25 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
-import 'package:KETAHANANPANGAN/presentation/profile/profile_page.dart';
+import 'package:go_router/go_router.dart'; // Pastikan import go_router
+import '../../auth/provider/auth_provider.dart'; // Sesuaikan path import ini
+import '../../router/route_names.dart'; // Sesuaikan path route names
 
 class ProfileMenuButton extends StatelessWidget {
   const ProfileMenuButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil Data dari Provider (Sesuai Model Go Backend)
+    // 1. Ambil Data dari Provider
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
 
     final String userName = user?.namaLengkap ?? "Tamu";
-    final String userJabatan = user?.jabatan ?? "Pengguna";
-    final String userNrp = user?.nrp ?? "-";
+    
+    // --- PERBAIKAN 1: Handle idJabatan (int) ke String ---
+    // Jangan gunakan 'as String', tapi gunakan .toString()
+    // Anda bisa mempercantik ini nanti dengan logic if(id==1) return "Admin" dst.
+    final String userJabatan = user?.idJabatan != null 
+        ? "Jabatan: ${user!.idJabatan}" 
+        : "Pengguna";
+
+    // --- PERBAIKAN 2: Gunakan idTugas untuk menggantikan NRP ---
+    final String userId = user?.idTugas ?? "-"; 
     
     // Ambil inisial huruf pertama
     final String initial = userName.isNotEmpty ? userName[0].toUpperCase() : "U";
 
-    // Warna Tema (Konsisten dengan Login Screen)
+    // Warna Tema (Konsisten)
     const Color primaryGold = Color(0xFFC0A100);
 
     return Theme(
@@ -27,31 +36,37 @@ class ProfileMenuButton extends StatelessWidget {
         popupMenuTheme: PopupMenuThemeData(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 4,
-          color: Colors.white, // Pastikan background putih bersih
+          color: Colors.white,
+          surfaceTintColor: Colors.white, // Mencegah tint ungu di Material 3
         ),
       ),
       child: PopupMenuButton<String>(
         offset: const Offset(0, 50),
         tooltip: "Profil Saya",
         
-        // --- 2. Avatar UI (Konsisten Warna Gold) ---
+        // --- 2. Avatar UI ---
         child: Container(
-          padding: const EdgeInsets.all(2), // Padding border lebih tipis agar rapi
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: primaryGold.withOpacity(0.5), width: 1.5),
           ),
           child: CircleAvatar(
             radius: 16,
-            backgroundColor: primaryGold, // Warna Emas
-            child: Text(
-              initial,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            backgroundColor: primaryGold,
+            backgroundImage: (user?.fotoProfil != null && user!.fotoProfil!.isNotEmpty)
+                ? NetworkImage(user.fotoProfil!)
+                : null,
+            child: (user?.fotoProfil == null || user!.fotoProfil!.isEmpty)
+                ? Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
           ),
         ),
 
@@ -59,18 +74,18 @@ class ProfileMenuButton extends StatelessWidget {
         onSelected: (value) {
           if (value == 'logout') {
             context.read<AuthProvider>().logout();
-            // Router biasanya otomatis redirect ke Login jika isAuthenticated false
+            context.go(RouteNames.login); // Gunakan go_router untuk navigasi aman
           } else if (value == 'profile') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfilePage()),
-            );
+            // Gunakan pushNamed dari go_router atau Navigator biasa
+             context.pushNamed(RouteNames.profile);
+            // Atau jika pakai Navigator biasa:
+            // Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
           }
         },
 
         // --- 4. Menu Items ---
         itemBuilder: (context) => [
-          // HEADER: Nama, Jabatan, NRP (Non-clickable)
+          // HEADER: Nama, Jabatan, ID (Non-clickable)
           PopupMenuItem<String>(
             enabled: false,
             child: Column(
@@ -87,9 +102,9 @@ class ProfileMenuButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                // Menampilkan Jabatan & NRP
+                // Menampilkan Jabatan & ID Tugas
                 Text(
-                  "$userJabatan ($userNrp)", 
+                  "$userJabatan ($userId)", 
                   style: TextStyle(
                     fontSize: 11, 
                     color: Colors.grey[600],

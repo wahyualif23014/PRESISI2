@@ -1,48 +1,81 @@
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
+
 class UserModel {
   final int id;
   final String namaLengkap;
-  final String nrp;
-  final String jabatan;
+  final String idTugas;
+  final String username;
+  final int idJabatan;
   final String role;
+  final String? noTelp;
   final String? fotoProfil;
-  
-  // TAMBAHAN: Field Nomor Telepon
-  final String? noTelp; 
+
+  final JabatanModel? jabatanDetail;
 
   UserModel({
     required this.id,
     required this.namaLengkap,
-    required this.nrp,
-    required this.jabatan,
+    required this.idTugas,
+    required this.username,
+    required this.idJabatan,
     required this.role,
+    this.noTelp,
     this.fotoProfil,
-    this.noTelp, // Masukkan ke constructor
+    this.jabatanDetail,
   });
+
+  // --- LOGIC DISPLAY ROLE ---
+  // Pastikan logic ini ada untuk menerjemahkan '1' jadi 'Administrator'
+  String get roleDisplay {
+    switch (role) {
+      case '1':
+        return 'Administrator';
+      case '2':
+        return 'Operator';
+      case '3':
+        return 'View Only';
+      default:
+        return 'Unknown Role';
+    }
+  }
+
+  bool get isAdmin => role == '1';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['ID'] ?? json['id'] ?? 0,
+      id: json['id'] ?? 0,
       namaLengkap: json['nama_lengkap'] ?? '',
-      nrp: json['nrp'] ?? '',
-      jabatan: json['jabatan'] ?? '',
-      role: json['role'] ?? 'view',
+      idTugas: json['id_tugas'] ?? '',
+      username: json['username'] ?? '',
+
+      idJabatan:
+          json['id_jabatan'] is int
+              ? json['id_jabatan']
+              : int.tryParse(json['id_jabatan'].toString()) ?? 0,
+
+      role: json['role']?.toString() ?? '3',
+
+      noTelp: json['no_telp'],
       fotoProfil: json['foto_profil'],
-      
-      // Mapping dari JSON backend (snake_case) ke variable Dart (camelCase)
-      noTelp: json['no_telp'], 
+
+      jabatanDetail:
+          json['jabatan_detail'] != null
+              ? JabatanModel.fromJson(json['jabatan_detail'])
+              : null,
     );
   }
 
-  // Method untuk mengubah Object -> JSON
   Map<String, dynamic> toJson() {
     return {
-      'ID': id,
+      'id': id,
       'nama_lengkap': namaLengkap,
-      'nrp': nrp,
-      'jabatan': jabatan,
+      'id_tugas': idTugas,
+      'username': username,
+      'id_jabatan': idJabatan,
       'role': role,
+      'no_telp': noTelp,
       'foto_profil': fotoProfil,
-      'no_telp': noTelp, // Simpan ke JSON
+      'jabatan_detail': jabatanDetail?.toJson(),
     };
   }
 }

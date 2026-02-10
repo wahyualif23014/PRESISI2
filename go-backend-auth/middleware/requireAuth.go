@@ -52,10 +52,11 @@ func RequireAuth(c *gin.Context) {
 		return
 	}
 
-	// 5. Query DB (Disetujui dengan Model Baru)
+	// 5. Query DB (UPDATE: Tambahkan Preload Jabatan)
 	var user models.User
 
 	result := initializers.DB.
+		Preload("Jabatan"). // <--- TAMBAHAN PENTING: Agar data jabatan ikut terbawa
 		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
 		Where("idanggota = ?", claims["sub"]).           // Cari berdasarkan ID (Sub)
 		Where("deletestatus = ?", models.StatusActive). // Pastikan user aktif ('2')
@@ -71,6 +72,7 @@ func RequireAuth(c *gin.Context) {
 	c.Next()
 }
 
+// RequireRoles TIDAK PERLU DIUBAH (Sudah Benar)
 func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userValue, exists := c.Get("user")
