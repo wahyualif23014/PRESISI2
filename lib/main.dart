@@ -1,3 +1,5 @@
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -26,14 +28,11 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // Auth Provider (Value Provider because it's already created above)
         ChangeNotifierProvider.value(value: authProvider),
-
-        // Dashboard Provider
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
-
-        // [FIX] Personel Provider (Added here so PersonelPage works)
         ChangeNotifierProvider(create: (_) => PersonelProvider()),
+        ChangeNotifierProvider(create: (_) => UnitProvider()),
+        ChangeNotifierProvider(create: (_) => RegionProvider()),
       ],
       child: MyApp(appRouter: appRouter),
     ),
@@ -134,6 +133,7 @@ class _SafeErrorView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
+                // Show actual error only in debug mode usually, but helpful for you now
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(

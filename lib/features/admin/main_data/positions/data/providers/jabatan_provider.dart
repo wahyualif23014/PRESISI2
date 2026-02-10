@@ -1,106 +1,108 @@
-// // Lokasi: lib/features/admin/main_data/jabatan/controllers/jabatan_provider.dart
+import 'package:flutter/material.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/repos/position_repository.dart';
 
-// import 'package:flutter/material.dart';
-// import 'package:sdmapp/features/admin/main_data/positions/data/models/position_model.dart';
-// import 'package:sdmapp/features/admin/main_data/positions/data/models/position_repository.dart';
+class JabatanProvider with ChangeNotifier {
+  // --- STATE ---
+  List<JabatanModel> _allData = [];
+  List<JabatanModel> _displayData = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
-// class JabatanProvider extends ChangeNotifier {
-//   // 1. STATE VARIABLES
-//   List<JabatanModel> _items = [];        // Master data
-//   List<JabatanModel> _filteredItems = []; // Data yang tampil (hasil search)
-//   String _searchQuery = '';
+  // --- GETTERS ---
+  List<JabatanModel> get displayData => _displayData;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-//   // Getter agar UI bisa mengakses data
-//   List<JabatanModel> get items => _filteredItems;
-  
-//   // Getter untuk mengetahui berapa item yang dicentang (untuk tombol Delete massal)
-//   int get selectedCount => _items.where((e) => e.isSelected).length;
+  // Getter Seleksi
+  int get selectedCount => _displayData.where((e) => e.isSelected).length;
+  bool get isAllSelected => _displayData.isNotEmpty && _displayData.length == selectedCount;
 
-//   // ---------------------------------------------------------------------------
-//   // 2. INITIALIZATION (READ)
-//   // ---------------------------------------------------------------------------
-//   void loadData() {
-//     // Mengambil data dummy dari Repository yang sudah kita buat
-//     _items = JabatanRepository.getDummyData();
-//     _filteredItems = List.from(_items); // Copy data ke filtered
-//     notifyListeners();
-//   }
+  // --- ACTIONS ---
 
-//   // ---------------------------------------------------------------------------
-//   // 3. SEARCH LOGIC
-//   // ---------------------------------------------------------------------------
-//   void search(String query) {
-//     _searchQuery = query;
-//     if (query.isEmpty) {
-//       _filteredItems = List.from(_items);
-//     } else {
-//       _filteredItems = _items.where((item) {
-//         final titleLower = item.namaJabatan.toLowerCase();
-//         final nameLower = (item.namaPejabat ?? '').toLowerCase();
-//         final searchLower = query.toLowerCase();
+  Future<void> fetchJabatan() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
 
-//         return titleLower.contains(searchLower) || nameLower.contains(searchLower);
-//       }).toList();
-//     }
-//     notifyListeners();
-//   }
+    try {
+      _allData = await JabatanRepository.getJabatanList();
+      _displayData = List.from(_allData);
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint("Error loading data: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-//   // ---------------------------------------------------------------------------
-//   // 4. CRUD OPERATIONS (Manipulasi Lokal)
-//   // ---------------------------------------------------------------------------
+  void search(String query) {
+    if (query.isEmpty) {
+      _displayData = List.from(_allData);
+    } else {
+      final searchLower = query.toLowerCase();
+      _displayData = _allData.where((item) {
+        final titleLower = item.namaJabatan.toLowerCase();
+        final nameLower = (item.namaPejabat ?? '').toLowerCase();
+        return titleLower.contains(searchLower) || nameLower.contains(searchLower);
+      }).toList();
+    }
+    notifyListeners();
+  }
 
-//   // A. CREATE (Tambah Data Baru)
-//   void addJabatan(JabatanModel newItem) {
-//     _items.add(newItem);
-//     _refreshFilter(); // Update tampilan
-//   }
+  // --- SELECTION LOGIC ---
 
-//   // B. UPDATE (Edit Data)
-//   void updateJabatan(JabatanModel updatedItem) {
-//     final index = _items.indexWhere((element) => element.id == updatedItem.id);
-//     if (index != -1) {
-//       _items[index] = updatedItem;
-//       _refreshFilter();
-//     }
-//   }
+  void toggleSelectAll(bool? val) {
+    if (val != null) {
+      for (var item in _displayData) {
+        item.isSelected = val;
+      }
+      notifyListeners();
+    }
+  }
 
-//   // C. DELETE (Hapus Satu Data)
-//   void deleteJabatan(String id) {
-//     _items.removeWhere((element) => element.id == id);
-//     _refreshFilter();
-//   }
+  void toggleSingleSelection(String id) {
+    final index = _displayData.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      _displayData[index].isSelected = !_displayData[index].isSelected;
+      notifyListeners();
+    }
+  }
 
-//   // D. BULK DELETE (Hapus yang dicentang)
-//   // Sesuai tombol "Delete" merah di screenshot
-//   void deleteSelectedItems() {
-//     _items.removeWhere((element) => element.isSelected);
-//     _refreshFilter();
-//   }
+  // --- CRUD OPERATIONS (Local Logic) ---
 
-//   // ---------------------------------------------------------------------------
-//   // 5. SELECTION LOGIC (CHECKBOX)
-//   // ---------------------------------------------------------------------------
-  
-//   // Toggle satu item (diklik checkbox-nya)
-//   void toggleSelection(String id) {
-//     final index = _items.indexWhere((e) => e.id == id);
-//     if (index != -1) {
-//       _items[index].isSelected = !_items[index].isSelected;
-//       notifyListeners(); // Hanya notify, tidak perlu refresh filter
-//     }
-//   }
+  void addNewData(String jabatan, String nama, String nrp, String tgl) {
+    final newItem = JabatanModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // ID Dummy
+      namaJabatan: jabatan.isEmpty ? "Jabatan Baru" : jabatan,
+      namaPejabat: nama.isEmpty ? "Personel Baru" : nama,
+      nrp: nrp,
+      tanggalPeresmian: tgl,
+    );
+    
+    _allData.add(newItem);
+    // Reset search agar data baru terlihat (opsional, atau tetap di filter search)
+    search(""); 
+    notifyListeners();
+  }
 
-//   // Toggle Select All (Checkbox di header tabel)
-//   void toggleSelectAll(bool? value) {
-//     if (value == null) return;
-//     for (var item in _items) {
-//       item.isSelected = value;
-//     }
-//     notifyListeners();
-//   }
+  void deleteSingle(String id) {
+    _displayData.removeWhere((e) => e.id == id);
+    _allData.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
 
-//   // Helper Private: Refresh list tampilan sesuai search query saat ini
-//   void _refreshFilter() {
-//     search(_searchQuery); // Jalankan ulang logic search agar list ter-update
-//   }
-// }
+  void deleteSelected() {
+    // Ambil ID yang mau dihapus dulu
+    final idsToDelete = _displayData.where((e) => e.isSelected).map((e) => e.id).toSet();
+    
+    _displayData.removeWhere((e) => idsToDelete.contains(e.id));
+    _allData.removeWhere((e) => idsToDelete.contains(e.id));
+    notifyListeners();
+  }
+
+  void refresh() {
+    fetchJabatan();
+  }
+}

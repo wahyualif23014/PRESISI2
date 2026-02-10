@@ -1,18 +1,13 @@
-// Lokasi: lib/features/admin/main_data/wilayah/pages/regions_page.dart
-
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-// Data
-import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/models/region_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/repos/region_repository.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_filter_widget.dart';
-
-// Widgets
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_info_banner.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_search_filter.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_table_header.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_list_item.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_group_headers.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_filter_widget.dart';
 
 class RegionsPage extends StatefulWidget {
   const RegionsPage({super.key});
@@ -22,88 +17,14 @@ class RegionsPage extends StatefulWidget {
 }
 
 class _RegionsPageState extends State<RegionsPage> {
-  // Controller Search
   final TextEditingController _searchController = TextEditingController();
-
-  // Data State
-  List<WilayahModel> _allData = [];
-  List<WilayahModel> _displayData = [];
-  bool _isBannerVisible = true;
-
-  final Set<String> _expandedKabupaten = {};
-  final Set<String> _expandedKecamatan = {};
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  void _loadData() {
-    final data = WilayahRepository.getDummyData();
-
-    // Sorting wajib agar grouping berurutan
-    data.sort((a, b) {
-      int kabCmp = a.kabupaten.compareTo(b.kabupaten);
-      if (kabCmp != 0) return kabCmp;
-      return a.kecamatan.compareTo(b.kecamatan);
-    });
-
-    setState(() {
-      _allData = data;
-      _displayData = List.from(data);
-
-      // Default: Buka semua data saat pertama kali load
-      // (Opsional: Hapus blok ini jika ingin default tertutup)
-      for (var item in data) {
-        _expandedKabupaten.add(item.kabupaten);
-        _expandedKecamatan.add(item.kecamatan);
-      }
-    });
-  }
-
-  void _runSearch(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _displayData = List.from(_allData);
-      } else {
-        _displayData =
-            _allData.where((item) {
-              return item.namaDesa.toLowerCase().contains(
-                    query.toLowerCase(),
-                  ) ||
-                  item.kecamatan.toLowerCase().contains(query.toLowerCase()) ||
-                  item.kabupaten.toLowerCase().contains(query.toLowerCase());
-            }).toList();
-
-        // Saat search, otomatis buka semua yang relevan agar hasil terlihat
-        for (var item in _displayData) {
-          _expandedKabupaten.add(item.kabupaten);
-          _expandedKecamatan.add(item.kecamatan);
-        }
-      }
-    });
-  }
-
-  // Fungsi Toggle Kabupaten
-  void _toggleKabupaten(String namaKab) {
-    setState(() {
-      if (_expandedKabupaten.contains(namaKab)) {
-        _expandedKabupaten.remove(namaKab); // Tutup
-      } else {
-        _expandedKabupaten.add(namaKab); // Buka
-      }
-    });
-  }
-
-  // Fungsi Toggle Kecamatan
-  void _toggleKecamatan(String namaKec) {
-    setState(() {
-      if (_expandedKecamatan.contains(namaKec)) {
-        _expandedKecamatan.remove(namaKec); // Tutup
-      } else {
-        _expandedKecamatan.add(namaKec); // Buka
-      }
+    // Fetch data saat init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RegionProvider>().fetchRegions();
     });
   }
 
@@ -119,107 +40,152 @@ class _RegionsPageState extends State<RegionsPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // 1. SEARCH & FILTER
+          // 1. SEARCH & FILTER SECTION
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: WilayahSearchFilter(
               controller: _searchController,
-              onChanged: _runSearch,
+              onChanged: (val) => context.read<RegionProvider>().search(val),
               onFilterTap: () {
                 showDialog(
                   context: context,
-                  builder: (context) {
-                    return WilayahFilterWidget(
-                      onApply: () {
-                        // TODO: Masukkan logika filter data di sini
-                        Navigator.pop(context); // Tutup popup
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Filter diterapkan")),
-                        );
-                      },
-                      onReset: () {
-                        // TODO: Masukkan logika reset data di sini
-                        // (Popup tidak perlu ditutup jika ingin user lihat checkbox kereset)
-                      },
-                    );
-                  },
+                  builder:
+                      (ctx) => WilayahFilterWidget(
+                        onApply: () {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Filter diterapkan")),
+                          );
+                        },
+                        onReset: () {
+                          Navigator.pop(ctx);
+                        },
+                      ),
                 );
               },
             ),
           ),
 
-          // 2. INFO BANNER
-          if (_isBannerVisible)
-            WilayahInfoBanner(
-              totalCount: _displayData.length,
-              onClose: () => setState(() => _isBannerVisible = false),
-            ),
-
-          // 3. TABLE HEADER
-          const WilayahTableHeader(),
-
-          // 4. LIST DATA (Grouped with Logic)
+          // 2. CONSUMER UNTUK DATA LIST
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: _displayData.length,
-              itemBuilder: (context, index) {
-                final item = _displayData[index];
-
-                // --- DETEKSI HEADER ---
-                bool isNewKabupaten = false;
-                bool isNewKecamatan = false;
-
-                if (index == 0) {
-                  isNewKabupaten = true;
-                  isNewKecamatan = true;
-                } else {
-                  final prevItem = _displayData[index - 1];
-                  if (prevItem.kabupaten != item.kabupaten) {
-                    isNewKabupaten = true;
-                    isNewKecamatan = true;
-                  } else if (prevItem.kecamatan != item.kecamatan) {
-                    isNewKecamatan = true;
-                  }
+            child: Consumer<RegionProvider>(
+              builder: (context, provider, child) {
+                // A. LOADING
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
-                // --- LOGIC VISIBILITY (PENTING) ---
+                // B. ERROR
+                if (provider.errorMessage != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 10),
+                        Text("Error: ${provider.errorMessage}"),
+                        ElevatedButton(
+                          onPressed: () => provider.refresh(),
+                          child: const Text("Coba Lagi"),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-                // 1. Cek Status Kabupaten (Buka/Tutup)
-                final isKabOpen = _expandedKabupaten.contains(item.kabupaten);
+                // C. EMPTY
+                if (provider.displayData.isEmpty) {
+                  return const Center(
+                    child: Text("Data wilayah tidak ditemukan"),
+                  );
+                }
 
-                final isKecOpen =
-                    isKabOpen && _expandedKecamatan.contains(item.kecamatan);
-
+                // D. DATA LIST
                 return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // A. HEADER KABUPATEN
-                    if (isNewKabupaten)
-                      WilayahKabupatenHeader(
-                        title: item.kabupaten,
-                        isExpanded: isKabOpen,
-                        onTap: () => _toggleKabupaten(item.kabupaten),
+                    // Banner Info (Bisa ditutup via Provider)
+                    if (provider.isBannerVisible)
+                      WilayahInfoBanner(
+                        totalCount: provider.displayData.length,
+                        onClose: () => provider.closeBanner(),
                       ),
 
-                    // B. HEADER KECAMATAN
-                    // Hanya tampil jika Header baru DAN Kabupaten induknya terbuka
-                    if (isNewKecamatan && isKabOpen)
-                      WilayahKecamatanHeader(
-                        title: item.kecamatan,
-                        isExpanded: isKecOpen,
-                        onTap: () => _toggleKecamatan(item.kecamatan),
-                      ),
+                    const WilayahTableHeader(),
 
-                    // C. DATA ROW (DESA)
-                    // Hanya tampil jika Kecamatan induknya terbuka
-                    if (isKecOpen)
-                      WilayahListItem(
-                        item: item,
-                        onEditTap: () {
-                          // Handle Edit
+                    Expanded(
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: provider.displayData.length,
+                        itemBuilder: (context, index) {
+                          final item = provider.displayData[index];
+
+                          // --- LOGIC DETEKSI HEADER ---
+                          bool isNewKabupaten = false;
+                          bool isNewKecamatan = false;
+
+                          if (index == 0) {
+                            isNewKabupaten = true;
+                            isNewKecamatan = true;
+                          } else {
+                            final prevItem = provider.displayData[index - 1];
+                            if (prevItem.kabupaten != item.kabupaten) {
+                              isNewKabupaten = true;
+                              isNewKecamatan = true;
+                            } else if (prevItem.kecamatan != item.kecamatan) {
+                              isNewKecamatan = true;
+                            }
+                          }
+
+                          // Ambil status expand dari Provider
+                          final isKabOpen = provider.isKabupatenExpanded(
+                            item.kabupaten,
+                          );
+                          final isKecOpen =
+                              isKabOpen &&
+                              provider.isKecamatanExpanded(item.kecamatan);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // HEADER KABUPATEN
+                              if (isNewKabupaten)
+                                WilayahKabupatenHeader(
+                                  title: item.kabupaten,
+                                  isExpanded: isKabOpen,
+                                  onTap:
+                                      () => provider.toggleKabupaten(
+                                        item.kabupaten,
+                                      ),
+                                ),
+
+                              // HEADER KECAMATAN
+                              if (isNewKecamatan && isKabOpen)
+                                WilayahKecamatanHeader(
+                                  title: item.kecamatan,
+                                  isExpanded: isKecOpen,
+                                  onTap:
+                                      () => provider.toggleKecamatan(
+                                        item.kecamatan,
+                                      ),
+                                ),
+
+                              // DATA ROW
+                              if (isKecOpen)
+                                WilayahListItem(
+                                  item: item,
+                                  onEditTap: () {
+                                    // Handle Edit
+                                  },
+                                ),
+                            ],
+                          );
                         },
                       ),
+                    ),
                   ],
                 );
               },
