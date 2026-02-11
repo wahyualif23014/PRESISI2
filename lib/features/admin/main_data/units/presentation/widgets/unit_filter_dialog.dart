@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 
 class UnitFilterDialog extends StatefulWidget {
-  final VoidCallback onApply;
+  // Update Callback: Tambah parameter 'wilayah'
+  final Function(bool isPolres, bool isPolsek, String wilayah, String query)
+  onApply;
   final VoidCallback onReset;
+
+  // Data Awal
+  final bool initialPolres;
+  final bool initialPolsek;
+  final String initialWilayah;
+  final List<String> availableWilayahs; // List wilayah dari Provider
 
   const UnitFilterDialog({
     super.key,
     required this.onApply,
     required this.onReset,
+    this.initialPolres = true,
+    this.initialPolsek = true,
+    this.initialWilayah = "Semua",
+    required this.availableWilayahs,
   });
 
   @override
@@ -15,12 +27,23 @@ class UnitFilterDialog extends StatefulWidget {
 }
 
 class _UnitFilterDialogState extends State<UnitFilterDialog> {
-  // State untuk Checkbox
-  bool _isPolresChecked = false;
-  bool _isPolsekChecked = false;
-  
-  // Controller untuk search di dalam filter
+  late bool _isPolresChecked;
+  late bool _isPolsekChecked;
+  late String _selectedWilayah;
   final TextEditingController _localSearchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _isPolresChecked = widget.initialPolres;
+    _isPolsekChecked = widget.initialPolsek;
+    _selectedWilayah = widget.initialWilayah;
+
+    // Pastikan nilai awal ada di dalam list (safety check)
+    if (!widget.availableWilayahs.contains(_selectedWilayah)) {
+      _selectedWilayah = "Semua";
+    }
+  }
 
   @override
   void dispose() {
@@ -31,160 +54,187 @@ class _UnitFilterDialogState extends State<UnitFilterDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16), // Radius sudut dialog
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white, // Memastikan background tetap putih
+      surfaceTintColor: Colors.white,
       child: Container(
         padding: const EdgeInsets.all(20),
-        width: 320, // Lebar fixed agar proporsional
+        width: 320,
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Tinggi menyesuaikan konten
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. JUDUL
+            // HEADER
             const Text(
-              "Filter Data Polres Dan Polsek",
+              "Filter Lanjutan",
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
-                fontWeight: FontWeight.w500,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E40AF),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // 2. SEARCH BAR (Di dalam Popup)
+            // 1. FILTER WILAYAH (DROPDOWN)
+            const Text(
+              "Pilih Wilayah",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedWilayah,
+                  isExpanded: true,
+                  icon: const Icon(
+                    Icons.arrow_drop_down,
+                    color: Color(0xFF1E40AF),
+                  ),
+                  items:
+                      widget.availableWilayahs.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        );
+                      }).toList(),
+                  onChanged: (newValue) {
+                    if (newValue != null) {
+                      setState(() => _selectedWilayah = newValue);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 2. FILTER TIPE (CHECKBOX)
+            const Text(
+              "Tampilkan Tipe",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            _buildCheckboxTile("Polres (Induk)", _isPolresChecked, (val) {
+              setState(() => _isPolresChecked = val!);
+            }),
+            _buildCheckboxTile("Polsek (Anak)", _isPolsekChecked, (val) {
+              setState(() => _isPolsekChecked = val!);
+            }),
+            const SizedBox(height: 16),
+
+            // 3. SEARCH TEXT (Optional)
             TextField(
               controller: _localSearchController,
               decoration: InputDecoration(
-                hintText: "Cari Data",
-                hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                hintText: "Cari nama kesatuan...",
+                hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Colors.grey,
+                ),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(color: Colors.grey),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade400),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.green),
-                ),
               ),
             ),
-            const SizedBox(height: 12),
 
-            // 3. LIST CHECKBOX DENGAN SCROLLBAR
-            SizedBox(
-              height: 120, // Batasi tinggi area list agar bisa di-scroll jika item banyak
-              child: Scrollbar(
-                thumbVisibility: true, // Tampilkan batang scroll
-                thickness: 4,
-                radius: const Radius.circular(10),
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _buildCheckboxTile("Polres", _isPolresChecked, (val) {
-                      setState(() => _isPolresChecked = val!);
-                    }),
-                    _buildCheckboxTile("Polsek", _isPolsekChecked, (val) {
-                      setState(() => _isPolsekChecked = val!);
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // 4. TOMBOL AKSI (Apply & Reset)
+            // TOMBOL AKSI
             Row(
               children: [
-                // Tombol Apply (Hijau)
                 Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        widget.onApply();
-                        Navigator.pop(context); // Tutup dialog
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1B5E20), // Hijau Tua sesuai gambar
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onApply(
+                        _isPolresChecked,
+                        _isPolsekChecked,
+                        _selectedWilayah,
+                        _localSearchController.text,
+                      );
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B5E20),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        "Apply",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
+                    child: const Text("Terapkan"),
                   ),
                 ),
-                const SizedBox(width: 16),
-                
-                // Tombol Reset (Teks Abu)
+                const SizedBox(width: 12),
                 Expanded(
-                  child: TextButton(
+                  child: OutlinedButton(
                     onPressed: () {
                       setState(() {
-                        _isPolresChecked = false;
-                        _isPolsekChecked = false;
+                        _isPolresChecked = true;
+                        _isPolsekChecked = true;
+                        _selectedWilayah = "Semua";
                         _localSearchController.clear();
                       });
                       widget.onReset();
+                      Navigator.pop(context);
                     },
-                    child: const Text(
-                      "Reset",
-                      style: TextStyle(
-                        color: Colors.grey, 
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
+                    child: const Text("Reset"),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  // Helper Widget untuk membuat baris Checkbox
-  Widget _buildCheckboxTile(String label, bool value, ValueChanged<bool?> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            height: 24,
-            width: 24,
-            child: Checkbox(
-              value: value,
-              onChanged: onChanged,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-              side: BorderSide(color: Colors.grey.shade500, width: 1.5),
-              activeColor: const Color(0xFF1B5E20), // Hijau saat dicentang
+  Widget _buildCheckboxTile(
+    String label,
+    bool value,
+    ValueChanged<bool?> onChanged,
+  ) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                activeColor: const Color(0xFF1B5E20),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Colors.black87,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Text(label, style: const TextStyle(fontSize: 14)),
+          ],
+        ),
       ),
     );
   }

@@ -7,7 +7,11 @@ import '../models/wilayah_model.dart';
 
 class UnitService {
   // Sesuaikan IP dengan Backend Golang Anda
+<<<<<<< HEAD
   final String baseUrl = 'http://10.16.1.116:8080'; // Emulator Android
+=======
+  final String baseUrl = 'http://10.16.1.87:8080'; // Emulator Android
+>>>>>>> fitur-fajri
   
   final _storage = const FlutterSecureStorage();
 

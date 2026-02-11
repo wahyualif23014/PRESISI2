@@ -83,7 +83,7 @@ final ThemeData _lightTheme = ThemeData(
     foregroundColor: Colors.black,
     centerTitle: true,
   ),
-  cardTheme: CardTheme(
+  cardTheme: CardThemeData(
     elevation: 2,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   ),

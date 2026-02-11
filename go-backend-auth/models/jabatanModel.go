@@ -19,6 +19,7 @@ func (Anggota) TableName() string {
 
 // 2. Model Jabatan (Pastikan References benar)
 type Jabatan struct {
+<<<<<<< HEAD
 	ID              uint64    `gorm:"column:idjabatan;primaryKey;autoIncrement" json:"id"`
 	NamaJabatan     string    `gorm:"column:namajabatan;size:100" json:"nama_jabatan"`
 	DeleteStatus    string    `gorm:"column:deletestatus;type:enum('1','2');default:'2'" json:"-"`
@@ -28,6 +29,12 @@ type Jabatan struct {
 	// References:ID artinya dia akan mencocokkan IDAnggota dengan field ID milik struct Anggota
 	AnggotaDetail   *Anggota  `gorm:"foreignKey:IDAnggota;references:ID" json:"-"`
 
+=======
+	ID           uint64  `gorm:"column:idjabatan;primaryKey;autoIncrement" json:"id"`
+	NamaJabatan  string  `gorm:"column:namajabatan;size:100" json:"nama_jabatan"`
+	DeleteStatus string  `gorm:"column:deletestatus;type:enum('1','2');default:'2'" json:"-"`
+	IDAnggota    *uint64 `gorm:"column:idanggota" json:"-"`
+>>>>>>> fitur-fajri
 	DateTransaction time.Time `gorm:"column:datetransaction" json:"created_at"`
 }
 
