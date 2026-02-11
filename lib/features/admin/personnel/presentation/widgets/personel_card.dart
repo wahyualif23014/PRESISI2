@@ -18,13 +18,9 @@ class PersonelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. LOGIC SAFE ACCESS UNTUK JABATAN
-    // Jika jabatanDetail ada, ambil namanya. Jika null, tampilkan '-'
     final String displayJabatan = personel.jabatanDetail?.namaJabatan ?? '-';
-
-    // 2. LOGIC SAFE ACCESS UNTUK NO TELP
-    // Cek apakah tidak null DAN tidak kosong
-    final bool hasPhone = personel.noTelp != null && personel.noTelp!.isNotEmpty;
+    final bool hasPhone =
+        personel.noTelp != null && personel.noTelp!.isNotEmpty;
     final String displayPhone = hasPhone ? personel.noTelp! : "-";
 
     return Container(
@@ -82,12 +78,13 @@ class PersonelCard extends StatelessWidget {
                                     color: Color(0xFF1E293B),
                                     height: 1.1,
                                   ),
-                                  maxLines: 1,
+                                  maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  displayJabatan.toUpperCase(), // Gunakan variabel yang sudah diamankan
+                                  displayJabatan
+                                      .toUpperCase(), // Gunakan variabel yang sudah diamankan
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -108,7 +105,6 @@ class PersonelCard extends StatelessWidget {
                       Container(height: 1, color: const Color(0xFFF1F5F9)),
                       const SizedBox(height: 12),
 
-                      // DATA SECTION (ID TUGAS & HP)
                       _TechnicalDataRow(
                         label: "ID TUGAS",
                         value: personel.idTugas,
@@ -124,11 +120,16 @@ class PersonelCard extends StatelessWidget {
                         isPlaceholder: !hasPhone,
                       ),
 
+                      // _TechnicalDataRow(
+                      //   label: "NRP",
+                      //   value: personel.nrp ?? "-",
+                      //   icon: Icons.fiber_manual_record_outlined,
+                      // ),
+
                       const SizedBox(height: 14),
 
                       Align(
                         alignment: Alignment.centerLeft,
-                        // Kirim Role String ('1','2','3') ke Badge
                         child: _RoleBadge(role: personel.role),
                       ),
                     ],
@@ -146,7 +147,7 @@ class PersonelCard extends StatelessWidget {
 // --- SUB WIDGETS ---
 
 class _RoleBadge extends StatelessWidget {
-  final String role; 
+  final String role;
 
   const _RoleBadge({required this.role});
 
@@ -234,7 +235,10 @@ class _TechnicalDataRow extends StatelessWidget {
               fontSize: 13,
               fontFamily: 'Ramabadra',
               fontWeight: FontWeight.w600,
-              color: isPlaceholder ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+              color:
+                  isPlaceholder
+                      ? const Color(0xFFCBD5E1)
+                      : const Color(0xFF334155),
               letterSpacing: -0.2,
             ),
           ),
@@ -262,25 +266,27 @@ class _AvatarSection extends StatelessWidget {
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-        image: hasPhoto
-            ? DecorationImage(
-                image: NetworkImage(photoUrl!),
-                fit: BoxFit.cover,
-              )
-            : null,
+        image:
+            hasPhoto
+                ? DecorationImage(
+                  image: NetworkImage(photoUrl!),
+                  fit: BoxFit.cover,
+                )
+                : null,
       ),
-      child: hasPhoto
-          ? null
-          : Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF64748B),
+      child:
+          hasPhoto
+              ? null
+              : Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ),
-            ),
     );
   }
 }
@@ -306,31 +312,45 @@ class _ActionMenu extends StatelessWidget {
           if (value == 'edit' && onEdit != null) onEdit!();
           if (value == 'delete' && onDelete != null) onDelete!();
         },
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'edit',
-            height: 40,
-            child: Row(
-              children: [
-                Icon(Icons.edit_note, color: Colors.black87, size: 18),
-                SizedBox(width: 12),
-                Text("Edit Data", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-          const PopupMenuDivider(height: 1),
-          const PopupMenuItem(
-            value: 'delete',
-            height: 40,
-            child: Row(
-              children: [
-                Icon(Icons.delete_forever, color: Colors.red, size: 18),
-                SizedBox(width: 12),
-                Text("Hapus", style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ],
+        itemBuilder:
+            (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                height: 40,
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_note, color: Colors.black87, size: 18),
+                    SizedBox(width: 12),
+                    Text(
+                      "Edit Data",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(height: 1),
+              const PopupMenuItem(
+                value: 'delete',
+                height: 40,
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever, color: Colors.red, size: 18),
+                    SizedBox(width: 12),
+                    Text(
+                      "Hapus",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
       ),
     );
   }

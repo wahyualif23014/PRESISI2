@@ -24,25 +24,19 @@ class Personel {
   // ============================
   factory Personel.fromJson(Map<String, dynamic> json) {
     return Personel(
-      id: json['ID'] ?? json['id'] ?? 0, 
-      
-      // Kunci JSON harus SAMA PERSIS dengan struct tag Golang (`json:"..."`)
+      id: json['ID'] ?? json['id'] ?? 0,
+
       namaLengkap: json['nama_lengkap'] ?? '',
       nrp: json['nrp'] ?? '',
       jabatan: json['jabatan'] ?? '',
-      
-      // Handle data nullable
-      noTelp: json['no_telp'], 
+
+      noTelp: json['no_telp'],
       fotoProfil: json['foto_profil'],
-      
+
       // Parsing Role
       role: UserRoleX.fromString(json['role'] ?? 'view'),
     );
   }
-
-  // ============================
-  // KE JSON (UNTUK KIRIM KE API)
-  // ============================
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -51,7 +45,8 @@ class Personel {
       'jabatan': jabatan,
       'no_telp': noTelp,
       'foto_profil': fotoProfil,
-      'role': role.label, // Pastikan role.label mengembalikan string 'admin', 'polres', dll.
+      'role':
+          role.label, // Pastikan role.label mengembalikan string 'admin', 'polres', dll.
     };
   }
 }

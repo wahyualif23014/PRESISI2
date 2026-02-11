@@ -66,7 +66,7 @@ class PersonelToolbar extends StatelessWidget {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
-                    value: 10,
+                    value: context.watch<PersonelProvider>().currentLimit,
                     icon: const Icon(Icons.keyboard_arrow_down, size: 20),
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                     items: const [
@@ -75,7 +75,7 @@ class PersonelToolbar extends StatelessWidget {
                       DropdownMenuItem(value: 50, child: Text('Show 50')),
                     ],
                     onChanged: (val) {
-                      // Implementasi update limit pagination jika diperlukan
+                      context.read<PersonelProvider>().updateLimit(val!);
                     },
                   ),
                 ),

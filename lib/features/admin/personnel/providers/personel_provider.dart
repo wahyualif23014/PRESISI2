@@ -8,6 +8,7 @@ class PersonelProvider with ChangeNotifier {
   // State Variables
   List<UserModel> _personelList = []; // List Utama (Hasil Filter)
   List<UserModel> _fullList = [];     // List Cadangan (Master Data)
+  int _currentLimit = 10;
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -16,6 +17,8 @@ class PersonelProvider with ChangeNotifier {
   List<UserModel> get personelList => _personelList;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int get currentLimit => _currentLimit;
+  List<UserModel> get personelListWithLimit => _personelList.take(_currentLimit).toList();
 
   // --- FETCH DATA ---
   Future<void> fetchPersonel() async {
@@ -35,6 +38,14 @@ class PersonelProvider with ChangeNotifier {
     }
   }
 
+  // fungsi update limit 
+  void updateLimit(int newLimit){
+    if (_currentLimit != newLimit){
+      _currentLimit = newLimit;
+      notifyListeners();
+    }
+  }
+
   // --- SEARCH (Client Side) ---
   void search(String keyword) {
     if (keyword.isEmpty) {
@@ -49,7 +60,6 @@ class PersonelProvider with ChangeNotifier {
     }
     notifyListeners();
   }
-
   // --- CRUD ACTIONS ---
 
   Future<void> addPersonel(UserModel user, String password) async {
