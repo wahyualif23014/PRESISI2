@@ -9,192 +9,12 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "Tim IT Support",
-            "email": "admin@polri.go.id"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/admin/polres": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengambil list semua Polres beserta detail Wilayahnya",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Master Data (Polres)"
-                ],
-                "summary": "Lihat Semua Polres",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Membuat data Polres dengan referensi ID Wilayah",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Master Data (Polres)"
-                ],
-                "summary": "Tambah Polres Baru",
-                "parameters": [
-                    {
-                        "description": "Data Polres",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "kapolres": {
-                                    "type": "string"
-                                },
-                                "nama_polres": {
-                                    "type": "string"
-                                },
-                                "no_telp_polres": {
-                                    "type": "string"
-                                },
-                                "wilayah_id": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/polsek": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengambil list semua Polsek beserta detail Polres dan Wilayahnya",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Master Data (Polsek)"
-                ],
-                "summary": "Lihat Semua Polsek",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Membuat data Polsek dengan referensi ID Polres dan ID Wilayah",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Master Data (Polsek)"
-                ],
-                "summary": "Tambah Polsek Baru",
-                "parameters": [
-                    {
-                        "description": "Data Polsek",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "kapolsek": {
-                                    "type": "string"
-                                },
-                                "kode": {
-                                    "type": "string"
-                                },
-                                "nama_polsek": {
-                                    "type": "string"
-                                },
-                                "no_telp_polsek": {
-                                    "type": "string"
-                                },
-                                "polres_id": {
-                                    "type": "integer"
-                                },
-                                "wilayah_id": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/admin/wilayah": {
             "get": {
                 "security": [
@@ -296,8 +116,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Backend API Kepolisian (Sistem Anggota & Laporan)",
-	Description:      "API Service untuk Manajemen Anggota (Login via Username) dan Pelaporan Data Kepolisian.",
+	Title:            "Backend API Kepolisian",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

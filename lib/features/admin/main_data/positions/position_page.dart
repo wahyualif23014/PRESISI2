@@ -1,7 +1,10 @@
-import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// Import Provider
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
+
+// Import Models & Widgets
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_action_buttons.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_form_widget.dart';
@@ -21,7 +24,7 @@ class _PositionPageState extends State<PositionPage> {
   @override
   void initState() {
     super.initState();
-    // Fetch data saat init
+    // Fetch data saat halaman pertama kali dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<JabatanProvider>().fetchJabatan();
     });
@@ -33,12 +36,16 @@ class _PositionPageState extends State<PositionPage> {
     super.dispose();
   }
 
-  // Helper Modal Form
   void _showFormModal(BuildContext context, JabatanFormType type, {JabatanModel? item}) {
     final jabatanCtrl = TextEditingController(text: item?.namaJabatan ?? '');
+    
+    // Field ini opsional di backend, tapi jika ada, kita tampilkan
     final namaCtrl = TextEditingController(text: item?.namaPejabat ?? '');
     final nrpCtrl = TextEditingController(text: item?.nrp ?? '');
     final tglCtrl = TextEditingController(text: item?.tanggalPeresmian ?? '');
+
+
+    String? selectedIdAnggota = item?.idAnggota; 
 
     showDialog(
       context: context,
@@ -53,29 +60,36 @@ class _PositionPageState extends State<PositionPage> {
             nrpController: nrpCtrl,
             tanggalController: tglCtrl,
             onCancel: () => Navigator.pop(ctx),
+            
+            // LOGIKA SUBMIT
             onSubmit: () {
-              // Panggil Provider untuk Logika Bisnis
               final provider = context.read<JabatanProvider>();
 
               if (type == JabatanFormType.add) {
+                // Panggil Provider Add
                 provider.addNewData(
-                  jabatanCtrl.text,
-                  namaCtrl.text,
-                  nrpCtrl.text,
-                  tglCtrl.text,
+                  jabatanCtrl.text, 
+                  selectedIdAnggota 
                 );
-                _showSnackBar("Data Berhasil Ditambah");
+                _showSnackBar("Proses tambah data...");
               } else if (type == JabatanFormType.edit) {
-                // TODO: Implement Edit Logic di Provider
-                // provider.editData(...);
+                if (item != null) {
+                  provider.updateData(
+                    item.id, 
+                    jabatanCtrl.text, 
+                    selectedIdAnggota
+                  );
+                  _showSnackBar("Proses update data...");
+                }
               } else {
                 // DELETE
                 if (item != null) {
                   provider.deleteSingle(item.id);
+                  _showSnackBar("Data dihapus");
                 } else {
                   provider.deleteSelected();
+                  _showSnackBar("Data terpilih dihapus");
                 }
-                _showSnackBar("Data Berhasil Dihapus");
               }
               Navigator.pop(ctx);
             },
@@ -90,22 +104,21 @@ class _PositionPageState extends State<PositionPage> {
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFFF8FAFC);
-
-    // Gunakan Consumer untuk listen perubahan data
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: const Color(0xFFF8FAFC),
+      // Gunakan Consumer agar UI rebuild saat data Provider berubah
       body: Consumer<JabatanProvider>(
         builder: (context, provider, child) {
           return Column(
             children: [
-              // --- HEADER SECTION (Search & Action) ---
+              // --- 1. HEADER (SEARCH & ACTION) ---
               Container(
                 padding: const EdgeInsets.all(16.0),
                 decoration: const BoxDecoration(
@@ -136,7 +149,7 @@ class _PositionPageState extends State<PositionPage> {
                               }
                             },
                             onRefresh: () {
-                              provider.refresh();
+                              provider.fetchJabatan();
                               _searchController.clear();
                             },
                           ),
@@ -147,62 +160,65 @@ class _PositionPageState extends State<PositionPage> {
                 ),
               ),
 
-              // --- SELECTION BAR ---
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Colors.white,
-                child: Row(
-                  children: [
-                    Transform.scale(
-                      scale: 0.9,
-                      child: Checkbox(
-                        value: provider.isAllSelected,
-                        onChanged: (val) => provider.toggleSelectAll(val),
-                        activeColor: const Color(0xFF6366F1),
+              // --- 2. SELECTION BAR ---
+              if (provider.displayData.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      Transform.scale(
+                        scale: 0.9,
+                        child: Checkbox(
+                          value: provider.isAllSelected,
+                          onChanged: (val) => provider.toggleSelectAll(val),
+                          activeColor: const Color(0xFF6366F1),
+                        ),
                       ),
-                    ),
-                    Text(
-                      provider.selectedCount > 0
-                          ? "${provider.selectedCount} Dipilih"
-                          : "Pilih Semua",
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                      Text(
+                        provider.selectedCount > 0
+                            ? "${provider.selectedCount} Dipilih"
+                            : "Pilih Semua",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // --- DATA GRID ---
+              // --- 3. DATA GRID ---
               Expanded(
                 child: provider.isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : provider.displayData.isEmpty
-                        ? _buildEmptyState()
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: GridView.builder(
-                              padding: const EdgeInsets.only(top: 16, bottom: 80),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.70,
+                    : provider.errorMessage != null
+                        ? Center(child: Text(provider.errorMessage!))
+                        : provider.displayData.isEmpty
+                            ? _buildEmptyState()
+                            : Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: GridView.builder(
+                                  padding: const EdgeInsets.only(top: 16, bottom: 80),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                    childAspectRatio: 0.70,
+                                  ),
+                                  itemCount: provider.displayData.length,
+                                  itemBuilder: (context, index) {
+                                    final item = provider.displayData[index];
+                                    return JabatanCardItem(
+                                      item: item,
+                                      onToggleSelection: () => provider.toggleSingleSelection(item.id),
+                                      onEdit: () => _showFormModal(context, JabatanFormType.edit, item: item),
+                                      onDelete: () => _showFormModal(context, JabatanFormType.delete, item: item),
+                                    );
+                                  },
+                                ),
                               ),
-                              itemCount: provider.displayData.length,
-                              itemBuilder: (context, index) {
-                                final item = provider.displayData[index];
-                                return JabatanCardItem(
-                                  item: item,
-                                  onToggleSelection: () => provider.toggleSingleSelection(item.id),
-                                  onEdit: () => _showFormModal(context, JabatanFormType.edit, item: item),
-                                  onDelete: () => _showFormModal(context, JabatanFormType.delete, item: item),
-                                );
-                              },
-                            ),
-                          ),
               ),
             ],
           );

@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/repos/position_repository.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/services/jabatan_service.dart';
 
 class JabatanProvider with ChangeNotifier {
-  // --- STATE ---
+  final JabatanService _service = JabatanService();
+
   List<JabatanModel> _allData = [];
   List<JabatanModel> _displayData = [];
+  String _currentQuery = "";
+
   bool _isLoading = false;
   String? _errorMessage;
 
-  // --- GETTERS ---
   List<JabatanModel> get displayData => _displayData;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Getter Seleksi
   int get selectedCount => _displayData.where((e) => e.isSelected).length;
-  bool get isAllSelected => _displayData.isNotEmpty && _displayData.length == selectedCount;
-
-  // --- ACTIONS ---
+  bool get isAllSelected =>
+      _displayData.isNotEmpty && _displayData.length == selectedCount;
 
   Future<void> fetchJabatan() async {
     _isLoading = true;
@@ -26,11 +26,12 @@ class JabatanProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _allData = await JabatanRepository.getJabatanList();
-      _displayData = List.from(_allData);
+      final data = await _service.getJabatanList();
+      _allData = data;
+      _applyFilter();
     } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint("Error loading data: $e");
+      _errorMessage = "Gagal mengambil data. Cek koneksi internet.";
+      debugPrint("Error Fetch: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -38,20 +39,23 @@ class JabatanProvider with ChangeNotifier {
   }
 
   void search(String query) {
-    if (query.isEmpty) {
-      _displayData = List.from(_allData);
-    } else {
-      final searchLower = query.toLowerCase();
-      _displayData = _allData.where((item) {
-        final titleLower = item.namaJabatan.toLowerCase();
-        final nameLower = (item.namaPejabat ?? '').toLowerCase();
-        return titleLower.contains(searchLower) || nameLower.contains(searchLower);
-      }).toList();
-    }
+    _currentQuery = query;
+    _applyFilter();
     notifyListeners();
   }
 
-  // --- SELECTION LOGIC ---
+  void _applyFilter() {
+    if (_currentQuery.isEmpty) {
+      _displayData = List.from(_allData);
+    } else {
+      final searchLower = _currentQuery.toLowerCase();
+      _displayData = _allData.where((item) {
+        final titleMatch = item.namaJabatan.toLowerCase().contains(searchLower);
+        final namaMatch = (item.namaPejabat ?? '').toLowerCase().contains(searchLower);
+        return titleMatch || namaMatch;
+      }).toList();
+    }
+  }
 
   void toggleSelectAll(bool? val) {
     if (val != null) {
@@ -70,39 +74,78 @@ class JabatanProvider with ChangeNotifier {
     }
   }
 
-  // --- CRUD OPERATIONS (Local Logic) ---
-
-  void addNewData(String jabatan, String nama, String nrp, String tgl) {
-    final newItem = JabatanModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // ID Dummy
-      namaJabatan: jabatan.isEmpty ? "Jabatan Baru" : jabatan,
-      namaPejabat: nama.isEmpty ? "Personel Baru" : nama,
-      nrp: nrp,
-      tanggalPeresmian: tgl,
-    );
-    
-    _allData.add(newItem);
-    // Reset search agar data baru terlihat (opsional, atau tetap di filter search)
-    search(""); 
-    notifyListeners();
-  }
-
-  void deleteSingle(String id) {
-    _displayData.removeWhere((e) => e.id == id);
-    _allData.removeWhere((e) => e.id == id);
-    notifyListeners();
-  }
-
-  void deleteSelected() {
-    // Ambil ID yang mau dihapus dulu
-    final idsToDelete = _displayData.where((e) => e.isSelected).map((e) => e.id).toSet();
-    
-    _displayData.removeWhere((e) => idsToDelete.contains(e.id));
-    _allData.removeWhere((e) => idsToDelete.contains(e.id));
-    notifyListeners();
-  }
-
   void refresh() {
     fetchJabatan();
+  }
+
+  Future<void> deleteSingle(String id) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final success = await _service.deleteJabatan(id);
+      if (success) {
+        await fetchJabatan();
+      } else {
+        _errorMessage = "Gagal menghapus data";
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSelected() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final selected = _displayData.where((e) => e.isSelected).toList();
+      for (var item in selected) {
+        await _service.deleteJabatan(item.id);
+      }
+      await fetchJabatan();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  Future<void> addNewData(String namaJabatan, String? idAnggota) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final success = await _service.createJabatan(namaJabatan, idAnggota);
+      if (success) {
+        await fetchJabatan();
+      } else {
+        _errorMessage = "Gagal menambah data";
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateData(String id, String namaJabatan, String? idAnggota) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final success = await _service.updateJabatan(id, namaJabatan, idAnggota);
+      if (success) {
+        await fetchJabatan();
+      } else {
+        _errorMessage = "Gagal mengubah data";
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

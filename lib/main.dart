@@ -1,30 +1,28 @@
-import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-// --- IMPORTS ---
-import 'auth/provider/auth_provider.dart';
-import './router/router_provider.dart';
-import 'features/admin/dashboard/providers/dashboard_provider.dart';
-import 'features/admin/personnel/providers/personel_provider.dart'; // [NEW] Import PersonelProvider
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
+import 'package:KETAHANANPANGAN/router/router_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/dashboard/providers/dashboard_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/commodity_category_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Setup Date Format (Indonesia)
   await initializeDateFormatting('id_ID');
 
-  // 2. Initialize Auth & Check Login Status
   final authProvider = AuthProvider();
   await authProvider.tryAutoLogin();
 
-  // 3. Setup Router with Redirect Logic
   final appRouter = AppRouter(authProvider);
 
-  // 4. Run App
   runApp(
     MultiProvider(
       providers: [
@@ -33,6 +31,9 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => PersonelProvider()),
         ChangeNotifierProvider(create: (_) => UnitProvider()),
         ChangeNotifierProvider(create: (_) => RegionProvider()),
+        ChangeNotifierProvider(create: (_) => JabatanProvider()),
+        // ChangeNotifierProvider(create: (_) => CommodityCategoryProvider()),
+        // ChangeNotifierProvider(create: (_) => LandHistoryProvider()),
       ],
       child: MyApp(appRouter: appRouter),
     ),
@@ -49,11 +50,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Sistem Ketahanan Pangan Presisi',
       debugShowCheckedModeBanner: false,
-
-      // Router Config
       routerConfig: appRouter.router,
-
-      // Localization
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -61,15 +58,10 @@ class MyApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       locale: const Locale('id', 'ID'),
-
-      // Theme
       theme: _lightTheme,
       themeMode: ThemeMode.light,
-
-      // Global Error Builder
       builder: (context, child) {
         ErrorWidget.builder = (FlutterErrorDetails details) {
-          // Pass the actual error message to the view
           return _SafeErrorView(errorMessage: details.exceptionAsString());
         };
         return child ?? const SizedBox.shrink();
@@ -78,12 +70,11 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// --- THEME CONFIGURATION ---
 final ThemeData _lightTheme = ThemeData(
   useMaterial3: true,
   fontFamily: 'Ramabhadra',
   colorScheme: ColorScheme.fromSeed(
-    seedColor: const Color(0xFF00A7C4), // Consistent with your UI color
+    seedColor: const Color(0xFF00A7C4),
     brightness: Brightness.light,
   ),
   appBarTheme: const AppBarTheme(
@@ -98,7 +89,6 @@ final ThemeData _lightTheme = ThemeData(
   ),
 );
 
-// --- SAFE ERROR VIEW (DEBUG MODE) ---
 class _SafeErrorView extends StatelessWidget {
   final String? errorMessage;
 
@@ -133,7 +123,6 @@ class _SafeErrorView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                // Show actual error only in debug mode usually, but helpful for you now
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -145,7 +134,7 @@ class _SafeErrorView extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.red,
-                      fontFamily: 'Courier', // Monospace for code font
+                      fontFamily: 'Courier',
                       decoration: TextDecoration.none,
                     ),
                     textAlign: TextAlign.center,

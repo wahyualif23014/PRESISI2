@@ -3,10 +3,14 @@
 class JabatanModel {
   final String id;
   final String namaJabatan;
-  final String? namaPejabat;   // Nullable jika jabatan kosong
-  final String? nrp;           // Tambahan: Nomor Registrasi Pokok
-  final String? tanggalPeresmian; // Tambahan: Format YYYY-MM-DD
-  bool isSelected;             // Untuk logic checkbox UI
+  final String? namaPejabat;
+  final String? nrp;
+  final String? tanggalPeresmian;
+
+  final String? idAnggota;
+
+  // State UI
+  bool isSelected;
 
   JabatanModel({
     required this.id,
@@ -14,29 +18,33 @@ class JabatanModel {
     this.namaPejabat,
     this.nrp,
     this.tanggalPeresmian,
+    this.idAnggota,
     this.isSelected = false,
   });
 
-  // Factory method (Untuk parsing JSON dari Backend nanti)
   factory JabatanModel.fromJson(Map<String, dynamic> json) {
     return JabatanModel(
-      id: json['id'].toString(),
+      id: json['id']?.toString() ?? '0',
+
       namaJabatan: json['nama_jabatan'] ?? '',
-      namaPejabat: json['nama_pejabat'], // Bisa null
-      nrp: json['nrp'],                 // Bisa null
-      tanggalPeresmian: json['tanggal_peresmian'], // Bisa null
+
+      // Sesuai DTO Backend Go (JabatanResponse)
+      namaPejabat: json['nama_pejabat'] ?? '-',
+      nrp: json['nrp'] ?? '-',
+
+      tanggalPeresmian: json['tanggal_peresmian'],
+
+      idAnggota: json['id_anggota']?.toString(),
+
       isSelected: false,
     );
   }
 
-  // Method toMap (Untuk mengirim data KE Backend nanti)
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'id': int.tryParse(id) ?? 0,
       'nama_jabatan': namaJabatan,
-      'nama_pejabat': namaPejabat,
-      'nrp': nrp,
-      'tanggal_peresmian': tanggalPeresmian,
+      'id_anggota': idAnggota != null ? int.tryParse(idAnggota!) : null,
     };
   }
 }
