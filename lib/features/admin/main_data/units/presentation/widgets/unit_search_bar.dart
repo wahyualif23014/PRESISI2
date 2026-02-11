@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class UnitSearchFilter extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  final VoidCallback onFilterTap; // Callback saat tombol filter ditekan
+  final VoidCallback onFilterTap;
 
   const UnitSearchFilter({
     super.key,
@@ -21,23 +21,29 @@ class UnitSearchFilter extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12), // Radius 12
-              border: Border.all(
-                color: Colors.black,
-                width: 1.5,
-              ), // Border Hitam
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.black, width: 1.5),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.2),
                   blurRadius: 4,
-                  offset: const Offset(0, 4), // Efek bayangan
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: TextField(
               controller: controller,
-              onChanged: onChanged,
+              onChanged:
+                  onChanged, // INI KUNCINYA (Meneruskan ketikan ke Provider)
+              // --- Tambahan Optimasi UX ---
+              autocorrect:
+                  false, // Matikan koreksi otomatis (mengganggu untuk nama daerah)
+              enableSuggestions: false,
+              textInputAction:
+                  TextInputAction.search, // Tombol enter jadi kaca pembesar
               textAlignVertical: TextAlignVertical.center,
+
+              // -----------------------------
               style: const TextStyle(color: Colors.black87),
               decoration: const InputDecoration(
                 hintText: "Cari Data Polres Atau Polsek",
@@ -54,14 +60,15 @@ class UnitSearchFilter extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(width: 12), // Jarak spasi horizontal
+        const SizedBox(width: 12),
 
+        // Tombol Filter (Tetap sama seperti kode Anda)
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: const Color(0xFF0097B2), // Warna Biru Cyan (Konsisten)
-            borderRadius: BorderRadius.circular(12), // Radius 12
-            border: Border.all(color: Colors.black, width: 1.5), // Border Hitam
+            color: const Color(0xFF0097B2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.black, width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),

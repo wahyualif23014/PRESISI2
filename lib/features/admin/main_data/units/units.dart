@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Ganti Riverpod dengan Provider
-
-// IMPORT PROVIDER BARU
+import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
-
-// IMPORT MODEL & WIDGET
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/data/models/unit_model.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/presentation/widgets/unit_filter_dialog.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/presentation/widgets/unit_search_bar.dart';
@@ -23,6 +19,7 @@ class _UnitsPageState extends State<UnitsPage> {
   @override
   void initState() {
     super.initState();
+    // Memanggil data dari Backend saat halaman pertama kali dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UnitProvider>().fetchUnits();
     });
@@ -36,160 +33,173 @@ class _UnitsPageState extends State<UnitsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<UnitProvider>();
+
+    // Warna untuk garis penghubung (Jaring)
+    final connectionColor = Colors.grey.shade300;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      // Gunakan Consumer untuk mendengarkan perubahan state
-      body: Consumer<UnitProvider>(
-        builder: (context, provider, child) {
-          return Column(
-            children: [
-              // ---------------------------------------
-              // 1. BAGIAN HEADER (Search & Filter)
-              // ---------------------------------------
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    UnitSearchFilter(
-                      controller: _searchController,
-                      onChanged: (val) {
-                        // Panggil fungsi search di Provider
-                        provider.search(val);
-                      },
-                      onFilterTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => UnitFilterDialog(
-                            onApply: () => Navigator.pop(context),
-                            onReset: () => Navigator.pop(context),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+      backgroundColor: const Color(0xFFF3F4F6),
+      body: RefreshIndicator(
+        onRefresh: () => provider.refresh(),
+        color: const Color(0xFF1E40AF),
 
-              // ---------------------------------------
-              // 2. BAGIAN INFO BANNER
-              // ---------------------------------------
-              // Tampilkan hanya jika tidak loading dan tidak error
-              if (!provider.isLoading && provider.errorMessage == null)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-                  ),
-                  child: Text(
-                    // Ambil total calculation dari Getter Provider
-                    "DITEMUKAN ${provider.totalUnits} UNIT KESATUAN",
-                    textAlign: TextAlign.center,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Data Kesatuan",
                     style: TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      color: Colors.grey.shade700,
+                      color: Color(0xFF1E40AF),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 16),
 
-              // ---------------------------------------
-              // 3. BAGIAN LIST (Handling States)
-              // ---------------------------------------
-              Expanded(
-                child: Builder(
-                  builder: (context) {
-                    // A. LOADING STATE
-                    if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                  // WIDGET PENCARIAN
+                  UnitSearchFilter(
+                    controller: _searchController,
+                    onChanged: (value) => provider.search(value),
+                    onFilterTap: () {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (context) => UnitFilterDialog(
+                              // Kirim Data Status Terakhir
+                              initialPolres: provider.showPolres,
+                              initialPolsek: provider.showPolsek,
+                              initialWilayah: provider.selectedWilayah,
 
-                    // B. ERROR STATE
-                    if (provider.errorMessage != null) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red, size: 40),
-                            const SizedBox(height: 10),
-                            Text(
-                              "Terjadi Kesalahan:\n${provider.errorMessage}",
-                              textAlign: TextAlign.center,
+                              // Kirim List Wilayah yang tersedia (Dari Provider)
+                              availableWilayahs: provider.uniqueWilayahList,
+
+                              // Handle Apply
+                              onApply: (isPolres, isPolsek, wilayah, query) {
+                                if (query.isNotEmpty) {
+                                  _searchController.text = query;
+                                }
+                                provider.applyFilter(
+                                  isPolres,
+                                  isPolsek,
+                                  wilayah,
+                                  _searchController.text,
+                                );
+                              },
+
+                              // Handle Reset
+                              onReset: () {
+                                _searchController.clear();
+                                provider.resetFilter();
+                              },
                             ),
-                            const SizedBox(height: 10),
-                            ElevatedButton(
-                              onPressed: () => provider.fetchUnits(),
-                              child: const Text("Coba Lagi"),
-                            ),
-                          ],
-                        ),
                       );
-                    }
+                    },
+                  ),
+                ],
+              ),
+            ),
 
-                    // C. EMPTY STATE
-                    if (provider.units.isEmpty) {
-                      return _buildEmptyState();
-                    }
-
-                    // D. DATA LIST
-                    return RefreshIndicator(
-                      onRefresh: () => provider.refresh(),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 16),
+            Expanded(
+              child:
+                  provider.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : provider.errorMessage != null
+                      ? Center(
+                        child: Text(provider.errorMessage!),
+                      ) // Tampilkan Error
+                      : provider.units.isEmpty
+                      ? _buildEmptyState() // Tampilkan jika data kosong
+                      : ListView.separated(
+                        padding: const EdgeInsets.all(20),
                         itemCount: provider.units.length,
-                        separatorBuilder: (ctx, index) => const SizedBox(height: 12),
+                        separatorBuilder: (c, i) => const SizedBox(height: 16),
                         itemBuilder: (context, index) {
                           final region = provider.units[index];
 
-                          // Mapping Data Polres
+                          // A. MODEL UNTUK POLRES (PARENT)
                           final parentUnit = UnitModel(
                             title: region.polres.namaPolres,
-                            subtitle: "Kapolres: ${region.polres.kapolres}",
-                            count: "${region.polseks.length} Polsek",
+                            subtitle: "Ka: ${region.polres.kapolres}",
+                            // Mengambil nama wilayah (Contoh: WILAYAH GRESIK)
+                            count:
+                                "WILAYAH ${region.polres.wilayah?.kabupaten ?? '-'}",
                             isPolres: true,
                           );
 
                           return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // A. Parent (Polres)
+                              // 1. KARTU UTAMA (POLRES)
                               UnitItemCard(
                                 unit: parentUnit,
                                 isExpanded: region.isExpanded,
-                                onExpandTap: () {
-                                  // Panggil toggle di Provider
-                                  provider.toggleExpand(index);
-                                },
+                                onExpandTap: () => provider.toggleExpand(index),
                               ),
 
-                              // B. Children (Polsek) - Muncul jika Expanded
                               if (region.isExpanded)
-                                Column(
-                                  children: region.polseks.map((polsek) {
-                                    final childUnit = UnitModel(
-                                      title: polsek.namaPolsek,
-                                      subtitle: "Kapolsek: ${polsek.kapolsek}",
-                                      count: "Kode: ${polsek.kode}",
-                                      isPolres: false,
-                                    );
+                                Container(
+                                  // Membuat Indentasi (Menjorok ke dalam)
+                                  margin: const EdgeInsets.only(left: 28.0),
+                                  // Membuat Garis Vertikal (Tiang Jaring)
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: connectionColor,
+                                        width: 2.0,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children:
+                                        region.polseks.map((polsek) {
+                                          // B. MODEL UNTUK POLSEK (CHILD)
+                                          final childUnit = UnitModel(
+                                            title: polsek.namaPolsek,
+                                            subtitle:
+                                                "Ka: ${polsek.kapolsek}\nHP: ${polsek.noTelp}",
+                                            count: "KODE: ${polsek.kode}",
+                                            isPolres: false,
+                                          );
 
-                                    return UnitItemCard(
-                                      unit: childUnit,
-                                      isExpanded: false,
-                                    );
-                                  }).toList(),
+                                          // Row untuk Garis Horizontal + Kartu
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 12.0,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                // Garis Horizontal Kecil (Penghubung)
+                                                Container(
+                                                  width: 16.0,
+                                                  height: 2.0,
+                                                  color: connectionColor,
+                                                ),
+                                                // Kartu Polsek (Expanded agar teks panjang aman)
+                                                Expanded(
+                                                  child: UnitItemCard(
+                                                    unit: childUnit,
+                                                    isExpanded: false,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                  ),
                                 ),
                             ],
                           );
                         },
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -203,7 +213,7 @@ class _UnitsPageState extends State<UnitsPage> {
           const SizedBox(height: 16),
           Text(
             "Data tidak ditemukan",
-            style: TextStyle(color: Colors.grey.shade500),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
           ),
         ],
       ),
