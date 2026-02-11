@@ -7,12 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class PersonelService {
-<<<<<<< HEAD
   final String baseUrl = 'http://10.16.1.116:8080'; 
-=======
-  // Ganti baseUrl sesuai config Anda
-  final String baseUrl = 'http://10.16.1.87:8080'; 
->>>>>>> fitur-fajri
+
   final _storage = const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
