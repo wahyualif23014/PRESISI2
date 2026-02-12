@@ -13,8 +13,7 @@ func GetTingkat(c *gin.Context) {
 	var rawData []models.KesatuanDetail
 
 	// --- QUERY PERBAIKAN ---
-	// Masalah: Error 1054 Unknown column 't.deletestatus'
-	// Solusi: Hapus 'WHERE t.deletestatus != 1'
+	// Mengambil hanya 1 pejabat per kesatuan berdasarkan prioritas idjabatan
 	query := `
 		SELECT 
 			t.kode AS kode,
@@ -23,11 +22,17 @@ func GetTingkat(c *gin.Context) {
 			COALESCE(a.nama, 'Belum Ada Pejabat') AS nama_pejabat,
 			COALESCE(a.hp, '-') AS no_hp
 		FROM tingkat t
-		-- Join ke Anggota (Filter deletestatus HANYA untuk tabel anggota 'a', bukan tingkat 't')
-		LEFT JOIN anggota a ON a.idtugas = t.kode AND a.deletestatus != '1'
+		LEFT JOIN (
+			SELECT *, 
+			ROW_NUMBER() OVER (
+				PARTITION BY idtugas 
+				ORDER BY FIELD(idjabatan, 1, 2, 3, 7, 8) ASC
+			) as rank_jabatan
+			FROM anggota 
+			WHERE deletestatus != '1' 
+			AND idjabatan IN (1, 2, 3, 7, 8)
+		) a ON a.idtugas = t.kode AND a.rank_jabatan = 1
 		LEFT JOIN jabatan j ON a.idjabatan = j.idjabatan
-		-- GROUP BY
-		GROUP BY t.kode, t.nama, j.namajabatan, a.nama, a.hp
 		ORDER BY t.kode ASC
 	`
 

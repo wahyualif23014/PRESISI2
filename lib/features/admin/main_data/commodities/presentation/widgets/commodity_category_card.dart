@@ -13,146 +13,109 @@ class CommodityCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Color> tagColors = [
-      const Color(0xFF2ECC71),
-      const Color(0xFFFF8A65),
-      const Color(0xFFFFA726),
-    ];
-
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      constraints: const BoxConstraints(minHeight: 180),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              flex: 4,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
-                ),
-                child: Image.asset(
-                  item.imageAsset,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported,
-                            color: Colors.grey, size: 40),
-                      ),
-                    );
-                  },
-                ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. KOTAK ICON (FOTO RUSAK)
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey[200], // Latar abu-abu
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              // Icon Foto Rusak sesuai permintaan
+              child: Icon(
+                Icons.broken_image_outlined,
+                size: 32,
+                color: Colors.grey,
               ),
             ),
-            Expanded(
-              flex: 6,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'Sans',
-                        color: Color(0xFF212121),
-                        height: 1.1,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: List.generate(item.tags.length, (index) {
-                        final color = tagColors[index % tagColors.length];
-                        return _buildTag(item.tags[index], color);
-                      }),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      item.description,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.justify,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Spacer(),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: SizedBox(
-                        height: 32,
-                        child: ElevatedButton(
-                          onPressed: onViewAllTap,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00E5FF),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              side: const BorderSide(color: Colors.black, width: 1),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            "VIEW ALL",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 11,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
 
-  Widget _buildTag(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 9,
-        ),
+          const SizedBox(width: 16),
+
+          // 2. KONTEN TENGAH
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Judul Kategori
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ),
+
+                // DESKRIPSI DIHAPUS (Kosong)
+                const SizedBox(height: 8),
+
+                // Tags / Chips (3 Item Awal)
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children:
+                      item.tags.map((tag) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7), // Kuning muda
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: const Color(0xFFFCD34D),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Text(
+                            tag,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF92400E), // Coklat
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ],
+            ),
+          ),
+
+          // 3. TOMBOL PANAH KANAN
+          InkWell(
+            onTap: onViewAllTap,
+            borderRadius: BorderRadius.circular(20),
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

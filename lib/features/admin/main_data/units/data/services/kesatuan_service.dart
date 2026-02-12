@@ -5,8 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // Buat jaga-jaga
 import '../models/kesatuan_model.dart';
 
 class KesatuanService {
-  // Ganti IP sesuai konfigurasi kamu (10.0.2.2 untuk Emulator, IP asli untuk HP fisik)
-  final String baseUrl = "http://10.16.1.87:8080/view/tingkat";
+  final String baseUrl = "http://10.16.15.78:8080/view/tingkat";
 
   Future<List<KesatuanModel>> getKesatuan() async {
     String? token;

@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../data/models/commodity_category_model.dart';
 
 class CommodityFormDialog extends StatefulWidget {
-  final bool isEdit;
-  final String? initialName;
-  final String? initialDescription;
-  final VoidCallback onCancel;
-  final Function(String name, String desc) onConfirm;
+  final List<CommodityCategoryModel> categories;
+  final Function(String name, String categoryId) onSubmit;
 
   const CommodityFormDialog({
     super.key,
-    this.isEdit = false, // Default adalah Tambah
-    this.initialName,
-    this.initialDescription,
-    required this.onCancel,
-    required this.onConfirm,
+    required this.categories,
+    required this.onSubmit,
   });
 
   @override
@@ -21,190 +16,126 @@ class CommodityFormDialog extends StatefulWidget {
 }
 
 class _CommodityFormDialogState extends State<CommodityFormDialog> {
-  late TextEditingController _nameController;
-  late TextEditingController _descController;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initialName ?? '');
-    _descController = TextEditingController(text: widget.initialDescription ?? '');
-  }
+  final TextEditingController _nameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  String? _selectedCategoryId;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _descController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Menentukan teks dan warna berdasarkan mode Edit/Tambah
-    final String title = widget.isEdit ? "Edit komoditi" : "Tambah komoditi";
-    final String btnLabel = widget.isEdit ? "Edit" : "Tambah";
-    final IconData headerIcon = Icons.forest; // Ikon pohon
-
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header (Icon + Title)
-              Row(
-                children: [
-                  Icon(headerIcon, size: 32, color: Colors.black),
-                  const SizedBox(width: 10),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // 2. Input Nama
-              _buildLabel("Nama Komoditi Lahan"),
-              _buildTextField(
-                controller: _nameController,
-                hint: "",
-                height: 50,
-              ),
-              const SizedBox(height: 16),
-
-              // 3. Input Deskripsi
-              _buildLabel("Tambahkan Deskripsi Komoditi Lahan"),
-              _buildTextField(
-                controller: _descController,
-                hint: "",
-                height: 100,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-
-              // 4. Upload Foto Area
-              _buildLabel("Foto Komoditi lahan"),
-              GestureDetector(
-                onTap: () {
-                  // TODO: Implementasi Image Picker disini
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Fitur Upload Gambar")),
-                  );
-                },
-                child: Container(
-                  height: 150,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.add_photo_alternate, size: 40, color: Colors.black),
-                      SizedBox(height: 8),
-                      Text(
-                        "Upload Gambar",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
+              const Text(
+                "Tambah Data Baru",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E40AF),
                 ),
               ),
               const SizedBox(height: 24),
 
-              // 5. Action Buttons
-              Row(
-                children: [
-                  // Tombol Cancel (Merah)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: widget.onCancel,
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      label: const Text("Cancel"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF0000), // Merah
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+              // INPUT NAMA
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: "Nama Komoditas",
+                  hintText: "Contoh: Bawang Merah",
+                  prefixIcon: const Icon(Icons.grass_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
+                ),
+                validator: (val) => val!.isEmpty ? "Nama wajib diisi" : null,
+              ),
+              const SizedBox(height: 16),
+
+              // DROPDOWN KATEGORI
+              DropdownButtonFormField<String>(
+                value: _selectedCategoryId,
+                decoration: InputDecoration(
+                  labelText: "Pilih Kategori",
+                  prefixIcon: const Icon(Icons.category_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
+                ),
+                items:
+                    widget.categories.map((cat) {
+                      return DropdownMenuItem(
+                        value: cat.id,
+                        child: Text(
+                          cat.title,
+                          style: const TextStyle(fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                      );
+                    }).toList(),
+                onChanged: (val) => setState(() => _selectedCategoryId = val),
+                validator: (val) => val == null ? "Pilih kategori dulu" : null,
+              ),
+              const SizedBox(height: 32),
+
+              // BUTTONS
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      "Batal",
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Tombol Action (Hijau)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        widget.onConfirm(_nameController.text, _descController.text);
-                      },
-                      icon: Icon(
-                        widget.isEdit ? Icons.edit_note : Icons.add,
-                        color: Colors.white,
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        widget.onSubmit(
+                          _nameController.text.toUpperCase(),
+                          _selectedCategoryId!,
+                        );
+                        Navigator.pop(context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E40AF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                      label: Text(btnLabel),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00C853), // Hijau
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
+                    child: const Text("Simpan"),
                   ),
                 ],
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          color: Colors.black,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required double height,
-    int maxLines = 1,
-  }) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE0E0E0), // Warna abu-abu input
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: hint,
-          contentPadding: const EdgeInsets.all(12),
         ),
       ),
     );

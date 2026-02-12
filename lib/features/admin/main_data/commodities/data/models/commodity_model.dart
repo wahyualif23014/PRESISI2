@@ -1,17 +1,16 @@
 class CommodityModel {
-  final String id;          // Unique ID item
-  final String categoryId;  // PENTING: Penghubung ke CommodityCategoryModel.id
-  final String name;        // Contoh: "BAWANG MERAH"
-  final bool isSelected;    // Untuk fitur Checkbox UI
+  final String id;
+  final String categoryId;
+  final String name;
+  final bool isSelected;
 
   const CommodityModel({
     required this.id,
     required this.categoryId,
     required this.name,
-    this.isSelected = false, // Default tidak tercentang
+    this.isSelected = false,
   });
 
-  // Wajib ada untuk update status checkbox (State Management)
   CommodityModel copyWith({
     String? id,
     String? categoryId,
@@ -23,6 +22,16 @@ class CommodityModel {
       categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
       isSelected: isSelected ?? this.isSelected,
+    );
+  }
+
+  // --- TAMBAHKAN INI ---
+  factory CommodityModel.fromJson(Map<String, dynamic> json) {
+    return CommodityModel(
+      id: json['id']?.toString() ?? '',
+      categoryId: json['categoryId']?.toString() ?? '',
+      name: json['name'] ?? '',
+      isSelected: json['isSelected'] ?? false,
     );
   }
 }

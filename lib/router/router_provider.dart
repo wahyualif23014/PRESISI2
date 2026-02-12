@@ -18,7 +18,7 @@ import '../../features/admin/main_data/main_data_shell_page.dart';
 import '../../features/admin/main_data/units/units.dart';
 import '../../features/admin/main_data/positions/position_page.dart';
 import '../../features/admin/main_data/regions/regions_page.dart';
-import '../../features/admin/main_data/commodities/comodities_page.dart';
+import '../../features/admin/main_data/commodities/presentation/pages/comodities_page.dart';
 import '../../features/admin/land_management/land_shell_page.dart';
 import '../../features/admin/land_management/Potensi_lahan/potensi_page.dart';
 import '../../features/admin/land_management/kelola_lahan/Kelola_lahan_page.dart';
