@@ -16,45 +16,58 @@ class WilayahSearchFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // SEARCH BAR (Style Lama: Putih dengan Border Hitam)
         Expanded(
           child: Container(
-            height: 48, // Tinggi disamakan dengan standar UI sebelumnya
+            height: 48,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.black, width: 1.5), // Border Hitam
+              border: Border.all(color: Colors.black, width: 1.5),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.2),
                   blurRadius: 4,
-                  offset: const Offset(0, 4), // Efek bayangan
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: TextField(
               controller: controller,
-              onChanged: onChanged,
+              onChanged: onChanged, // Fungsi Search Tetap Jalan
               textAlignVertical: TextAlignVertical.center,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: "Cari Wilayah",
-                hintStyle: TextStyle(
-                  color: Colors.black87, 
+                hintStyle: const TextStyle(
+                  color: Colors.black87,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
-                prefixIcon: Icon(Icons.search, color: Colors.black87, size: 24),
+                prefixIcon: const Icon(Icons.search, color: Colors.black87),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 9),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                suffixIcon:
+                    controller.text.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () {
+                            controller.clear();
+                            onChanged('');
+                          },
+                        )
+                        : null,
               ),
             ),
           ),
         ),
-        
-        const SizedBox(width: 12), // Jarak antar Search dan Filter
+
+        const SizedBox(width: 12),
+
+        // FILTER BUTTON (Style Lama: Warna Cyan 0xFF0097B2)
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: const Color(0xFF0097B2), // Warna Biru Cyan (Sesuai Filter sebelumnya)
+            color: const Color(0xFF0097B2),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.black, width: 1.5),
             boxShadow: [
@@ -68,7 +81,7 @@ class WilayahSearchFilter extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: onFilterTap,
+              onTap: onFilterTap, // Fungsi Filter Tetap Jalan
               borderRadius: BorderRadius.circular(8),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),

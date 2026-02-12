@@ -33,6 +33,7 @@ func init() {
 func main() {
 	r := gin.Default()
 
+	// Konfigurasi CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -55,29 +56,37 @@ func main() {
 	authorized := r.Group("/")
 	authorized.Use(middleware.RequireAuth)
 	{
-
+		// ==========================================
+		//           API ROUTES (GENERAL)
+		// ==========================================
+		// Grup ini bisa diakses SEMUA user yang sudah login (Apapun Rolenya)
 		api := r.Group("/api")
 		{
-			api.GET("/categories", controllers.GetCategories)    // Untuk Dropdown Flutter
-			api.GET("/commodities", controllers.GetCommodities)  // Untuk Detail (yang kamu tanyakan)
-			api.POST("/categories", controllers.CreateCommodity) // Untuk Tambah Data
+			// --- PINDAHKAN ROUTE WILAYAH KE SINI ---
+			// URL sekarang menjadi: /api/wilayah
+			api.GET("/wilayah", controllers.GetWilayah)
+			api.POST("/wilayah", controllers.CreateWilayah)
+			api.PUT("/wilayah/:id", controllers.UpdateWilayah)
+
+			// Route Lainnya
+			api.GET("/categories", controllers.GetCategories)
+			api.GET("/commodities", controllers.GetCommodities)
+			api.POST("/categories", controllers.CreateCommodity)
 			api.POST("/categories/delete", controllers.DeleteCategory)
 			api.POST("/commodity/update", controllers.UpdateCommodity)
 			api.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
 		}
 
-		// ==========================================
-		//           JABATAN ROUTES
-		// ==========================================
+		// JABATAN ROUTES
 		authorized.GET("/jabatan", controllers.GetJabatan)
 		authorized.POST("/jabatan", middleware.RequireRoles(models.RoleAdmin), controllers.CreateJabatan)
 		authorized.PUT("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.UpdateJabatan)
 		authorized.DELETE("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.DeleteJabatan)
 
 		// ==========================================
-		//           ADMIN ROUTES
+		//           ADMIN ROUTES (KHUSUS ADMIN)
 		// ==========================================
-		adminRoutes := authorized.Group("/admin")
+		adminRoutes := authorized.Group("/Admin")
 		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
 			adminRoutes.POST("/users", controllers.CreateUser)
@@ -86,13 +95,10 @@ func main() {
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)
 			adminRoutes.DELETE("/users/:id", controllers.DeleteUser)
 
-			adminRoutes.POST("/wilayah", controllers.CreateWilayah)
-			adminRoutes.GET("/wilayah", controllers.GetWilayah)
+			// Route Wilayah sudah dipindah ke atas (Grup API)
 		}
 
-		// ==========================================
-		//           INPUT ROUTES
-		// ==========================================
+		// INPUT ROUTES
 		inputRoutes := authorized.Group("/input")
 		inputRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres))
 		{
@@ -101,14 +107,11 @@ func main() {
 			})
 		}
 
-		// ==========================================
-		//            VIEW ROUTES
-		// ==========================================
+		// VIEW ROUTES
 		viewRoutes := authorized.Group("/view")
 		viewRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres, models.RoleView))
 		{
 			viewRoutes.GET("/tingkat", controllers.GetTingkat)
-
 			viewRoutes.GET("/dashboard", func(c *gin.Context) {
 				userValue, exists := c.Get("user")
 				if !exists {

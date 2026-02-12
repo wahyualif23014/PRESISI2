@@ -46,6 +46,7 @@ dependencies:
   geolocator: ^14.0.2
   jwt_decoder: ^2.0.1
   shared_preferences: ^2.2.2
+  url_launcher: ^6.2.4
 
 
   # The following adds the Cupertino Icons font to your application.

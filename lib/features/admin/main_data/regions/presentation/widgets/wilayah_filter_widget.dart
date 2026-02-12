@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class WilayahFilterWidget extends StatefulWidget {
-  final VoidCallback onApply;
+  final List<String> availableKabupaten; // Data dinamis dari provider
+  final Function(List<String>) onApply;
   final VoidCallback onReset;
 
   const WilayahFilterWidget({
     super.key,
+    required this.availableKabupaten,
     required this.onApply,
     required this.onReset,
   });
@@ -15,122 +17,164 @@ class WilayahFilterWidget extends StatefulWidget {
 }
 
 class _WilayahFilterWidgetState extends State<WilayahFilterWidget> {
-  // Simulasi state checkbox
-  final Map<String, bool> _filters = {
-    'Kabupaten': false,
-    'Kecamatan': false,
-    'Desa': false,
-    'Dusun': false, // Tambahan untuk demo scrollbar
-    'RW': false,    // Tambahan untuk demo scrollbar
-    'RT': false,    // Tambahan untuk demo scrollbar
-  };
+  // Simpan kabupaten yang dipilih
+  final Set<String> _selectedItems = {};
 
   @override
   Widget build(BuildContext context) {
+    // Warna tema
+    const Color goldColor = Color(0xFFC0A100);
+
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
       backgroundColor: Colors.white,
       child: Container(
-        padding: const EdgeInsets.all(20),
-        width: 300, // Lebar fixed agar proporsional seperti gambar
+        padding: const EdgeInsets.all(24),
+        width: 340,
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Tinggi menyesuaikan konten
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Title
-            Text(
-              "Filter Data Wilayah",
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Filter Wilayah",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  "${_selectedItems.length} Dipilih",
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+
+            const Text(
+              "Pilih Kabupaten:",
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // 2. Search Bar Kecil
-            TextField(
-              decoration: InputDecoration(
-                hintText: "Cari Data",
-                hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.green),
-                ),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 3. List Checkbox dengan Scrollbar
-            // Kita batasi tingginya agar scrollbar muncul seperti di gambar
+            // List Checkbox Dinamis
             SizedBox(
-              height: 150, 
-              child: RawScrollbar(
-                thumbColor: Colors.grey.shade300,
-                radius: const Radius.circular(4),
-                thickness: 6,
-                thumbVisibility: true, // Agar scrollbar selalu terlihat (seperti gambar)
-                child: ListView(
-                  shrinkWrap: true,
-                  children: _filters.keys.map((key) {
-                    return Theme(
-                      data: ThemeData(
-                        checkboxTheme: CheckboxThemeData(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4), // Checkbox kotak rounded dikit
-                          ),
+              height: 200, // Batasi tinggi agar scrollable
+              child:
+                  widget.availableKabupaten.isEmpty
+                      ? const Center(child: Text("Tidak ada opsi filter"))
+                      : RawScrollbar(
+                        thumbColor: Colors.grey.shade300,
+                        radius: const Radius.circular(4),
+                        thickness: 4,
+                        child: ListView.separated(
+                          separatorBuilder:
+                              (_, __) => const SizedBox(height: 4),
+                          itemCount: widget.availableKabupaten.length,
+                          itemBuilder: (context, index) {
+                            final kab = widget.availableKabupaten[index];
+                            final isSelected = _selectedItems.contains(kab);
+
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedItems.remove(kab);
+                                  } else {
+                                    _selectedItems.add(kab);
+                                  }
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isSelected
+                                          ? goldColor.withOpacity(0.1)
+                                          : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color:
+                                        isSelected
+                                            ? goldColor
+                                            : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isSelected
+                                          ? Icons.check_circle
+                                          : Icons.circle_outlined,
+                                      color:
+                                          isSelected
+                                              ? goldColor
+                                              : Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        kab,
+                                        style: TextStyle(
+                                          color:
+                                              isSelected
+                                                  ? Colors.black87
+                                                  : Colors.grey.shade600,
+                                          fontWeight:
+                                              isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      child: CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading, // Checkbox di kiri
-                        title: Text(
-                          key,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        value: _filters[key],
-                        activeColor: const Color(0xFF00C853), // Hijau saat aktif
-                        side: BorderSide(color: Colors.grey.shade400, width: 1.5),
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _filters[key] = value ?? false;
-                          });
-                        },
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
             ),
 
             const SizedBox(height: 24),
 
-            // 4. Buttons (Apply & Reset)
+            // Buttons Action
             Row(
               children: [
-                // Tombol Apply (Hijau)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() => _selectedItems.clear());
+                      widget.onReset();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black54,
+                      side: const BorderSide(color: Colors.grey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text("Reset"),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: widget.onApply,
+                    onPressed: () => widget.onApply(_selectedItems.toList()),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853), // Warna Hijau sesuai gambar
+                      backgroundColor: goldColor,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -138,31 +182,7 @@ class _WilayahFilterWidgetState extends State<WilayahFilterWidget> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text("Apply", style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                // Tombol Reset (Putih Border)
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      // Logic reset visual checkbox
-                      setState(() {
-                        _filters.updateAll((key, value) => false);
-                      });
-                      widget.onReset();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black87,
-                      side: const BorderSide(color: Colors.black87), // Border hitam tipis
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text("Reset"),
+                    child: const Text("Terapkan"),
                   ),
                 ),
               ],

@@ -1,17 +1,13 @@
-// Lokasi: lib/features/admin/main_data/regions/presentation/widgets/wilayah_group_headers.dart
-
 import 'package:flutter/material.dart';
 
-// -----------------------------------------------------------------------------
 // HEADER LEVEL 1: KABUPATEN
-// -----------------------------------------------------------------------------
 class WilayahKabupatenHeader extends StatelessWidget {
   final String title;
-  final bool isExpanded;     // Status apakah sedang terbuka
-  final VoidCallback onTap;  // Aksi saat header diklik
+  final bool isExpanded;
+  final VoidCallback onTap;
 
   const WilayahKabupatenHeader({
-    super.key, 
+    super.key,
     required this.title,
     required this.isExpanded,
     required this.onTap,
@@ -20,33 +16,35 @@ class WilayahKabupatenHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFD1C4E9), // Deep Purple 100
+      color: const Color(0xFFD1C4E9), // Warna Asli: Deep Purple 100
       child: InkWell(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Colors.deepPurple.shade200, width: 1),
+            ),
+          ),
           child: Row(
             children: [
-              // Ikon Panah (Indikator)
               AnimatedRotation(
-                turns: isExpanded ? 0.0 : -0.25, // 0 = Bawah, -0.25 = Kanan (90 derajat)
+                turns: isExpanded ? 0.0 : -0.25,
                 duration: const Duration(milliseconds: 200),
                 child: const Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 20,
-                  color: Color(0xFF4527A0),
+                  color: Colors.deepPurple,
                 ),
               ),
               const SizedBox(width: 8),
-
-              // Judul Kabupaten
               Expanded(
                 child: Text(
-                  title,
+                  title, // Nama Kabupaten
                   style: const TextStyle(
-                    fontWeight: FontWeight.w800, // Lebih tebal dari kecamatan
+                    fontWeight: FontWeight.bold,
                     fontSize: 13,
-                    color: Color(0xFF4527A0), // Deep Purple 800
+                    color: Colors.deepPurple,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -59,16 +57,14 @@ class WilayahKabupatenHeader extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
 // HEADER LEVEL 2: KECAMATAN
-// -----------------------------------------------------------------------------
 class WilayahKecamatanHeader extends StatelessWidget {
   final String title;
-  final bool isExpanded;     // Status apakah desa di bawahnya terlihat
-  final VoidCallback onTap;  // Aksi saat header diklik
+  final bool isExpanded;
+  final VoidCallback onTap;
 
   const WilayahKecamatanHeader({
-    super.key, 
+    super.key,
     required this.title,
     required this.isExpanded,
     required this.onTap,
@@ -77,20 +73,24 @@ class WilayahKecamatanHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFEDE7F6), // Deep Purple 50
+      color: const Color(0xFFEDE7F6), // Warna Asli: Deep Purple 50
       child: InkWell(
         onTap: onTap,
         child: Container(
-          // Tambahkan indentasi kiri (paddingLeft) agar terlihat sebagai anak dari Kabupaten
-          padding: const EdgeInsets.only(left: 32, right: 12, top: 10, bottom: 10),
+          // Indentasi kiri agar terlihat hierarkinya
+          padding: const EdgeInsets.only(
+            left: 32,
+            right: 12,
+            top: 10,
+            bottom: 10,
+          ),
           decoration: const BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: Color(0xFFD1C4E9), width: 0.5), // Garis tipis pemisah
+              bottom: BorderSide(color: Color(0xFFD1C4E9), width: 0.5),
             ),
           ),
           child: Row(
             children: [
-              // Ikon Panah Kecil
               AnimatedRotation(
                 turns: isExpanded ? 0.0 : -0.25,
                 duration: const Duration(milliseconds: 200),
@@ -101,15 +101,13 @@ class WilayahKecamatanHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-
-              // Judul Kecamatan
               Expanded(
                 child: Text(
-                  title,
+                  title, // Nama Kecamatan
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
-                    color: Color(0xFF5E35B1), // Deep Purple 600
+                    color: Color(0xFF5E35B1),
                   ),
                 ),
               ),

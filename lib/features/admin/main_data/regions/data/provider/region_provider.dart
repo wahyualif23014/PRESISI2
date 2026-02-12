@@ -1,56 +1,51 @@
 import 'package:flutter/material.dart';
-// Import Model & Repo
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/models/region_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/repos/region_repository.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/repos/region_service.dart';
 
 class RegionProvider with ChangeNotifier {
-  List<WilayahModel> _allData = []; // Data mentah dari repo
-  List<WilayahModel> _displayData = []; // Data hasil filter/search untuk UI
-  
-  // State UI
+  final RegionService _service = RegionService();
+
+  List<WilayahModel> _allData = []; // Data master (tidak berubah)
+  List<WilayahModel> _displayData = []; // Data yang tampil di UI
+
   bool _isLoading = false;
   String? _errorMessage;
   bool _isBannerVisible = true;
 
-  // State Accordion (Grouping)
+  // State Filter
+  String _searchQuery = "";
+  List<String> _selectedKabupatenFilters =
+      []; // Menyimpan filter kabupaten yang aktif
+
+  // State Accordion
   final Set<String> _expandedKabupaten = {};
   final Set<String> _expandedKecamatan = {};
 
-  // --- GETTERS ---
+  // Getters
   List<WilayahModel> get displayData => _displayData;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isBannerVisible => _isBannerVisible;
-  
-  // Getter untuk cek status expand di UI
+
+  // Ambil list unik Kabupaten untuk menu Filter
+  List<String> get uniqueKabupatenList {
+    return _allData.map((e) => e.kabupaten).toSet().toList()..sort();
+  }
+
   bool isKabupatenExpanded(String kab) => _expandedKabupaten.contains(kab);
   bool isKecamatanExpanded(String kec) => _expandedKecamatan.contains(kec);
 
   // --- ACTIONS ---
 
-  // 1. Fetch Data Awal
   Future<void> fetchRegions() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Panggil Repo (Simulasi Async jika perlu)
-      final data = WilayahRepository.getDummyData();
-      
-      // Sorting wajib agar grouping di UI berurutan
-      data.sort((a, b) {
-        int kabCmp = a.kabupaten.compareTo(b.kabupaten);
-        if (kabCmp != 0) return kabCmp;
-        return a.kecamatan.compareTo(b.kecamatan);
-      });
-
+      final data = await _service.fetchRegions();
       _allData = data;
-      _displayData = List.from(data);
-
-      // Default: Expand All saat load pertama
-      _expandAll(); 
-
+      _applyFilters(); // Terapkan filter awal (tampilkan semua & urutkan)
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -60,25 +55,75 @@ class RegionProvider with ChangeNotifier {
     }
   }
 
-  // 2. Search Logic
+  // 1. Fungsi Search Real-time
   void search(String query) {
-    if (query.isEmpty) {
-      _displayData = List.from(_allData);
-    } else {
-      final lowerQuery = query.toLowerCase();
-      _displayData = _allData.where((item) {
-        return item.namaDesa.toLowerCase().contains(lowerQuery) ||
-               item.kecamatan.toLowerCase().contains(lowerQuery) ||
-               item.kabupaten.toLowerCase().contains(lowerQuery);
-      }).toList();
-
-      // Saat search, otomatis buka semua accordion agar hasil terlihat
-      _expandAllFiltered();
-    }
+    _searchQuery = query;
+    _applyFilters();
     notifyListeners();
   }
 
-  // 3. Toggle Accordion
+  Future<bool> updateData(String kode, double lat, double lng) async {
+    final success = await _service.updateCoordinate(kode, lat, lng);
+    if (success) {
+      // Jika sukses di backend, refresh data di list agar tampilan berubah
+      await fetchRegions();
+      return true;
+    }
+    return false;
+  }
+
+  // 2. Fungsi Filter by Kabupaten
+  void applyFilterKabupaten(List<String> selectedKabupatens) {
+    _selectedKabupatenFilters = selectedKabupatens;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  // 3. Logika Inti: Gabungan Search & Filter + Sorting
+  void _applyFilters() {
+    // A. Filter Data
+    var temp =
+        _allData.where((item) {
+          // Cek Search Query
+          final matchSearch =
+              _searchQuery.isEmpty ||
+              item.namaDesa.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              item.kecamatan.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              item.kabupaten.toLowerCase().contains(_searchQuery.toLowerCase());
+
+          // Cek Filter Kabupaten
+          final matchFilter =
+              _selectedKabupatenFilters.isEmpty ||
+              _selectedKabupatenFilters.contains(item.kabupaten);
+
+          return matchSearch && matchFilter;
+        }).toList();
+
+    // B. Sorting Wajib (Agar grouping UI rapi)
+    temp.sort((a, b) {
+      int kabCmp = a.kabupaten.compareTo(b.kabupaten);
+      if (kabCmp != 0) return kabCmp;
+      int kecCmp = a.kecamatan.compareTo(b.kecamatan);
+      if (kecCmp != 0) return kecCmp;
+      return a.namaDesa.compareTo(b.namaDesa);
+    });
+
+    _displayData = temp;
+
+    // C. Auto Expand jika sedang mencari/filter
+    if (_searchQuery.isNotEmpty || _selectedKabupatenFilters.isNotEmpty) {
+      _expandAllFiltered();
+    } else {
+      _collapseAll(); // Opsional: tutup semua jika reset
+      _expandAllFiltered(); // Atau buka semua default
+    }
+  }
+
+  // --- UI Helpers ---
   void toggleKabupaten(String namaKab) {
     if (_expandedKabupaten.contains(namaKab)) {
       _expandedKabupaten.remove(namaKab);
@@ -97,7 +142,6 @@ class RegionProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 4. UI Helpers
   void closeBanner() {
     _isBannerVisible = false;
     notifyListeners();
@@ -107,20 +151,17 @@ class RegionProvider with ChangeNotifier {
     fetchRegions();
   }
 
-  // --- INTERNAL HELPERS ---
-  void _expandAll() {
+  void _expandAllFiltered() {
     _expandedKabupaten.clear();
     _expandedKecamatan.clear();
-    for (var item in _allData) {
+    for (var item in _displayData) {
       _expandedKabupaten.add(item.kabupaten);
       _expandedKecamatan.add(item.kecamatan);
     }
   }
 
-  void _expandAllFiltered() {
-    for (var item in _displayData) {
-      _expandedKabupaten.add(item.kabupaten);
-      _expandedKecamatan.add(item.kecamatan);
-    }
+  void _collapseAll() {
+    _expandedKabupaten.clear();
+    _expandedKecamatan.clear();
   }
 }
