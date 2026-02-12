@@ -6,7 +6,6 @@ import '../models/kesatuan_model.dart';
 
 class KesatuanService {
   final String baseUrl = "http://10.16.15.78:8080/view/tingkat";
-
   Future<List<KesatuanModel>> getKesatuan() async {
     String? token;
 

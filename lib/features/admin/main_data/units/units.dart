@@ -52,17 +52,6 @@ class _UnitsPageState extends State<UnitsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Data Kesatuan",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E40AF),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // WIDGET PENCARIAN
                   UnitSearchFilter(
                     controller: _searchController,
                     onChanged: (value) => provider.search(value),
@@ -71,12 +60,10 @@ class _UnitsPageState extends State<UnitsPage> {
                         context: context,
                         builder:
                             (context) => UnitFilterDialog(
-                              // Kirim Data Status Terakhir
                               initialPolres: provider.showPolres,
                               initialPolsek: provider.showPolsek,
                               initialWilayah: provider.selectedWilayah,
 
-                              // Kirim List Wilayah yang tersedia (Dari Provider)
                               availableWilayahs: provider.uniqueWilayahList,
 
                               // Handle Apply
