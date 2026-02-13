@@ -1,37 +1,28 @@
 class NoLandPotentialModel {
-  final int totalPolres; // Contoh: 17
-  final List<NoLandDetailItem> details; // List rincian (Polsek, Kabupaten, dll)
+  final int totalEmptyPolres;
+  final int emptyPolsek;
+  final int emptyKabKota;
+  final int emptyKecamatan;
+  final int emptyKelDesa;
 
   NoLandPotentialModel({
-    required this.totalPolres,
-    required this.details,
+    required this.totalEmptyPolres,
+    required this.emptyPolsek,
+    required this.emptyKabKota,
+    required this.emptyKecamatan,
+    required this.emptyKelDesa,
   });
 
   factory NoLandPotentialModel.fromJson(Map<String, dynamic> json) {
-    var list = json['details'] as List;
-    List<NoLandDetailItem> detailsList =
-        list.map((i) => NoLandDetailItem.fromJson(i)).toList();
+    // FIX: Mengambil data dari object 'details', bukan list
+    final details = json['details'] as Map<String, dynamic>? ?? {};
 
     return NoLandPotentialModel(
-      totalPolres: json['total_polres'] ?? 0,
-      details: detailsList,
-    );
-  }
-}
-
-class NoLandDetailItem {
-  final String label; // Contoh: "Polsek", "Kabupaten / Kota"
-  final int count;    // Contoh: 300
-
-  NoLandDetailItem({
-    required this.label,
-    required this.count,
-  });
-
-  factory NoLandDetailItem.fromJson(Map<String, dynamic> json) {
-    return NoLandDetailItem(
-      label: json['label'] ?? '',
-      count: json['count'] ?? 0,
+      totalEmptyPolres: (json['total_empty_polres'] ?? 0).toInt(),
+      emptyPolsek: (details['polsek'] ?? 0).toInt(),
+      emptyKabKota: (details['kab_kota'] ?? 0).toInt(),
+      emptyKecamatan: (details['kecamatan'] ?? 0).toInt(),
+      emptyKelDesa: (details['kel_desa'] ?? 0).toInt(),
     );
   }
 }

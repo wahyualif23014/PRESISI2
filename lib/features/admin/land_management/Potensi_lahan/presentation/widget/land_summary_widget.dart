@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/model/land_summary_model.dart'; // Sesuaikan path
-import '../../data/repos/land_summary_repository.dart'; // Sesuaikan path
+import '../../data/model/land_summary_model.dart';
+import '../../data/repos/land_summary_repository.dart';
 
 class LandSummaryWidget extends StatefulWidget {
   const LandSummaryWidget({super.key});
@@ -11,10 +11,10 @@ class LandSummaryWidget extends StatefulWidget {
 
 class _LandSummaryWidgetState extends State<LandSummaryWidget> {
   final LandSummaryRepository _repo = LandSummaryRepository();
-  
+
   LandSummaryModel? _data;
   bool _isLoading = true;
-  bool _isExpanded = false; // State untuk kontrol buka/tutup
+  bool _isExpanded = false; // Default tertutup
 
   @override
   void initState() {
@@ -22,6 +22,7 @@ class _LandSummaryWidgetState extends State<LandSummaryWidget> {
     _fetchSummaryData();
   }
 
+  // Ambil data dari API
   Future<void> _fetchSummaryData() async {
     try {
       final data = await _repo.getSummaryData();
@@ -32,54 +33,67 @@ class _LandSummaryWidgetState extends State<LandSummaryWidget> {
         });
       }
     } catch (e) {
-      debugPrint("Error loading summary: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Helper simpel untuk format angka dengan koma (tanpa package intl)
+  // Format Angka: 1234.56 -> 1,234.56
   String _formatNumber(double number) {
-    return number.toStringAsFixed(2).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+    return number
+        .toStringAsFixed(2)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    // 1. Loading State
     if (_isLoading) {
-      return const SizedBox(
+      return Container(
         height: 60,
-        child: Center(child: CircularProgressIndicator()),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
+    // 2. Empty/Error State
     if (_data == null) return const SizedBox();
 
+    // 3. Data Loaded
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black, width: 1), // Border hitam tipis
+        border: Border.all(color: Colors.black, width: 1),
       ),
       child: Column(
         children: [
+          // HEADER (BISA DIKLIK)
           InkWell(
             onTap: () {
               setState(() {
-                _isExpanded = !_isExpanded; // Toggle state
+                _isExpanded = !_isExpanded;
               });
             },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // Icon Hijau "i"
+                  // ICON "i" HIJAU
                   Container(
                     width: 32,
                     height: 32,
                     decoration: const BoxDecoration(
-                      color: Color.fromARGB(255, 106, 106, 106), // Hijau terang (Lime Green)
+                      color: Color(0xFF9E9D24),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -88,29 +102,32 @@ class _LandSummaryWidgetState extends State<LandSummaryWidget> {
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Serif', // Agar mirip huruf 'i' di gambar
+                          fontFamily: 'Serif',
+                          fontStyle: FontStyle.italic,
                           fontSize: 18,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  
-                  // Text Header
+
+                  // TEXT UTAMA
                   Expanded(
                     child: Text(
                       "Total Potensi Lahan ${_formatNumber(_data!.totalArea)} HA",
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900, // Sangat tebal
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
                         color: Colors.black,
                       ),
                     ),
                   ),
 
-                  // Optional: Icon panah agar user tahu bisa diklik
+                  // ICON PANAH
                   Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.grey,
                   ),
                 ],
@@ -118,70 +135,143 @@ class _LandSummaryWidgetState extends State<LandSummaryWidget> {
             ),
           ),
 
-          // ==========================================
-          // 2. BODY / DETAIL (MUNCUL JIKA EXPANDED)
-          // ==========================================
+          // BODY (EXPANDABLE)
           if (_isExpanded) ...[
             const Divider(height: 1, thickness: 1, color: Colors.black),
-            
-            // Sub-Header: "Terdiri dari ..."
-            Padding(
+
+            Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8),
+              color: Colors.grey[50],
               child: Text(
-                "Terdiri dari ${_data!.totalLocations} Lokasi Potensi Lahan",
+                "TERDIRI DARI ${_data!.totalLocations} LOKASI POTENSI LAHAN",
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 13,
+                  color: Colors.black87,
                 ),
                 textAlign: TextAlign.center,
               ),
             ),
-            
+
             const Divider(height: 1, thickness: 1, color: Colors.black),
 
-            // List Detail Items
-            ListView.separated(
-              shrinkWrap: true, // Agar list tidak error di dalam Column
-              physics: const NeverScrollableScrollPhysics(), // Scroll ikut parent
-              itemCount: _data!.details.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 1, 
-                thickness: 1, 
-                color: Colors.black54
+            // DETAIL KATEGORI (2 KOLOM)
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Wrap(
+                spacing: 0,
+                runSpacing: 16,
+                children:
+                    _data!.categories.map((cat) {
+                      return SizedBox(
+                        width: (MediaQuery.of(context).size.width - 64) / 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              cat.title,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: _formatNumber(cat.area),
+                                    style: const TextStyle(
+                                      color: Color(0xFF00838F),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const TextSpan(text: " HA / "),
+                                  TextSpan(
+                                    text: "${cat.count}",
+                                    style: const TextStyle(
+                                      color: Color(0xFF0277BD),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const TextSpan(text: " LOKASI"),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
               ),
-              itemBuilder: (context, index) {
-                final item = _data!.details[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Kiri: Judul (Milik Polri, dll)
-                      Text(
-                        item.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      // Kanan: Angka (6.59 HA/5 LOKASI)
-                      Text(
-                        "${item.area} HA/${item.locationCount} LOKASI",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
             ),
-            // Padding bawah sedikit agar rapi
-            const SizedBox(height: 4),
-          ]
+
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
+
+            // BAGIAN FOOTER ADMINISTRASI
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 10,
+                children: [
+                  _buildAdminItem(
+                    "POLRES",
+                    "${_data!.adminCounts.polres} LOKASI",
+                  ),
+                  _buildAdminItem(
+                    "POLSEK",
+                    "${_data!.adminCounts.polsek} LOKASI",
+                  ),
+                  _buildAdminItem(
+                    "KAB./KOTA",
+                    "${_data!.adminCounts.kabKota} LOKASI",
+                  ),
+                  _buildAdminItem(
+                    "KECAMATAN",
+                    "${_data!.adminCounts.kecamatan} LOKASI",
+                  ),
+                  _buildAdminItem(
+                    "KEL./DESA",
+                    "${_data!.adminCounts.kelDesa} LOKASI",
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
         ],
       ),
+    );
+  }
+
+  // --- HELPER UNTUK ITEM ADMINISTRASI ---
+  Widget _buildAdminItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF0277BD),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

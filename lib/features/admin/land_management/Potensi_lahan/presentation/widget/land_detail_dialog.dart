@@ -1,114 +1,95 @@
 import 'package:flutter/material.dart';
-import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
+import '../../data/model/land_potential_model.dart';
 
 class LandDetailDialog extends StatelessWidget {
   final LandPotentialModel data;
 
-  const LandDetailDialog({
-    super.key,
-    required this.data,
-  });
+  const LandDetailDialog({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 1. KARTU DATA
-          Flexible(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.black, width: 1.5),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildRow("KEPOLISIAN RESOR", data.resor),
-                    _buildRow("KEPOLISIAN SEKTOR", data.sektor),
-                    _buildRow("JENIS LAHAN", data.jenisLahan),
-                    _buildRow("POLISI PENGGERAK", "${data.policeName} (${data.policePhone})"),
-                    _buildRow("PENANGGUNG JAWAB", "${data.picName} (${data.picPhone})"),
-                    _buildRow("KETERANGAN", data.keterangan),
-                    _buildRow("Jumlah Poktan", data.jumlahPoktan.toString()),
-                    _buildRow("Luas Lahan", "${data.luasLahan} Ha"),
-                    _buildRow("Jumlah Petani", data.jumlahPetani.toString()),
-                    _buildRow("Komoditi", data.komoditi),
-                    _buildRow("Alamat Lahan", "${data.alamatLahan}\nKEC. ${data.kecamatan} KAB. ${data.kabupaten}"),
-                    _buildRow("Wilayah Lahan", "Desa ${data.desa} Kecamatan ${data.kecamatan}\nKabupaten ${data.kabupaten}"),
-
-                    const SizedBox(height: 12),
-                    
-                    // PETA (Placeholder Maps)
-                    Container(
-                      height: 150,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
-                        image: const DecorationImage(
-                          image: NetworkImage("https://mt1.google.com/vt/lyrs=m&x=1325&y=3143&z=13"),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // FOTO LAHAN
-                    const Text(
-                      "Foto Lahan",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 120,
-                      width: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: Colors.grey.shade200,
-                        image: DecorationImage(
-                          image: NetworkImage(
-                            (data.fotoLahan != null && data.fotoLahan!.isNotEmpty)
-                                ? data.fotoLahan!
-                                : "https://via.placeholder.com/200x120?text=No+Image" // Fallback jika foto null
-                          ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    _buildRow("Keterangan Lain", data.keteranganLain),
-                    _buildRow("Diproses Oleh", "${data.diprosesOleh} (${data.tglProses})"),
-                    _buildRow("Divalidasi Oleh", "${data.divalidasiOleh} (${data.tglValidasi})"),
-                  ],
+          // HEADER CUSTOM
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0097B2),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.description_outlined, color: Colors.white),
+                const SizedBox(width: 12),
+                const Text(
+                  "Detail Informasi",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(Icons.close, color: Colors.white),
+                ),
+              ],
             ),
           ),
-          
-          const SizedBox(height: 16),
 
-          // 2. TOMBOL TUTUP
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: Colors.white, size: 20),
-            label: const Text("Tutup", style: TextStyle(fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00C853),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          // BODY SCROLLABLE
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _infoSection(
+                    "DATA LAHAN",
+                    Icons.landscape,
+                    Colors.green.shade700,
+                    [
+                      _row("Alamat", data.alamatLahan),
+                      _row("Luas", "${data.luasLahan} HA"),
+                      _row("Jenis", data.jenisLahan),
+                      _row(
+                        "Komoditi",
+                        data.komoditi.isEmpty ? "-" : data.komoditi,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _infoSection(
+                    "PERSONEL",
+                    Icons.badge_outlined,
+                    Colors.blue.shade700,
+                    [
+                      _row(
+                        "Polisi",
+                        "${data.policeName}\n(${data.policePhone})",
+                      ),
+                      _row("PJ Lahan", "${data.picName}\n(${data.picPhone})"),
+                      _row("Poktan", data.keterangan),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _infoSection(
+                    "WILAYAH",
+                    Icons.map_outlined,
+                    Colors.orange.shade700,
+                    [
+                      _row("Kabupaten", data.kabupaten),
+                      _row("Kecamatan", data.kecamatan),
+                      _row("Desa", data.desa),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -116,38 +97,60 @@ class LandDetailDialog extends StatelessWidget {
     );
   }
 
-  // Widget Baris Data
-  Widget _buildRow(String label, String value) {
-    // Jika value kosong dari backend (string kosong), tampilkan "-"
-    final displayValue = value.trim().isEmpty ? "-" : value;
+  Widget _infoSection(
+    String title,
+    IconData icon,
+    Color color,
+    List<Widget> items,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          ...items,
+        ],
+      ),
+    );
+  }
 
+  Widget _row(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 4, 
+          SizedBox(
+            width: 100,
             child: Text(
               label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold, 
-                fontSize: 11, 
-                color: Colors.black
-              ),
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ),
-          const SizedBox(width: 8),
           Expanded(
-            flex: 6,
             child: Text(
-              displayValue,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600, 
-                fontSize: 11, 
-                color: Colors.black87,
-                height: 1.3
-              ),
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),
         ],

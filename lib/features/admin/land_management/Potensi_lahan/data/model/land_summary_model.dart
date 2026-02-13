@@ -1,43 +1,74 @@
-class LandSummaryModel {
-  final double totalArea;     // Contoh: 21313.03
-  final int totalLocations;   // Contoh: 1350
-  final List<LandSummaryItem> details; // List baris data (Milik Polri, Pesantren, dll)
+class LandSummaryCategory {
+  final String title;
+  final double area;
+  final int count;
 
-  LandSummaryModel({
-    required this.totalArea,
-    required this.totalLocations,
-    required this.details,
+  LandSummaryCategory({
+    required this.title,
+    required this.area,
+    required this.count,
   });
 
-  // Factory untuk convert dari JSON (Persiapan API)
-  factory LandSummaryModel.fromJson(Map<String, dynamic> json) {
-    var list = json['details'] as List;
-    List<LandSummaryItem> detailsList = list.map((i) => LandSummaryItem.fromJson(i)).toList();
-
-    return LandSummaryModel(
-      totalArea: (json['total_area'] as num).toDouble(),
-      totalLocations: json['total_locations'] as int,
-      details: detailsList,
+  factory LandSummaryCategory.fromJson(Map<String, dynamic> json) {
+    return LandSummaryCategory(
+      title: json['title'] ?? "-",
+      // Menggunakan .toDouble() untuk menghindari error tipe data num
+      area: (json['area'] ?? 0).toDouble(),
+      count: json['count'] ?? 0,
     );
   }
 }
 
-class LandSummaryItem {
-  final String title;       // Contoh: "Milik Polri"
-  final double area;        // Contoh: 6.59
-  final int locationCount;  // Contoh: 5
+class AdminCounts {
+  final int polres;
+  final int polsek;
+  final int kabKota;
+  final int kecamatan;
+  final int kelDesa;
 
-  LandSummaryItem({
-    required this.title,
-    required this.area,
-    required this.locationCount,
+  AdminCounts({
+    required this.polres,
+    required this.polsek,
+    required this.kabKota,
+    required this.kecamatan,
+    required this.kelDesa,
   });
 
-  factory LandSummaryItem.fromJson(Map<String, dynamic> json) {
-    return LandSummaryItem(
-      title: json['title'] ?? '',
-      area: (json['area'] as num).toDouble(),
-      locationCount: json['location_count'] ?? 0,
+  factory AdminCounts.fromJson(Map<String, dynamic> json) {
+    return AdminCounts(
+      polres: (json['polres'] ?? 0).toInt(),
+      polsek: (json['polsek'] ?? 0).toInt(),
+      kabKota: (json['kab_kota'] ?? 0).toInt(),
+      kecamatan: (json['kecamatan'] ?? 0).toInt(),
+      kelDesa: (json['kel_desa'] ?? 0).toInt(),
+    );
+  }
+}
+
+class LandSummaryModel {
+  final double totalArea;
+  final int totalLocations;
+  final List<LandSummaryCategory> categories;
+  final AdminCounts adminCounts;
+
+  LandSummaryModel({
+    required this.totalArea,
+    required this.totalLocations,
+    required this.categories,
+    required this.adminCounts,
+  });
+
+  factory LandSummaryModel.fromJson(Map<String, dynamic> json) {
+    // Perbaikan: Ambil data dari 'categories' bukan 'details'
+    var list = json['categories'] as List? ?? [];
+    List<LandSummaryCategory> catList =
+        list.map((i) => LandSummaryCategory.fromJson(i)).toList();
+
+    return LandSummaryModel(
+      totalArea: (json['total_area'] ?? 0).toDouble(),
+      totalLocations: json['total_locations'] ?? 0,
+      categories: catList,
+      adminCounts: AdminCounts.fromJson(json['admin_counts'] ?? {}),
     );
   }
 }

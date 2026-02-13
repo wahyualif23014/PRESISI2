@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class LandPotentialToolbar extends StatelessWidget {
+  // Callback untuk mengirim sinyal ke halaman induk (OverviewPage)
   final Function(String) onSearchChanged;
   final VoidCallback onFilterTap;
   final VoidCallback onAddTap;
@@ -23,7 +24,7 @@ class LandPotentialToolbar extends StatelessWidget {
           // ==============================
           Expanded(
             child: Container(
-              height: 48, 
+              height: 48,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -37,13 +38,13 @@ class LandPotentialToolbar extends StatelessWidget {
                 ],
               ),
               child: TextField(
-                onChanged: onSearchChanged,
+                onChanged: onSearchChanged, // <-- Sinyal Search dikirim di sini
                 textAlignVertical: TextAlignVertical.center,
                 decoration: const InputDecoration(
                   hintText: "Cari Data Lahan",
                   hintStyle: TextStyle(
-                    color: Colors.black87, 
-                    fontWeight: FontWeight.w600
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
                   ),
                   prefixIcon: Icon(Icons.search, color: Colors.black87, size: 28),
                   border: InputBorder.none,
@@ -52,12 +53,16 @@ class LandPotentialToolbar extends StatelessWidget {
               ),
             ),
           ),
-          
+
           const SizedBox(width: 12),
+
+          // ==============================
+          // 2. TOMBOL FILTER (UI Baru)
+          // ==============================
           _buildActionButton(
             icon: Icons.filter_alt,
             color: const Color(0xFF0097B2), // Biru Cyan
-            onTap: onFilterTap,
+            onTap: onFilterTap, // <-- Sinyal Filter dikirim di sini
           ),
 
           const SizedBox(width: 12),
@@ -68,7 +73,7 @@ class LandPotentialToolbar extends StatelessWidget {
           _buildActionButton(
             icon: Icons.add,
             color: const Color(0xFF00C853), // Hijau
-            onTap: onAddTap,
+            onTap: onAddTap, // <-- Sinyal Tambah dikirim di sini
           ),
         ],
       ),

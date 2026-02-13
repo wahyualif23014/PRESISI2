@@ -1,372 +1,471 @@
 import 'package:flutter/material.dart';
+import '../../data/model/land_potential_model.dart';
+import '../../data/service/land_potential_service.dart';
 
 class AddLandDataPage extends StatefulWidget {
-  const AddLandDataPage({super.key});
+  final LandPotentialModel? editData;
+
+  const AddLandDataPage({super.key, this.editData});
 
   @override
   State<AddLandDataPage> createState() => _AddLandDataPageState();
 }
 
 class _AddLandDataPageState extends State<AddLandDataPage> {
-  // ==========================================
-  // 1. CONTROLLERS
-  // ==========================================
-  final TextEditingController _resorController = TextEditingController();
-  final TextEditingController _sektorController = TextEditingController();
-  final TextEditingController _jenisLahanController = TextEditingController();
-  final TextEditingController _polisiPenggerakController = TextEditingController();
-  final TextEditingController _kontakPenggerakController = TextEditingController();
-  final TextEditingController _penanggungJawabController = TextEditingController();
-  final TextEditingController _kontakPJController = TextEditingController();
-  final TextEditingController _keteranganController = TextEditingController();
-  
-  // Statistik
-  final TextEditingController _jmlPoktanController = TextEditingController();
-  final TextEditingController _luasLahanController = TextEditingController();
-  final TextEditingController _jmlPetaniController = TextEditingController();
-  final TextEditingController _komoditiController = TextEditingController();
-  
-  // Alamat & Lokasi
-  final TextEditingController _alamat1Controller = TextEditingController();
-  final TextEditingController _alamat2Controller = TextEditingController();
-  final TextEditingController _alamat3Controller = TextEditingController();
-  final TextEditingController _latitudeController = TextEditingController();
-  final TextEditingController _longitudeController = TextEditingController();
-  
-  final TextEditingController _keteranganLainController = TextEditingController();
+  final LandPotentialService _service = LandPotentialService();
+  final _formKey = GlobalKey<FormState>();
+
+  // --- CONTROLLERS BERDASARKAN FORM ---
+  final _policeNameController = TextEditingController();
+  final _policePhoneController = TextEditingController();
+  final _picNameController = TextEditingController();
+  final _picPhoneController = TextEditingController();
+  final _picKeteranganController = TextEditingController();
+  final _jmlPoktanController = TextEditingController(text: "0");
+  final _luasLahanController = TextEditingController(text: "0.00");
+  final _jmlPetaniController = TextEditingController(text: "0");
+  final _alamatController = TextEditingController();
+  final _latitudeController = TextEditingController(text: "0");
+  final _longitudeController = TextEditingController(text: "0");
+  final _ketLainController = TextEditingController();
+
+  // --- DROPDOWN STATES ---
+  String? _selectedResor;
+  String? _selectedSektor;
+  String? _selectedJenisLahan;
+  String? _selectedKomoditi = "AKASIA";
+  String? _selectedKab;
+  String? _selectedKec;
+  String? _selectedDesa;
+  String _selectedStatus = "BELUM TERVALIDASI";
+
+  bool _isLoading = false;
 
   @override
-  void dispose() {
-    _resorController.dispose();
-    _sektorController.dispose();
-    _jenisLahanController.dispose();
-    _polisiPenggerakController.dispose();
-    _kontakPenggerakController.dispose();
-    _penanggungJawabController.dispose();
-    _kontakPJController.dispose();
-    _keteranganController.dispose();
-    _jmlPoktanController.dispose();
-    _luasLahanController.dispose();
-    _jmlPetaniController.dispose();
-    _komoditiController.dispose();
-    _alamat1Controller.dispose();
-    _alamat2Controller.dispose();
-    _alamat3Controller.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
-    _keteranganLainController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    if (widget.editData != null) _loadInitialData();
+  }
+
+  void _loadInitialData() {
+    final d = widget.editData!;
+    _policeNameController.text = d.policeName;
+    _policePhoneController.text = d.policePhone;
+    _picNameController.text = d.picName;
+    _picPhoneController.text = d.picPhone;
+    _picKeteranganController.text = d.keterangan;
+    _jmlPoktanController.text = d.jumlahPoktan.toString();
+    _luasLahanController.text = d.luasLahan.toString();
+    _jmlPetaniController.text = d.jumlahPetani.toString();
+    _alamatController.text = d.alamatLahan;
+    _selectedJenisLahan = d.jenisLahan;
+    _selectedKomoditi = d.komoditi;
+    _selectedResor = d.resor;
+    _selectedSektor = d.sektor;
+    _selectedKab = d.kabupaten;
+    _selectedKec = d.kecamatan;
+    _selectedDesa = d.desa;
+    _selectedStatus = d.statusValidasi;
+  }
+
+  Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+
+    final payload = LandPotentialModel(
+      id: widget.editData?.id ?? "0",
+      kabupaten: _selectedKab ?? "-",
+      kecamatan: _selectedKec ?? "-",
+      desa: _selectedDesa ?? "-",
+      resor: _selectedResor ?? "-",
+      sektor: _selectedSektor ?? "-",
+      jenisLahan: _selectedJenisLahan ?? "-",
+      luasLahan: double.tryParse(_luasLahanController.text) ?? 0.0,
+      alamatLahan: _alamatController.text,
+      statusValidasi: _selectedStatus,
+      policeName: _policeNameController.text,
+      policePhone: _policePhoneController.text,
+      picName: _picNameController.text,
+      picPhone: _picPhoneController.text,
+      keterangan: _picKeteranganController.text,
+      jumlahPoktan: int.tryParse(_jmlPoktanController.text) ?? 0,
+      jumlahPetani: int.tryParse(_jmlPetaniController.text) ?? 0,
+      komoditi: _selectedKomoditi ?? "AKASIA",
+      keteranganLain: _ketLainController.text,
+      fotoLahan: "",
+      tglProses: DateTime.now().toString(),
+      diprosesOleh: "Admin",
+      divalidasiOleh: "-",
+      tglValidasi: "-",
+    );
+
+    bool success =
+        widget.editData != null
+            ? await _service.updateLandData(widget.editData!.id, payload)
+            : await _service.postLandData(payload);
+
+    setState(() => _isLoading = false);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Data Berhasil Disimpan"),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context, true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8EFF5), 
-      // AppBar dihapus sesuai permintaan
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Container Form Utama
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.black, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(20.0), // Padding dalam diperbesar agar lega
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Form (Opsional, agar user tahu ini halaman apa)
-                    const Text(
-                      "Formulir Data Lahan",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const Divider(thickness: 1.5, height: 30),
-
-                    // 1. DATA UMUM
-                    _buildSectionTitle("Data Umum"),
-                    _buildDataUmum(),
-                    const SizedBox(height: 20),
-
-                    // 2. PERSONEL & KONTAK
-                    _buildSectionTitle("Personel & Kontak"),
-                    _buildPersonelData(),
-                    const SizedBox(height: 20),
-
-                    // 3. STATISTIK & KOMODITI
-                    _buildSectionTitle("Statistik & Komoditi"),
-                    _buildStatistikData(),
-                    const SizedBox(height: 20),
-
-                    // 4. LOKASI & PETA
-                    _buildSectionTitle("Lokasi Lahan"),
-                    _buildLokasiData(),
-                    const SizedBox(height: 20),
-
-                    // 5. DOKUMENTASI & LAINNYA
-                    _buildSectionTitle("Dokumentasi"),
-                    _buildDokumentasi(),
-                  ],
-                ),
-              ),
-            ],
+      backgroundColor: const Color(0xFFF4F7F9),
+      appBar: AppBar(
+        title: Text(
+          widget.editData != null
+              ? "EDIT FORM DATA LAHAN"
+              : "FORM TAMBAH DATA LAHAN",
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            letterSpacing: 1,
           ),
         ),
-      ),
-      
-      // Tombol Aksi (Tetap di bawah)
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Color(0xFFE8EFF5),
-          border: Border(top: BorderSide(color: Colors.black12)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                label: "Batal",
-                icon: Icons.close,
-                color: const Color(0xFFEA4335),
-                onTap: () => Navigator.pop(context),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionButton(
-                label: "Simpan",
-                icon: Icons.save,
-                color: const Color(0xFF00C853),
-                onTap: () {
-                  // TODO: Logic Simpan
-                  print("Simpan Data");
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==========================================
-  // SECTION BUILDERS (Agar Code Rapi)
-  // ==========================================
-
-  Widget _buildDataUmum() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildLabelAndInput("Kepolisian Resor", _resorController)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildLabelAndInput("Kepolisian Sektor", _sektorController)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildLabelAndInput("Jenis Lahan", _jenisLahanController),
-      ],
-    );
-  }
-
-  Widget _buildPersonelData() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(flex: 3, child: _buildLabelAndInput("Polisi Penggerak", _polisiPenggerakController)),
-            const SizedBox(width: 10),
-            Expanded(flex: 2, child: _buildLabelAndInput("Kontak", _kontakPenggerakController, inputType: TextInputType.phone)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(flex: 3, child: _buildLabelAndInput("Penanggung Jawab", _penanggungJawabController)),
-            const SizedBox(width: 10),
-            Expanded(flex: 2, child: _buildLabelAndInput("Kontak", _kontakPJController, inputType: TextInputType.phone)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildLabelAndInput("Keterangan", _keteranganController),
-      ],
-    );
-  }
-
-  Widget _buildStatistikData() {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: _buildLabelAndInput("JML. Poktan", _jmlPoktanController, inputType: TextInputType.number)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildLabelAndInput("Luas (HA)", _luasLahanController, inputType: TextInputType.number)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildLabelAndInput("JML Petani", _jmlPetaniController, inputType: TextInputType.number)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildLabelAndInput("Komoditi", _komoditiController),
-      ],
-    );
-  }
-
-  Widget _buildLokasiData() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSimpleTextField(_alamat1Controller, hint: "Alamat Jalan/Gedung"),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: _buildSimpleTextField(_alamat2Controller, hint: "RT/RW/Kelurahan")),
-            const SizedBox(width: 8),
-            Expanded(child: _buildSimpleTextField(_alamat3Controller, hint: "Kecamatan/Kota")),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildLabelAndInput("LATITUDE", _latitudeController)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildLabelAndInput("LONGITUDE", _longitudeController)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // Map Placeholder
-        Container(
-          height: 160,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(8),
-            image: const DecorationImage(
-              image: NetworkImage("https://mt1.google.com/vt/lyrs=m&x=1325&y=3143&z=13"),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Center(
-            child: CircleAvatar(
-              backgroundColor: Colors.white.withOpacity(0.8),
-              child: const Icon(Icons.location_on, color: Colors.red),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDokumentasi() {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () {
-            print("Upload foto ditekan");
-          },
-          child: Container(
-            height: 120,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              border: Border.all(color: Colors.black54, style: BorderStyle.solid),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.add_a_photo, size: 32, color: Colors.black54),
-                SizedBox(height: 8),
-                Text("Tap untuk Upload Foto", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildLabelAndInput("Keterangan Lain", _keteranganLainController, maxLines: 3),
-      ],
-    );
-  }
-
-  // ==========================================
-  // HELPER WIDGETS KECIL
-  // ==========================================
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: Color(0xFF0097B2), // Warna aksen cyan/biru
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLabelAndInput(String label, TextEditingController controller, {int maxLines = 1, TextInputType inputType = TextInputType.text}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-        ),
-        const SizedBox(height: 5),
-        _buildSimpleTextField(controller, maxLines: maxLines, inputType: inputType),
-      ],
-    );
-  }
-
-  Widget _buildSimpleTextField(TextEditingController controller, {int maxLines = 1, TextInputType inputType = TextInputType.text, String? hint}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F4F8), // Abu-abu sangat muda agar kontras dengan kotak putih
-        border: Border.all(color: Colors.grey.shade400, width: 1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: inputType,
-        maxLines: maxLines,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.normal, fontSize: 13),
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({required String label, required IconData icon, required Color color, required VoidCallback onTap}) {
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, color: Colors.white, size: 20),
-      label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
+        backgroundColor: const Color(0xFF0097B2),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 2,
+        centerTitle: true,
       ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      // SECTION 1: UNIT KERJA
+                      _buildSectionCard("UNIT KERJA", [
+                        _buildDropdown(
+                          "KEPOLISIAN RESOR",
+                          [
+                            "PILIH KEPOLISIAN RESOR",
+                            "POLRES BANYUWANGI",
+                            "POLRES JEMBER",
+                          ],
+                          (v) => setState(() => _selectedResor = v),
+                          _selectedResor,
+                        ),
+                        _buildDropdown(
+                          "KEPOLISIAN SEKTOR",
+                          [
+                            "PILIH KEPOLISIAN SEKTOR",
+                            "POLSEK KABAT",
+                            "POLSEK ROGOJAMPI",
+                          ],
+                          (v) => setState(() => _selectedSektor = v),
+                          _selectedSektor,
+                        ),
+                      ]),
+
+                      // SECTION 2: JENIS LAHAN
+                      _buildSectionCard("JENIS LAHAN", [
+                        _buildDropdown(
+                          "PILIH JENIS LAHAN",
+                          ["SAWAH", "LADANG", "PERKEBUNAN"],
+                          (v) => setState(() => _selectedJenisLahan = v),
+                          _selectedJenisLahan,
+                        ),
+                      ]),
+
+                      // SECTION 3: PERSONEL & PJ
+                      _buildSectionCard("PERSONEL & PENANGGUNG JAWAB", [
+                        _buildFieldRow(
+                          "POLISI PENGGERAK",
+                          _policeNameController,
+                          "KONTAK",
+                          _policePhoneController,
+                          isPhone: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFieldRow(
+                          "PENANGGUNG JAWAB",
+                          _picNameController,
+                          "KONTAK",
+                          _picPhoneController,
+                          isPhone: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildField(
+                          "KETERANGAN PENANGGUNG JAWAB",
+                          _picKeteranganController,
+                          Icons.edit_note,
+                        ),
+                      ]),
+
+                      // SECTION 4: DATA LAHAN
+                      _buildSectionCard("DATA LAHAN", [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildField(
+                                "JML. POKTAN",
+                                _jmlPoktanController,
+                                Icons.groups,
+                                isNumber: true,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildField(
+                                "LUAS LAHAN (HA)",
+                                _luasLahanController,
+                                Icons.area_chart,
+                                isNumber: true,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildField(
+                                "JML. PETANI",
+                                _jmlPetaniController,
+                                Icons.person,
+                                isNumber: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown(
+                          "KOMODITI",
+                          ["AKASIA", "JATI", "JAGUNG", "PADI"],
+                          (v) => setState(() => _selectedKomoditi = v),
+                          _selectedKomoditi,
+                        ),
+                      ]),
+
+                      // SECTION 5: ALAMAT & MAPS
+                      _buildSectionCard("ALAMAT LAHAN", [
+                        _buildField(
+                          "MASUKKAN ALAMAT LAHAN",
+                          _alamatController,
+                          Icons.location_on,
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildDropdown(
+                                "KABUPATEN/KOTA",
+                                ["BANYUWANGI", "JEMBER"],
+                                (v) => setState(() => _selectedKab = v),
+                                _selectedKab,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDropdown(
+                                "KECAMATAN",
+                                ["KEC. KABAT", "KEC. ROGOJAMPI"],
+                                (v) => setState(() => _selectedKec = v),
+                                _selectedKec,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDropdown(
+                                "DESA",
+                                ["DESA A", "DESA B"],
+                                (v) => setState(() => _selectedDesa = v),
+                                _selectedDesa,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFieldRow(
+                          "LATITUDE",
+                          _latitudeController,
+                          "LONGITUDE",
+                          _longitudeController,
+                          isNumber: true,
+                        ),
+                      ]),
+
+                      // SECTION 6: KETERANGAN LAIN
+                      _buildSectionCard("KETERANGAN LAIN", [
+                        _buildField(
+                          "MASUKKAN KETERANGAN LAINNYA",
+                          _ketLainController,
+                          Icons.description,
+                          maxLines: 2,
+                        ),
+                      ]),
+
+                      _buildFooterButtons(),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+                ),
+              ),
+    );
+  }
+
+  Widget _buildSectionCard(String title, List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+              letterSpacing: 1,
+            ),
+          ),
+          const Divider(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildField(
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    bool isNumber = false,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      style: const TextStyle(fontSize: 12),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 11),
+        prefixIcon: Icon(icon, size: 18, color: const Color(0xFF0097B2)),
+        filled: true,
+        fillColor: const Color(0xFFF9FBFB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    );
+  }
+
+  Widget _buildFieldRow(
+    String label1,
+    TextEditingController ctrl1,
+    String label2,
+    TextEditingController ctrl2, {
+    bool isNumber = false,
+    bool isPhone = false,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: _buildField(label1, ctrl1, Icons.edit, isNumber: isNumber),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 1,
+          child: _buildField(
+            label2,
+            ctrl2,
+            Icons.contact_phone,
+            isNumber: isNumber || isPhone,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown(
+    String label,
+    List<String> items,
+    Function(String?) onChanged,
+    String? value,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: DropdownButtonFormField<String>(
+        value: items.contains(value) ? value : null,
+        style: const TextStyle(fontSize: 11, color: Colors.black),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(fontSize: 10),
+          filled: true,
+          fillColor: const Color(0xFFF9FBFB),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+        items:
+            items
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e, overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildFooterButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close, size: 16, color: Colors.white),
+            label: const Text(
+              "BATAL",
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.grey.shade800,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _handleSave,
+            icon: const Icon(Icons.check, size: 16),
+            label: const Text("SIMPAN", style: TextStyle(fontSize: 12)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF546E7A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
