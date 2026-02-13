@@ -113,7 +113,7 @@ class _PositionPageState extends State<PositionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      // Gunakan Consumer agar UI rebuild saat data Provider berubah
+      resizeToAvoidBottomInset: true,
       body: Consumer<JabatanProvider>(
         builder: (context, provider, child) {
           return Column(

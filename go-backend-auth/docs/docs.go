@@ -14,109 +14,16 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {
-        "/admin/wilayah": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Mengambil list semua wilayah yang terdaftar",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Master Data (Wilayah)"
-                ],
-                "summary": "Lihat Semua Wilayah",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Membuat data master wilayah (Kecamatan/Kabupaten)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Master Data (Wilayah)"
-                ],
-                "summary": "Tambah Wilayah Baru",
-                "parameters": [
-                    {
-                        "description": "Data Wilayah",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "kabupaten": {
-                                    "type": "string"
-                                },
-                                "kecamatan": {
-                                    "type": "string"
-                                },
-                                "latitude": {
-                                    "type": "number"
-                                },
-                                "longitude": {
-                                    "type": "number"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        }
-    },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
-    }
+    "paths": {}
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "2.0",
-	Host:             "localhost:8080",
-	BasePath:         "/",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Backend API Kepolisian",
+	Title:            "",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

@@ -28,6 +28,7 @@ class _PersonelPageState extends State<PersonelPage> {
   Widget build(BuildContext context) {
     // Menggunakan Consumer dari package:provider
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFEAF0F9),
       body: Column(
         children: [

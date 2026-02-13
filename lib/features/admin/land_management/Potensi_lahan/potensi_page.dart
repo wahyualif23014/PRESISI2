@@ -199,9 +199,9 @@ class _OverviewPageState extends State<OverviewPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
+    return Container(
+      color: Colors.white,
+      child: Column(
         children: [
           // 1. TOOLBAR
           LandPotentialToolbar(

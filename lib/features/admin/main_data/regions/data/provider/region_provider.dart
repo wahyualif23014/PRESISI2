@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/models/region_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/repos/region_service.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/services/region_service.dart';
 
 class RegionProvider with ChangeNotifier {
   final RegionService _service = RegionService();

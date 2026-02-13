@@ -2,43 +2,38 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-// IMPORT UserModel DARI AUTH
-
+import 'package:shared_preferences/shared_preferences.dart'; // GANTI KE SINI
 
 class PersonelService {
-  final String baseUrl = 'http://10.16.7.4:8080'; 
-
-  final _storage = const FlutterSecureStorage();
+  final String baseUrl = 'http://10.16.7.228:8080'; 
 
   Future<Map<String, String>> _getHeaders() async {
-    String? token = await _storage.read(key: 'jwt_token');
+    // AMBIL DARI SharedPreferences agar sinkron dengan AuthProvider
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwt_token'); 
+    
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
   }
 
-  // --- GET ALL (Return List<UserModel>) ---
+  // --- GET ALL ---
   Future<List<UserModel>> getAllPersonel() async {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/admin/users'), // Endpoint GET All Users
+        Uri.parse('$baseUrl/api/admin/users'), // Tambahkan prefix /api
         headers: headers,
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         final List<dynamic> data = jsonResponse['data'];
-        
-        // Mapping ke UserModel
         return data.map((json) => UserModel.fromJson(json)).toList();
       } else {
         throw Exception('Gagal mengambil data: ${response.statusCode}');
       }
-    } on SocketException {
-      throw Exception('Tidak ada koneksi internet');
     } catch (e) {
       rethrow;
     }
@@ -49,14 +44,14 @@ class PersonelService {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
-        Uri.parse('$baseUrl/admin/users'),
+        Uri.parse('$baseUrl/api/admin/users'), // Tambahkan prefix /api
         headers: headers,
         body: jsonEncode({
           "nama_lengkap": user.namaLengkap,
-          "id_tugas": user.idTugas, // Konsisten ID TUGAS
+          "id_tugas": user.idTugas,
           "username": user.username,
-          "id_jabatan": user.idJabatan, // Kirim ID Jabatan (int)
-          "role": user.role, // Kirim string '1', '2', '3'
+          "id_jabatan": user.idJabatan,
+          "role": user.role,
           "no_telp": user.noTelp,
           "password": password, 
         }),
@@ -76,7 +71,7 @@ class PersonelService {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$baseUrl/admin/users/${user.id}'),
+        Uri.parse('$baseUrl/api/admin/users/${user.id}'), // Tambahkan prefix /api
         headers: headers,
         body: jsonEncode({
           "nama_lengkap": user.namaLengkap,
@@ -102,7 +97,7 @@ class PersonelService {
     try {
       final headers = await _getHeaders();
       final response = await http.delete(
-        Uri.parse('$baseUrl/admin/users/$id'),
+        Uri.parse('$baseUrl/api/admin/users/$id'), // Tambahkan prefix /api
         headers: headers,
       );
 

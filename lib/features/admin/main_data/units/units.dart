@@ -39,6 +39,7 @@ class _UnitsPageState extends State<UnitsPage> {
     final connectionColor = Colors.grey.shade300;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF3F4F6),
       body: RefreshIndicator(
         onRefresh: () => provider.refresh(),

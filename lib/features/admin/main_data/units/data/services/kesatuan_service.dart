@@ -5,11 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart'; // Buat jaga-jaga
 import '../models/kesatuan_model.dart';
 
 class KesatuanService {
-  final String baseUrl = "http://10.16.7.4:8080/view/tingkat";
+  final String baseUrl = "http://10.16.7.228:8080/api/admin/tingkat";
   Future<List<KesatuanModel>> getKesatuan() async {
     String? token;
 
-    // 1. COBA AMBIL DARI SECURE STORAGE (Biasanya Login pakai ini)
     const storage = FlutterSecureStorage();
     token = await storage.read(key: 'jwt_token'); // Coba nama key 'jwt_token'
 

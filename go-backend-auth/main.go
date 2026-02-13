@@ -26,7 +26,6 @@ func init() {
 func main() {
 	r := gin.Default()
 
-	// 1. KONFIGURASI CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -36,101 +35,85 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// ==========================================
-	// 2. PUBLIC ROUTES (BEBAS AKSES)
-	// ==========================================
-
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong - Backend Online"})
+		c.JSON(200, gin.H{"message": "SIKAP PRESISI Backend v2.0 Online"})
 	})
 
 	r.POST("/signup", controllers.Signup)
 	r.POST("/login", controllers.Login)
 	r.GET("/jabatan", controllers.GetJabatan)
 
-	publicApi := r.Group("/api")
+	api := r.Group("/api")
+	api.Use(middleware.RequireAuth)
 	{
-		// Potensi Lahan
-		lahan := publicApi.Group("/potensi-lahan")
+		// A. ADMIN ONLY RESOURCE (/api/admin)
+		admin := api.Group("/admin")
+		admin.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
-			lahan.GET("", controllers.GetPotensiLahan)
-			lahan.GET("/filters", controllers.GetFilterOptions)
-			lahan.POST("", controllers.CreatePotensiLahan)
-			lahan.PUT("/:id", controllers.UpdatePotensiLahan)
-			lahan.DELETE("/:id", controllers.DeletePotensiLahan)
-			lahan.GET("/summary", controllers.GetSummaryLahan)
-			lahan.GET("/no-potential", controllers.GetNoPotentialLahan)
-		}
+			// Personel Management
+			admin.POST("/users", controllers.CreateUser)
+			admin.GET("/users", controllers.GetUsers)
+			admin.GET("/users/:id", controllers.GetUserByID)
+			admin.PUT("/users/:id", controllers.UpdateUser)
+			admin.DELETE("/users/:id", controllers.DeleteUser)
 
-		// Wilayah, Kategori, Komoditas (PUBLIC)
-		publicApi.GET("/wilayah", controllers.GetWilayah)
-		publicApi.GET("/categories", controllers.GetCategories)
-		publicApi.GET("/commodities", controllers.GetCommodities)
-	}
+			// Master Jabatan CUD
+			admin.GET("/jabatan", controllers.GetJabatan)
+			admin.POST("/jabatan", controllers.CreateJabatan)
+			admin.PUT("/jabatan/:id", controllers.UpdateJabatan)
+			admin.DELETE("/jabatan/:id", controllers.DeleteJabatan)
 
-	// --- GROUP ADMIN (PUBLIC) ---
-	adminRoutes := r.Group("/admin")
-	{
-		adminRoutes.POST("/users", controllers.CreateUser)
-		adminRoutes.GET("/users", controllers.GetUsers)
-		adminRoutes.GET("/users/:id", controllers.GetUserByID)
-		adminRoutes.PUT("/users/:id", controllers.UpdateUser)
-		adminRoutes.DELETE("/users/:id", controllers.DeleteUser)
-	}
+			// Data Wilayah & Tingkat
+			admin.GET("/tingkat", controllers.GetTingkat)
+			admin.GET("/wilayah", controllers.GetWilayah)
+			admin.PUT("/wilayah/:id", controllers.UpdateWilayah)
 
-	// --- GROUP VIEW (PUBLIC - Agar Dashboard Tingkat muncul) ---
-	viewRoutes := r.Group("/view")
-	{
-		viewRoutes.GET("/tingkat", controllers.GetTingkat)
-	}
+			// --- KOMODITAS MANAGEMENT (ADMIN AREA) ---
+			admin.GET("/categories", controllers.GetCategories)
+			admin.POST("/categories", controllers.CreateCommodity)
+			admin.POST("/categories/delete", controllers.DeleteCategory)
+			admin.GET("/commodities", controllers.GetCommodities)
+			admin.POST("/commodity/update", controllers.UpdateCommodity)
+			admin.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
 
-	// ==========================================
-	// 3. PROTECTED ROUTES (WAJIB LOGIN)
-	// ==========================================
-	authorized := r.Group("")
-	authorized.Use(middleware.RequireAuth)
-	{
-		api := authorized.Group("/api")
-		{
-			// Modifikasi Data Master (Create/Update/Delete masih dilindungi)
-			api.POST("/categories", controllers.CreateCommodity)
-			api.POST("/categories/delete", controllers.DeleteCategory)
-			api.POST("/commodity/update", controllers.UpdateCommodity)
-			api.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
-		}
+			admin.GET("", controllers.GetPotensiLahan)
+			admin.GET("/filters", controllers.GetFilterOptions)
+			admin.POST("", controllers.CreatePotensiLahan)
+			admin.PUT("/:id", controllers.UpdatePotensiLahan)
+			admin.DELETE("/:id", controllers.DeletePotensiLahan)
+			admin.GET("/summary", controllers.GetSummaryLahan)
+			admin.GET("/no-potential", controllers.GetNoPotentialLahan)
 
-		// Modifikasi Jabatan (Hanya Admin)
-		authorized.POST("/jabatan", middleware.RequireRoles(models.RoleAdmin), controllers.CreateJabatan)
-		authorized.PUT("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.UpdateJabatan)
-		authorized.DELETE("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.DeleteJabatan)
-
-		// Input Laporan
-		inputRoutes := authorized.Group("/input")
-		inputRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres))
-		{
-			inputRoutes.POST("/laporan", func(c *gin.Context) {
-				c.JSON(200, gin.H{"message": "Laporan berhasil diinput"})
+			admin.GET("/recap", func(c *gin.Context) {
+				c.JSON(200, gin.H{"message": "Full Recap Data"})
 			})
 		}
 
-		// Dashboard User Info
-		authorized.GET("/view/dashboard", func(c *gin.Context) {
-			userValue, exists := c.Get("user")
-			if !exists {
-				c.JSON(401, gin.H{"error": "Unauthorized"})
-				return
-			}
-			userData := userValue.(models.User)
-			c.JSON(200, gin.H{
-				"message": "Dashboard Data Loaded",
-				"user_info": gin.H{
-					"id":           userData.ID,
-					"nama_lengkap": userData.NamaLengkap,
-					"role":         userData.Role,
-				},
+		// B. DATA INPUT & OPERATIONAL (/api/input)
+		input := api.Group("/input")
+		input.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleOperator))
+		{
+			input.POST("/laporan", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Input Sukses"}) })
+			input.POST("/lahan", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Input Lahan Sukses"}) })
+			input.GET("", controllers.GetPotensiLahan)
+			input.GET("/filters", controllers.GetFilterOptions)
+			input.POST("", controllers.CreatePotensiLahan)
+			input.PUT("/:id", controllers.UpdatePotensiLahan)
+			input.DELETE("/:id", controllers.DeletePotensiLahan)
+			input.GET("/summary", controllers.GetSummaryLahan)
+			input.GET("/no-potential", controllers.GetNoPotentialLahan)
+		}
+
+		// C. GENERAL VIEW (/api/view)
+		view := api.Group("/view")
+		{
+			view.GET("/dashboard", func(c *gin.Context) {
+				u, _ := c.Get("user")
+				c.JSON(200, gin.H{"user_info": u})
 			})
-		})
+		}
 	}
 
 	r.Run()

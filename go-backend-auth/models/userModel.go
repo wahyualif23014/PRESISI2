@@ -6,7 +6,7 @@ import (
 
 const (
 	RoleAdmin  string = "1"
-	RolePolres string = "2"
+	RoleOperator string = "2"
 	RoleView   string = "3"
 )
 
