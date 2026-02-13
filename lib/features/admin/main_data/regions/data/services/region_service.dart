@@ -4,20 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/region_model.dart';
 
 class RegionService {
-  // Pastikan IP Address ini benar (IP Laptop/PC Anda)
-  static const String _baseUrl = 'http://10.16.7.4:8080/api/wilayah';
+  static const String _baseUrl = 'http://10.16.7.228:8080/api/admin/wilayah';
 
   Future<List<WilayahModel>> fetchRegions() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
-      // --- PERBAIKAN DISINI ---
-      // Ambil dengan kunci 'jwt_token' (Sesuai AuthProvider)
       final String? token = prefs.getString('jwt_token');
-
-      // Debugging
-      print("Request ke: $_baseUrl");
-      print("Menggunakan Token: $token"); // Cek di console apakah null
 
       final response = await http.get(
         Uri.parse(_baseUrl),
@@ -31,8 +23,6 @@ class RegionService {
         final List<dynamic> data = json.decode(response.body);
         return data.map((json) => WilayahModel.fromJson(json)).toList();
       } else {
-        print("Gagal: ${response.body}");
-        // Jika list kosong dari backend (solusi no 404), kembalikan list kosong
         if (response.statusCode == 404) return [];
         throw Exception('Gagal load data: ${response.statusCode}');
       }
@@ -47,7 +37,7 @@ class RegionService {
       final String? token = prefs.getString('jwt_token');
 
       final response = await http.put(
-        Uri.parse('$_baseUrl/$kode'), // URL: /api/wilayah/35.01...
+        Uri.parse('$_baseUrl/$kode'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

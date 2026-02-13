@@ -13,82 +13,71 @@ import (
 	"github.com/wahyualif23014/backendGO/models"
 )
 
+// RequireAuth memvalidasi identitas pengguna melalui JWT
 func RequireAuth(c *gin.Context) {
-	// 1. Ambil header Authorization
+	// 1. Ambil Header Authorization
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Akses ditolak: Token tidak ditemukan"})
 		return
 	}
 
-	// 2. Format "Bearer <token>"
-	tokenString := authHeader
-	if len(strings.Split(authHeader, " ")) == 2 {
-		tokenString = strings.Split(authHeader, " ")[1]
-	}
+	// 2. Bersihkan Prefix "Bearer "
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-	// 3. Parse Token
+	// 3. Parse & Validasi Signature Token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("metode signing tidak valid: %v", token.Header["alg"])
 		}
 		return []byte(os.Getenv("SECRET")), nil
 	})
 
+	// Penanganan Token Invalid
 	if err != nil || !token.Valid {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sesi tidak valid atau telah berakhir"})
 		return
 	}
 
-	// 4. Validasi Claims & Expiration
+	// 4. Ekstrak Claims & Cek Expiry
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Format token rusak"})
 		return
 	}
 
 	if float64(time.Now().Unix()) > claims["exp"].(float64) {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sesi telah kedaluwarsa, silakan login ulang"})
 		return
 	}
 
-	// 5. Query DB (UPDATE: Tambahkan Preload Jabatan)
+	// 5. Query Database (Load Full User & Relasi Jabatan)
 	var user models.User
-
 	result := initializers.DB.
-		Preload("Jabatan"). // <--- TAMBAHAN PENTING: Agar data jabatan ikut terbawa
-		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
-		Where("idanggota = ?", claims["sub"]).           // Cari berdasarkan ID (Sub)
-		Where("deletestatus = ?", models.StatusActive). // Pastikan user aktif ('2')
+		Preload("Jabatan").
+		Where("idanggota = ? AND deletestatus = ?", claims["sub"], models.StatusActive).
 		First(&user)
 
-	if result.Error != nil || user.ID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or inactive"})
+	if result.Error != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Akun tidak ditemukan atau tidak aktif"})
 		return
 	}
 
-	// 6. Set user ke context
 	c.Set("user", user)
 	c.Next()
 }
 
-// RequireRoles TIDAK PERLU DIUBAH (Sudah Benar)
 func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 1. Ambil data user dari context
 		userValue, exists := c.Get("user")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized session"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sesi tidak ditemukan"})
 			return
 		}
 
-		// 2. Type Assertion
-		user, ok := userValue.(models.User)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "User context error"})
-			return
-		}
+		user := userValue.(models.User)
 
-		// 3. Cek Role
 		isAllowed := false
 		for _, role := range allowedRoles {
 			if user.Role == role {
@@ -98,19 +87,20 @@ func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 		}
 
 		if !isAllowed {
-			roleLabel := "Unknown"
+			// Mapping label role untuk pesan error yang ramah pengguna
+			roleLabel := "User"
 			switch user.Role {
 			case models.RoleAdmin:
-				roleLabel = "Admin"
-			case models.RolePolres:
-				roleLabel = "Polres"
+				roleLabel = "Administrator"
+			case models.RoleOperator:
+				roleLabel = "Operator"
 			case models.RoleView:
-				roleLabel = "View"
+				roleLabel = "View Only"
 			}
 
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error":   "Access denied",
-				"message": fmt.Sprintf("Role Level '%s' (%s) tidak diizinkan mengakses resource ini.", user.Role, roleLabel),
+				"error":   "Akses Terbatas",
+				"message": fmt.Sprintf("Level akses Anda (%s) tidak diizinkan untuk fitur ini.", roleLabel),
 			})
 			return
 		}

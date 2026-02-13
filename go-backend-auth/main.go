@@ -23,17 +23,9 @@ func init() {
 	initializers.SyncDatabase()
 }
 
-// @title           Backend API Kepolisian
-// @version         2.0
-// @host            localhost:8080
-// @BasePath        /
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
 func main() {
 	r := gin.Default()
 
-	// Konfigurasi CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -43,105 +35,82 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Swagger Route
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Public Routes (Tidak butuh token)
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong - Backend v2.0 Online"})
+		c.JSON(200, gin.H{"message": "SIKAP PRESISI Backend v2.0 Online"})
 	})
 
 	r.POST("/signup", controllers.Signup)
 	r.POST("/login", controllers.Login)
 
-	// --- PROTECTED ROUTES (Butuh Token) ---
-	// Menggunakan string kosong "" agar routing lebih bersih (tidak double slash)
-	authorized := r.Group("")
-	authorized.Use(middleware.RequireAuth)
+	api := r.Group("/api")
+	api.Use(middleware.RequireAuth)
 	{
-		// ==========================================
-		//           API ROUTES (GENERAL)
-		// ==========================================
-		api := authorized.Group("/api")
+		// A. ADMIN ONLY RESOURCE (/api/admin)
+		admin := api.Group("/admin")
+		admin.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
-			// Wilayah
-			api.GET("/wilayah", controllers.GetWilayah)
-			api.PUT("/wilayah/:id", controllers.UpdateWilayah)
+			// Personel Management
+			admin.POST("/users", controllers.CreateUser)
+			admin.GET("/users", controllers.GetUsers)
+			admin.GET("/users/:id", controllers.GetUserByID)
+			admin.PUT("/users/:id", controllers.UpdateUser)
+			admin.DELETE("/users/:id", controllers.DeleteUser)
 
-			// Kategori & Komoditas
-			api.GET("/categories", controllers.GetCategories)
-			api.GET("/commodities", controllers.GetCommodities)
-			api.POST("/categories", controllers.CreateCommodity)
-			api.POST("/categories/delete", controllers.DeleteCategory)
-			api.POST("/commodity/update", controllers.UpdateCommodity)
-			api.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
-		}
+			// Master Jabatan CUD
+			admin.GET("/jabatan", controllers.GetJabatan)
+			admin.POST("/jabatan", controllers.CreateJabatan)
+			admin.PUT("/jabatan/:id", controllers.UpdateJabatan)
+			admin.DELETE("/jabatan/:id", controllers.DeleteJabatan)
 
-		// ==========================================
-		//           JABATAN ROUTES
-		// ==========================================
-		// Route ini sekarang bisa diakses via /jabatan
-		authorized.GET("/jabatan", controllers.GetJabatan)
-		authorized.POST("/jabatan", middleware.RequireRoles(models.RoleAdmin), controllers.CreateJabatan)
-		authorized.PUT("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.UpdateJabatan)
-		authorized.DELETE("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.DeleteJabatan)
+			// Data Wilayah & Tingkat
+			admin.GET("/tingkat", controllers.GetTingkat)
+			admin.GET("/wilayah", controllers.GetWilayah)
+			admin.PUT("/wilayah/:id", controllers.UpdateWilayah)
 
-		// ==========================================
-		//      ADMIN ROUTES (KHUSUS ADMIN)
-		// ==========================================
-		// PERBAIKAN: Menggunakan huruf kecil "/admin" agar sesuai dengan Flutter
-		adminRoutes := authorized.Group("/admin")
-		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
-		{
-			adminRoutes.POST("/users", controllers.CreateUser)
-			adminRoutes.GET("/users", controllers.GetUsers)
-			adminRoutes.GET("/users/:id", controllers.GetUserByID)
-			adminRoutes.PUT("/users/:id", controllers.UpdateUser)
-			adminRoutes.DELETE("/users/:id", controllers.DeleteUser)
-		}
+			// --- KOMODITAS MANAGEMENT (ADMIN AREA) ---
+			admin.GET("/categories", controllers.GetCategories)
+			admin.POST("/categories", controllers.CreateCommodity)
+			admin.POST("/categories/delete", controllers.DeleteCategory)
+			admin.GET("/commodities", controllers.GetCommodities)
+			admin.POST("/commodity/update", controllers.UpdateCommodity)
+			admin.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
 
-		// ==========================================
-		//           INPUT ROUTES
-		// ==========================================
-		inputRoutes := authorized.Group("/input")
-		inputRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres))
-		{
-			inputRoutes.POST("/laporan", func(c *gin.Context) {
-				c.JSON(200, gin.H{"message": "Laporan berhasil diinput"})
+			admin.GET("", controllers.GetPotensiLahan)
+			admin.GET("/filters", controllers.GetFilterOptions)
+			admin.POST("", controllers.CreatePotensiLahan)
+			admin.PUT("/:id", controllers.UpdatePotensiLahan)
+			admin.DELETE("/:id", controllers.DeletePotensiLahan)
+			admin.GET("/summary", controllers.GetSummaryLahan)
+			admin.GET("/no-potential", controllers.GetNoPotentialLahan)
+
+			admin.GET("/recap", func(c *gin.Context) {
+				c.JSON(200, gin.H{"message": "Full Recap Data"})
 			})
 		}
 
-		// ==========================================
-		//           VIEW ROUTES
-		// ==========================================
-		viewRoutes := authorized.Group("/view")
-		viewRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres, models.RoleView))
+		// B. DATA INPUT & OPERATIONAL (/api/input)
+		input := api.Group("/input")
+		input.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleOperator))
 		{
-			viewRoutes.GET("/tingkat", controllers.GetTingkat)
+			input.POST("/laporan", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Input Sukses"}) })
+			input.POST("/lahan", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Input Lahan Sukses"}) })
+			input.GET("", controllers.GetPotensiLahan)
+			input.GET("/filters", controllers.GetFilterOptions)
+			input.POST("", controllers.CreatePotensiLahan)
+			input.PUT("/:id", controllers.UpdatePotensiLahan)
+			input.DELETE("/:id", controllers.DeletePotensiLahan)
+			input.GET("/summary", controllers.GetSummaryLahan)
+			input.GET("/no-potential", controllers.GetNoPotentialLahan)
+		}
 
-			viewRoutes.GET("/dashboard", func(c *gin.Context) {
-				// Mengambil data user dari context (diset oleh middleware)
-				userValue, exists := c.Get("user")
-				if !exists {
-					c.JSON(401, gin.H{"error": "Unauthorized"})
-					return
-				}
-
-				// Type assertion ke model User
-				userData := userValue.(models.User)
-
-				c.JSON(200, gin.H{
-					"message": "Dashboard Data Loaded",
-					"user_info": gin.H{
-						"id":           userData.ID,
-						"nama_lengkap": userData.NamaLengkap,
-						"id_tugas":     userData.IDTugas,
-						"username":     userData.Username,
-						"id_jabatan":   userData.JabatanID,
-						"role":         userData.Role,
-						"no_telp":      userData.NoTelp,
-					},
-				})
+		// C. GENERAL VIEW (/api/view)
+		view := api.Group("/view")
+		{
+			view.GET("/dashboard", func(c *gin.Context) {
+				u, _ := c.Get("user")
+				c.JSON(200, gin.H{"user_info": u})
 			})
 		}
 	}

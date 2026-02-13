@@ -13,8 +13,8 @@ class CategoryFetchResult {
 }
 
 class CommodityService {
-  // Pastikan IP ini sesuai dengan IP Laptop/Komputer kamu saat ini
-  static const String baseUrl = "http://10.16.7.4:8080/api";
+  // UPDATE: baseUrl mengarah langsung ke grup admin agar konsisten
+  static const String baseUrl = "http://10.16.7.228:8080/api/admin";
 
   // PERBAIKAN: Menggunakan key 'jwt_token' agar sinkron dengan AuthProvider
   Future<String> _getToken() async {
@@ -22,7 +22,7 @@ class CommodityService {
     return prefs.getString('jwt_token') ?? '';
   }
 
-  // 1. Fetch Categories & Total Items (ENDPOINT UTAMA)
+  // 1. Fetch Categories & Total Items (Path: /api/admin/categories)
   Future<CategoryFetchResult> fetchCategoriesData() async {
     final token = await _getToken();
     try {
@@ -34,24 +34,21 @@ class CommodityService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         final List<dynamic> data = body['data'];
-
-        // Ambil 'total_items' dari JSON backend
         final int tItems = body['total_items'] ?? 0;
 
         return CategoryFetchResult(
-          categories:
-              data.map((e) => CommodityCategoryModel.fromJson(e)).toList(),
+          categories: data.map((e) => CommodityCategoryModel.fromJson(e)).toList(),
           totalItems: tItems,
         );
       }
       return CategoryFetchResult(categories: [], totalItems: 0);
     } catch (e) {
-      print("Error: $e");
+      print("Error Fetch Categories: $e");
       return CategoryFetchResult(categories: [], totalItems: 0);
     }
   }
 
-  // 2. Add Commodity (Tambah Data Baru)
+  // 2. Add Commodity (Path: /api/admin/categories)
   Future<bool> addCommodity(String categoryId, String name) async {
     final token = await _getToken();
     try {
@@ -69,7 +66,7 @@ class CommodityService {
     }
   }
 
-  // 3. Delete Category (Hapus Massal Kategori)
+  // 3. Delete Category (Path: /api/admin/categories/delete)
   Future<bool> deleteCategory(String kindName) async {
     final token = await _getToken();
     try {
@@ -87,13 +84,11 @@ class CommodityService {
     }
   }
 
-  // 4. Fetch Detail Items (Untuk Halaman Detail)
+  // 4. Fetch Detail Items (Path: /api/admin/commodities)
   Future<List<CommodityModel>> fetchCommoditiesByKind(String kind) async {
     final token = await _getToken();
     try {
-      final uri = Uri.parse(
-        '$baseUrl/commodities',
-      ).replace(queryParameters: {'kind': kind});
+      final uri = Uri.parse('$baseUrl/commodities').replace(queryParameters: {'kind': kind});
       final response = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
@@ -106,11 +101,12 @@ class CommodityService {
       }
       return [];
     } catch (e) {
+      print("Error Fetch Detail: $e");
       return [];
     }
   }
 
-  // 5. Update Commodity (Edit Nama Tanaman)
+  // 5. Update Commodity (Path: /api/admin/commodity/update)
   Future<bool> updateCommodity(String id, String newName) async {
     final token = await _getToken();
     try {
@@ -128,7 +124,6 @@ class CommodityService {
     }
   }
 
-  // 6. Delete Single Item (Hapus 1 Tanaman)
   Future<bool> deleteCommodityItem(String id) async {
     final token = await _getToken();
     try {

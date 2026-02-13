@@ -55,10 +55,17 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    if (isKeyboardOpen) {
+      return const SizedBox.shrink();
+    }
+    
     final size = MediaQuery.of(context).size;
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _calculateSelectedIndex(location);
     final itemWidth = size.width / _navItems.length;
+
+    
 
     return SizedBox(
       height: _navHeight,

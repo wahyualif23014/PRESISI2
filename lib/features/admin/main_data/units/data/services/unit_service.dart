@@ -6,7 +6,7 @@ import '../models/polsek_model.dart';
 import '../models/wilayah_model.dart';
 
 class UnitService {
-  final String baseUrl = 'http://10.16.7.4:8080';
+  final String baseUrl = 'http://10.16.7.228:8080';
 
   
   final _storage = const FlutterSecureStorage();

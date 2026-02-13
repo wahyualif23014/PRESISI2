@@ -56,6 +56,7 @@ class _PageRecapState extends State<PageRecap> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF8F9FC),
       body: Column(
         children: [

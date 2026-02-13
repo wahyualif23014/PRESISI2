@@ -274,6 +274,7 @@ class _RegionsPageState extends State<RegionsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: Consumer<RegionProvider>(
         builder: (context, provider, child) {

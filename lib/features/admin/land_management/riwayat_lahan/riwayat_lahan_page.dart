@@ -98,6 +98,7 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: Column(
         children: [

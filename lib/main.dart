@@ -1,3 +1,4 @@
+import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,7 +11,7 @@ import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_prov
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/commodity_category_provider.dart';
+// IMPORT BARU DISINI
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart';
 
 Future<void> main() async {
@@ -32,7 +33,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UnitProvider()),
         ChangeNotifierProvider(create: (_) => RegionProvider()),
         ChangeNotifierProvider(create: (_) => JabatanProvider()),
-        // ChangeNotifierProvider(create: (_) => CommodityCategoryProvider()),
+        ChangeNotifierProvider(create: (_) => CommodityProvider()), 
         // ChangeNotifierProvider(create: (_) => LandHistoryProvider()),
       ],
       child: MyApp(appRouter: appRouter),
