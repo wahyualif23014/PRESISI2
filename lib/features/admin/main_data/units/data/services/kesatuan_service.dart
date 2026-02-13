@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // Buat jaga-jaga
 import '../models/kesatuan_model.dart';
 
 class KesatuanService {
-  final String baseUrl = "http://10.16.15.78:8080/view/tingkat";
+  final String baseUrl = "http://10.16.7.4:8080/view/tingkat";
   Future<List<KesatuanModel>> getKesatuan() async {
     String? token;
 
@@ -13,7 +13,6 @@ class KesatuanService {
     const storage = FlutterSecureStorage();
     token = await storage.read(key: 'jwt_token'); // Coba nama key 'jwt_token'
 
-    // 2. JIKA KOSONG, COBA DARI SHARED PREFERENCES (Backup)
     if (token == null) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       token = prefs.getString('token'); // Coba nama key 'token'

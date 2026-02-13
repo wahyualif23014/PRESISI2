@@ -100,7 +100,7 @@ class AuthProvider with ChangeNotifier {
     _token = null;
     _user = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Hapus semua data (jwt_token & user_data)
+    await prefs.clear(); 
     notifyListeners();
   }
 }

@@ -13,12 +13,13 @@ class CategoryFetchResult {
 }
 
 class CommodityService {
-  // Sesuaikan IP dengan komputermu
-  static const String baseUrl = "http://10.16.15.78:8080/api";
+  // Pastikan IP ini sesuai dengan IP Laptop/Komputer kamu saat ini
+  static const String baseUrl = "http://10.16.7.4:8080/api";
 
+  // PERBAIKAN: Menggunakan key 'jwt_token' agar sinkron dengan AuthProvider
   Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
+    return prefs.getString('jwt_token') ?? '';
   }
 
   // 1. Fetch Categories & Total Items (ENDPOINT UTAMA)
@@ -108,10 +109,6 @@ class CommodityService {
       return [];
     }
   }
-
-  // ==========================================
-  // FUNGSI YANG HILANG (PENYEBAB ERROR)
-  // ==========================================
 
   // 5. Update Commodity (Edit Nama Tanaman)
   Future<bool> updateCommodity(String id, String newName) async {

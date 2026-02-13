@@ -5,7 +5,7 @@ import '../models/region_model.dart';
 
 class RegionService {
   // Pastikan IP Address ini benar (IP Laptop/PC Anda)
-  static const String _baseUrl = 'http://10.16.15.78:8080/api/wilayah';
+  static const String _baseUrl = 'http://10.16.7.4:8080/api/wilayah';
 
   Future<List<WilayahModel>> fetchRegions() async {
     try {

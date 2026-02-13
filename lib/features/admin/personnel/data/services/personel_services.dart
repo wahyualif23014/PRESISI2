@@ -7,7 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class PersonelService {
-  final String baseUrl = 'http://10.16.15.78:8080'; 
+  final String baseUrl = 'http://10.16.7.4:8080'; 
 
   final _storage = const FlutterSecureStorage();
 

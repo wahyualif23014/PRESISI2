@@ -1,20 +1,17 @@
+// controllers/wilayahController.go
 package controllers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wahyualif23014/backendGO/initializers"
 	"github.com/wahyualif23014/backendGO/models"
 )
 
-// GetWilayah mengambil data hirarki wilayah (Kab, Kec, Desa)
 func GetWilayah(c *gin.Context) {
-	// Inisialisasi slice kosong agar jika tidak ada data, return-nya "[]" (bukan null)
 	results := []models.WilayahResponse{}
-
-	// Query SQL Self-Join
-	// Menggabungkan tabel wilayah dengan dirinya sendiri untuk mendapat nama Kab & Kec
 	query := `
 		SELECT 
 			d.kode,
@@ -31,63 +28,42 @@ func GetWilayah(c *gin.Context) {
 		WHERE CHAR_LENGTH(d.kode) > 8 
 		ORDER BY d.kode ASC
 	`
-
-	// Eksekusi Raw SQL
 	if err := initializers.DB.Raw(query).Scan(&results).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Gagal mengambil data wilayah: " + err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	// --- PERBAIKAN DI SINI ---
-	// Kita kembalikan Status 200 OK dan list kosong jika tidak ada data.
-	// Jangan return 404, karena itu akan dianggap error oleh Flutter.
 	c.JSON(http.StatusOK, results)
 }
 
-// CreateWilayah (Placeholder untuk route POST)
-func CreateWilayah(c *gin.Context) {
-	// Di sini nanti logika untuk menambah data wilayah
-	// Sementara return sukses dulu agar tidak error 404
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Fitur Create Wilayah belum diimplementasi (Placeholder)",
-	})
-}
 func UpdateWilayah(c *gin.Context) {
-	// Ambil Kode Desa dari URL (misal: /api/wilayah/35.01.01.2001)
 	kode := c.Param("id")
-
-	// Struktur input dari Flutter
 	var body struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}
 
-	if c.Bind(&body) != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
 		return
 	}
 
-	// Ambil User yang login untuk mengisi 'updated_by' (idanggota)
+	// Ambil user dari middleware JWT
 	userValue, _ := c.Get("user")
 	currentUser := userValue.(models.User)
 
-	// Update Database (Gunakan Raw SQL atau GORM Map agar aman dengan nama kolom custom)
-	// Kita update lat, lng, idanggota (updated_by), dan datetransaction
 	result := initializers.DB.Table("wilayah").
 		Where("kode = ?", kode).
 		Updates(map[string]interface{}{
 			"lat":             body.Latitude,
 			"lng":             body.Longitude,
-			"idanggota":       currentUser.ID, // Siapa yang update
-			"datetransaction": time.Now(),     // Kapan diupdate
+			"idanggota":       currentUser.ID,
+			"datetransaction": time.Now(),
 		})
 
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update data"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diperbarui"})
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil diperbarui"})
 }

@@ -8,7 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class JabatanService {
   // Ganti URL ini sesuai IP Backend GO Anda
-  static const String baseUrl = "http://10.16.15.78:8080"; 
+  static const String baseUrl = "http://10.16.7.4:8080"; 
   final _storage = const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {

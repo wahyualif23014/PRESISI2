@@ -43,8 +43,10 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Swagger Route
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Public Routes (Tidak butuh token)
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong - Backend v2.0 Online"})
 	})
@@ -52,23 +54,21 @@ func main() {
 	r.POST("/signup", controllers.Signup)
 	r.POST("/login", controllers.Login)
 
-	// --- PROTECTED ROUTES ---
-	authorized := r.Group("/")
+	// --- PROTECTED ROUTES (Butuh Token) ---
+	// Menggunakan string kosong "" agar routing lebih bersih (tidak double slash)
+	authorized := r.Group("")
 	authorized.Use(middleware.RequireAuth)
 	{
 		// ==========================================
 		//           API ROUTES (GENERAL)
 		// ==========================================
-		// Grup ini bisa diakses SEMUA user yang sudah login (Apapun Rolenya)
-		api := r.Group("/api")
+		api := authorized.Group("/api")
 		{
-			// --- PINDAHKAN ROUTE WILAYAH KE SINI ---
-			// URL sekarang menjadi: /api/wilayah
+			// Wilayah
 			api.GET("/wilayah", controllers.GetWilayah)
-			api.POST("/wilayah", controllers.CreateWilayah)
 			api.PUT("/wilayah/:id", controllers.UpdateWilayah)
 
-			// Route Lainnya
+			// Kategori & Komoditas
 			api.GET("/categories", controllers.GetCategories)
 			api.GET("/commodities", controllers.GetCommodities)
 			api.POST("/categories", controllers.CreateCommodity)
@@ -77,16 +77,20 @@ func main() {
 			api.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
 		}
 
-		// JABATAN ROUTES
+		// ==========================================
+		//           JABATAN ROUTES
+		// ==========================================
+		// Route ini sekarang bisa diakses via /jabatan
 		authorized.GET("/jabatan", controllers.GetJabatan)
 		authorized.POST("/jabatan", middleware.RequireRoles(models.RoleAdmin), controllers.CreateJabatan)
 		authorized.PUT("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.UpdateJabatan)
 		authorized.DELETE("/jabatan/:id", middleware.RequireRoles(models.RoleAdmin), controllers.DeleteJabatan)
 
 		// ==========================================
-		//           ADMIN ROUTES (KHUSUS ADMIN)
+		//      ADMIN ROUTES (KHUSUS ADMIN)
 		// ==========================================
-		adminRoutes := authorized.Group("/Admin")
+		// PERBAIKAN: Menggunakan huruf kecil "/admin" agar sesuai dengan Flutter
+		adminRoutes := authorized.Group("/admin")
 		adminRoutes.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
 			adminRoutes.POST("/users", controllers.CreateUser)
@@ -94,11 +98,11 @@ func main() {
 			adminRoutes.GET("/users/:id", controllers.GetUserByID)
 			adminRoutes.PUT("/users/:id", controllers.UpdateUser)
 			adminRoutes.DELETE("/users/:id", controllers.DeleteUser)
-
-			// Route Wilayah sudah dipindah ke atas (Grup API)
 		}
 
-		// INPUT ROUTES
+		// ==========================================
+		//           INPUT ROUTES
+		// ==========================================
 		inputRoutes := authorized.Group("/input")
 		inputRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres))
 		{
@@ -107,18 +111,25 @@ func main() {
 			})
 		}
 
-		// VIEW ROUTES
+		// ==========================================
+		//           VIEW ROUTES
+		// ==========================================
 		viewRoutes := authorized.Group("/view")
 		viewRoutes.Use(middleware.RequireRoles(models.RoleAdmin, models.RolePolres, models.RoleView))
 		{
 			viewRoutes.GET("/tingkat", controllers.GetTingkat)
+
 			viewRoutes.GET("/dashboard", func(c *gin.Context) {
+				// Mengambil data user dari context (diset oleh middleware)
 				userValue, exists := c.Get("user")
 				if !exists {
 					c.JSON(401, gin.H{"error": "Unauthorized"})
 					return
 				}
+
+				// Type assertion ke model User
 				userData := userValue.(models.User)
+
 				c.JSON(200, gin.H{
 					"message": "Dashboard Data Loaded",
 					"user_info": gin.H{
