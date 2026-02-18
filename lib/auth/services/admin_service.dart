@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart'; // Wajib ada untuk ambil token
 
 class AdminService {
-  final String baseUrl = 'http://10.16.7.228:8080'; 
+  final String baseUrl = 'http://10.16.2.233:8080'; 
 
   // Fungsi untuk mengambil Data Users (Admin Only)
   Future<List<dynamic>> getUsers() async {

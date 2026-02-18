@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/region_model.dart';
 
 class RegionService {
-  static const String _baseUrl = 'http://10.16.7.228:8080/api/admin/wilayah';
+  static const String _baseUrl = 'http://10.16.2.233:8080/api/admin/wilayah';
 
   Future<List<WilayahModel>> fetchRegions() async {
     try {

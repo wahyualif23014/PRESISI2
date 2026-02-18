@@ -13,53 +13,37 @@ import (
 	"github.com/wahyualif23014/backendGO/models"
 )
 
-// RequireAuth memvalidasi identitas pengguna melalui JWT
 func RequireAuth(c *gin.Context) {
-	// 1. Ambil Header Authorization
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Akses ditolak: Token tidak ditemukan"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	// 2. Bersihkan Prefix "Bearer "
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-	// 3. Parse & Validasi Signature Token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("metode signing tidak valid: %v", token.Header["alg"])
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(os.Getenv("SECRET")), nil
 	})
 
-	// Penanganan Token Invalid
 	if err != nil || !token.Valid {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sesi tidak valid atau telah berakhir"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 		return
 	}
 
-	// 4. Ekstrak Claims & Cek Expiry
 	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Format token rusak"})
+	if !ok || float64(time.Now().Unix()) > claims["exp"].(float64) {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
 		return
 	}
 
-	if float64(time.Now().Unix()) > claims["exp"].(float64) {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sesi telah kedaluwarsa, silakan login ulang"})
-		return
-	}
-
-	// 5. Query Database (Load Full User & Relasi Jabatan)
 	var user models.User
-	result := initializers.DB.
-		Preload("Jabatan").
-		Where("idanggota = ? AND deletestatus = ?", claims["sub"], models.StatusActive).
-		First(&user)
+	initializers.DB.Preload("Jabatan").First(&user, claims["sub"])
 
-	if result.Error != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Akun tidak ditemukan atau tidak aktif"})
+	if user.ID == 0 || user.DeleteStatus == models.StatusDeleted {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or inactive"})
 		return
 	}
 
@@ -69,15 +53,13 @@ func RequireAuth(c *gin.Context) {
 
 func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. Ambil data user dari context
 		userValue, exists := c.Get("user")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sesi tidak ditemukan"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
 
 		user := userValue.(models.User)
-
 		isAllowed := false
 		for _, role := range allowedRoles {
 			if user.Role == role {
@@ -87,21 +69,7 @@ func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 		}
 
 		if !isAllowed {
-			// Mapping label role untuk pesan error yang ramah pengguna
-			roleLabel := "User"
-			switch user.Role {
-			case models.RoleAdmin:
-				roleLabel = "Administrator"
-			case models.RoleOperator:
-				roleLabel = "Operator"
-			case models.RoleView:
-				roleLabel = "View Only"
-			}
-
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error":   "Akses Terbatas",
-				"message": fmt.Sprintf("Level akses Anda (%s) tidak diizinkan untuk fitur ini.", roleLabel),
-			})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access denied: insufficient permissions"})
 			return
 		}
 

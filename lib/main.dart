@@ -12,7 +12,6 @@ import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_pr
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
 // IMPORT BARU DISINI
-import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

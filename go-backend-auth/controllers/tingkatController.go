@@ -12,8 +12,6 @@ import (
 func GetTingkat(c *gin.Context) {
 	var rawData []models.KesatuanDetail
 
-	// --- QUERY PERBAIKAN ---
-	// Mengambil hanya 1 pejabat per kesatuan berdasarkan prioritas idjabatan
 	query := `
 		SELECT 
 			t.kode AS kode,
@@ -30,7 +28,6 @@ func GetTingkat(c *gin.Context) {
 			) as rank_jabatan
 			FROM anggota 
 			WHERE deletestatus != '1' 
-			AND idjabatan IN (1, 2, 3, 7, 8)
 		) a ON a.idtugas = t.kode AND a.rank_jabatan = 1
 		LEFT JOIN jabatan j ON a.idjabatan = j.idjabatan
 		ORDER BY t.kode ASC
@@ -41,15 +38,13 @@ func GetTingkat(c *gin.Context) {
 		return
 	}
 
-	// --- LOGIC HIERARKI (Sama seperti sebelumnya) ---
 	var polresList []models.KesatuanDetail
-	var anakMap = make(map[string][]models.KesatuanDetail)
+	anakMap := make(map[string][]models.KesatuanDetail)
 
 	for i := range rawData {
 		kode := rawData[i].Kode
 		nama := rawData[i].NamaSatuan
 
-		// 1. Logic Wilayah (Bersihkan Nama)
 		cleanName := nama
 		cleanName = strings.Replace(cleanName, "POLSEK ", "", 1)
 		cleanName = strings.Replace(cleanName, "POLRES ", "", 1)
@@ -58,32 +53,25 @@ func GetTingkat(c *gin.Context) {
 		cleanName = strings.Replace(cleanName, "POLDA ", "", 1)
 		rawData[i].Wilayah = cleanName
 
-		// 2. Logic Induk & Anak (Berdasarkan Panjang Kode)
 		if len(kode) > 5 {
-			// Anak (Polsek) -> Kode Induk = 5 digit pertama
 			indukID := kode[:5]
 			rawData[i].KodeInduk = indukID
 			anakMap[indukID] = append(anakMap[indukID], rawData[i])
 		} else {
-			// Induk (Polres)
-			rawData[i].KodeInduk = ""
+			polresList = append(polresList, rawData[i])
 		}
 	}
 
-	// 3. Gabungkan Anak ke Induk
-	for _, item := range rawData {
-		if len(item.Kode) <= 5 {
-			if anak, ada := anakMap[item.Kode]; ada {
-				item.DaftarPolsek = anak
-				item.TotalPolsek = len(anak)
-			}
-			polresList = append(polresList, item)
+	for i := range polresList {
+		idInduk := polresList[i].Kode
+		if anak, ok := anakMap[idInduk]; ok {
+			polresList[i].DaftarPolsek = anak
+			polresList[i].TotalPolsek = len(anak)
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Data Struktur Komando Berhasil Dimuat",
-		"total_data": len(polresList),
-		"data":       polresList,
+		"status": "success",
+		"data":   polresList,
 	})
 }

@@ -1,9 +1,11 @@
-import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:flutter/material.dart';
-// Pastikan import ini mengarah ke file UserModel yang benar
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
+import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 
 class PersonelCard extends StatelessWidget {
-  final UserModel personel; // Menggunakan UserModel
+  final UserModel personel;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
@@ -16,123 +18,609 @@ class PersonelCard extends StatelessWidget {
     this.onTap,
   });
 
+  // ===============================
+  // PHONE NUMBER SANITIZER
+  // ===============================
+  String? _sanitizePhoneNumber(String? phone) {
+    if (phone == null || phone.isEmpty) return null;
+
+    // Remove all non-digit characters except +
+    String sanitized = phone.replaceAll(RegExp(r'[^\d+]'), '');
+
+    // Handle Indonesian numbers
+    if (sanitized.startsWith('0')) {
+      sanitized = '+62${sanitized.substring(1)}';
+    } else if (sanitized.startsWith('62') && !sanitized.startsWith('+')) {
+      sanitized = '+$sanitized';
+    } else if (!sanitized.startsWith('+')) {
+      sanitized = '+$sanitized';
+    }
+
+    // Validate
+    if (sanitized.length < 8 || sanitized.length > 15) return null;
+
+    return sanitized;
+  }
+
+  // ===============================
+  // LAUNCHERS - DIRECT EXECUTION
+  // ===============================
+  Future<void> _launchWhatsApp(BuildContext context, String phone) async {
+    final message = Uri.encodeComponent(
+      "Halo ${personel.namaLengkap}, saya ingin menghubungi terkait tugas di ${personel.tingkatDetail?.nama ?? 'Kantor'}.",
+    );
+    
+    // PERBAIKAN: Hapus spasi, wa.me tidak perlu +
+    final waNumber = phone.replaceAll('+', '');
+    final Uri url = Uri.parse("https://wa.me/$waNumber?text=$message");
+
+    debugPrint('Launching WhatsApp: $url'); // Debug
+
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          _showError(context, 'WhatsApp tidak terinstall atau tidak dapat dibuka');
+        }
+      }
+    } catch (e) {
+      debugPrint('WhatsApp Error: $e');
+      if (context.mounted) {
+        _showError(context, 'Error: $e');
+      }
+    }
+  }
+
+  Future<void> _launchPhoneCall(BuildContext context, String phone) async {
+    final Uri url = Uri.parse("tel:$phone");
+    
+    debugPrint('Launching Phone: $url'); // Debug
+
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          _showError(context, 'Tidak dapat melakukan panggilan');
+        }
+      }
+    } catch (e) {
+      debugPrint('Phone Error: $e');
+      if (context.mounted) {
+        _showError(context, 'Error: $e');
+      }
+    }
+  }
+
+  Future<void> _launchSMS(BuildContext context, String phone) async {
+    final Uri url = Uri.parse("sms:$phone");
+    
+    debugPrint('Launching SMS: $url'); // Debug
+
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (context.mounted) {
+          _showError(context, 'Tidak dapat membuka SMS');
+        }
+      }
+    } catch (e) {
+      debugPrint('SMS Error: $e');
+      if (context.mounted) {
+        _showError(context, 'Error: $e');
+      }
+    }
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showSuccess(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  // ===============================
+  // BOTTOM SHEET
+  // ===============================
+  void _showContactOptions(BuildContext context) {
+    final sanitized = _sanitizePhoneNumber(personel.noTelp);
+    if (sanitized == null) {
+      _showError(context, 'Nomor telepon tidak valid');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _ContactBottomSheet(
+        name: personel.namaLengkap,
+        phone: sanitized,
+        onCall: () async {
+          Navigator.pop(sheetContext); // Tutup dulu
+          await Future.delayed(const Duration(milliseconds: 200)); // Tunggu animasi
+          if (context.mounted) {
+            await _launchPhoneCall(context, sanitized);
+          }
+        },
+        onSms: () async {
+          Navigator.pop(sheetContext); // Tutup dulu
+          await Future.delayed(const Duration(milliseconds: 200));
+          if (context.mounted) {
+            await _launchSMS(context, sanitized);
+          }
+        },
+        onWhatsApp: () async {
+          Navigator.pop(sheetContext); // Tutup dulu
+          await Future.delayed(const Duration(milliseconds: 200));
+          if (context.mounted) {
+            await _launchWhatsApp(context, sanitized);
+          }
+        },
+        onCopy: () {
+          Clipboard.setData(ClipboardData(text: sanitized));
+          Navigator.pop(sheetContext);
+          _showSuccess(context, 'Nomor disalin: $sanitized');
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String displayJabatan = personel.jabatanDetail?.namaJabatan ?? '-';
-    final bool hasPhone =
-        personel.noTelp != null && personel.noTelp!.isNotEmpty;
-    final String displayPhone = hasPhone ? personel.noTelp! : "-";
+    final String unitName = personel.tingkatDetail?.nama ?? "-";
+    final String jabatanName = personel.jabatanDetail?.namaJabatan ?? "-";
+    final String? sanitizedPhone = _sanitizePhoneNumber(personel.noTelp);
+    final bool hasPhone = sanitizedPhone != null;
+    final String displayPhone = hasPhone ? sanitizedPhone : "Belum terdaftar";
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF0F172A).withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: Colors.blueGrey.withOpacity(0.1),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. AVATAR
-                _AvatarSection(
-                  name: personel.namaLengkap,
-                  photoUrl: personel.fotoProfil,
-                ),
-
-                const SizedBox(width: 20),
-
-                // 2. INFORMASI UTAMA & DATA
-                Expanded(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            children: [
+              InkWell(
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildAvatar(),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  personel.namaLengkap,
+                                  personel.namaLengkap.toUpperCase(),
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
                                     color: Color(0xFF1E293B),
-                                    height: 1.1,
+                                    letterSpacing: 0.3,
+                                    height: 1.2,
                                   ),
-                                  maxLines: 3,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  displayJabatan
-                                      .toUpperCase(), // Gunakan variabel yang sudah diamankan
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF64748B),
-                                    letterSpacing: 0.5,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    unitName.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFD97706),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          _ActionMenu(onEdit: onEdit, onDelete: onDelete),
+                          _ActionMenu(
+                            onEdit: onEdit,
+                            onDelete: onDelete,
+                          ),
                         ],
                       ),
-
-                      const SizedBox(height: 12),
-                      Container(height: 1, color: const Color(0xFFF1F5F9)),
-                      const SizedBox(height: 12),
-
-                      _TechnicalDataRow(
-                        label: "ID TUGAS",
-                        value: personel.idTugas,
-                        icon: Icons.badge_rounded,
+                      
+                      const SizedBox(height: 20),
+                      
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _InfoItem(
+                                    icon: Icons.work_outline,
+                                    label: "JABATAN",
+                                    value: jabatanName,
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                                Expanded(
+                                  child: _InfoItem(
+                                    icon: Icons.badge_outlined,
+                                    label: "ID TUGAS",
+                                    value: personel.idTugas,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (hasPhone) ...[
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                              ),
+                              _InfoItem(
+                                icon: Icons.phone_outlined,
+                                label: "NOMOR TELEPON",
+                                value: displayPhone,
+                                isPhone: true,
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-
-                      const SizedBox(height: 6),
-
-                      _TechnicalDataRow(
-                        label: "TEL",
-                        value: displayPhone, // Gunakan variabel safe phone
-                        icon: Icons.phone_iphone_rounded,
-                        isPlaceholder: !hasPhone,
-                      ),
-
-                      // _TechnicalDataRow(
-                      //   label: "NRP",
-                      //   value: personel.nrp ?? "-",
-                      //   icon: Icons.fiber_manual_record_outlined,
-                      // ),
-
-                      const SizedBox(height: 14),
-
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _RoleBadge(role: personel.role),
+                      
+                      const SizedBox(height: 16),
+                      
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _RoleBadge(role: personel.role),
+                          if (hasPhone)
+                            Text(
+                              "Ketuk untuk menghubungi",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                        ],
                       ),
                     ],
+                  ),
+                ),
+              ),
+              
+              // ACTION BAR - DIRECT BUTTONS
+              if (hasPhone)
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    border: Border(
+                      top: BorderSide(color: const Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _ActionButton(
+                        icon: Icons.phone,
+                        label: "Telepon",
+                        color: Colors.blue[600]!,
+                        onTap: () => _launchPhoneCall(context, sanitizedPhone),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 50,
+                        color: const Color(0xFFE2E8F0),
+                      ),
+                      _ActionButton(
+                        icon: Icons.message_outlined,
+                        label: "SMS",
+                        color: Colors.orange[600]!,
+                        onTap: () => _launchSMS(context, sanitizedPhone),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 50,
+                        color: const Color(0xFFE2E8F0),
+                      ),
+                      _ActionButton(
+                        icon: Icons.chat,
+                        label: "WhatsApp",
+                        color: const Color(0xFF25D366),
+                        onTap: () => _launchWhatsApp(context, sanitizedPhone),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final String initial = personel.namaLengkap.isNotEmpty
+        ? personel.namaLengkap[0].toUpperCase()
+        : '?';
+
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: personel.fotoProfil != null && personel.fotoProfil!.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                personel.fotoProfil!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _buildInitials(initial),
+              ),
+            )
+          : _buildInitials(initial),
+    );
+  }
+
+  Widget _buildInitials(String initial) {
+    return Center(
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+// ===============================
+// CONTACT BOTTOM SHEET
+// ===============================
+class _ContactBottomSheet extends StatelessWidget {
+  final String name;
+  final String phone;
+  final VoidCallback onCall;
+  final VoidCallback onSms;
+  final VoidCallback onWhatsApp;
+  final VoidCallback onCopy;
+
+  const _ContactBottomSheet({
+    required this.name,
+    required this.phone,
+    required this.onCall,
+    required this.onSms,
+    required this.onWhatsApp,
+    required this.onCopy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue[400]!, Colors.blue[700]!],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          
+          const SizedBox(height: 4),
+          
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                phone,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onCopy,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.copy,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 32),
+          
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _BigActionButton(
+                    icon: Icons.phone,
+                    label: "Telepon",
+                    color: Colors.blue[600]!,
+                    onTap: onCall,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _BigActionButton(
+                    icon: Icons.message_outlined,
+                    label: "SMS",
+                    color: Colors.orange[600]!,
+                    onTap: onSms,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _BigActionButton(
+                    icon: Icons.chat_bubble,
+                    label: "WA",
+                    color: const Color(0xFF25D366),
+                    onTap: onWhatsApp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+// ===============================
+// WIDGETS
+// ===============================
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: color,
                   ),
                 ),
               ],
@@ -144,103 +632,104 @@ class PersonelCard extends StatelessWidget {
   }
 }
 
-// --- SUB WIDGETS ---
+class _BigActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
-class _RoleBadge extends StatelessWidget {
-  final String role;
-
-  const _RoleBadge({required this.role});
+  const _BigActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    Color bgColor;
-    Color textColor;
-    Color borderColor;
-    String label;
-
-    switch (role) {
-      case '1':
-        bgColor = const Color(0xFFFEF2F2);
-        textColor = const Color(0xFFB91C1C);
-        borderColor = const Color(0xFFFECACA);
-        label = "ADMINISTRATOR";
-        break;
-      case '2':
-        bgColor = const Color(0xFFFFF7ED);
-        textColor = const Color(0xFFC2410C);
-        borderColor = const Color(0xFFFED7AA);
-        label = "OPERATOR";
-        break;
-      case '3':
-        bgColor = const Color(0xFFF3E8FF);
-        textColor = const Color(0xFF7E22CE);
-        borderColor = const Color(0xFFE9D5FF);
-        label = "VIEW ONLY";
-        break;
-      default:
-        bgColor = const Color(0xFFF1F5F9);
-        textColor = const Color(0xFF475569);
-        borderColor = const Color(0xFFE2E8F0);
-        label = "UNKNOWN";
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// --- WIDGET HELPER LAINNYA TIDAK BERUBAH ---
-// (Copy paste _TechnicalDataRow, _AvatarSection, _ActionMenu dari kode sebelumnya)
-
-class _TechnicalDataRow extends StatelessWidget {
+class _InfoItem extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
-  final IconData icon;
-  final bool isPlaceholder;
+  final bool isPhone;
 
-  const _TechnicalDataRow({
+  const _InfoItem({
+    required this.icon,
     required this.label,
     required this.value,
-    required this.icon,
-    this.isPlaceholder = false,
+    this.isPhone = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: const Color(0xFF94A3B8)),
-        const SizedBox(width: 8),
-        Container(width: 1, height: 12, color: const Color(0xFFE2E8F0)),
-        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isPhone ? const Color(0xFFDBEAFE) : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: isPhone ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontFamily: 'Ramabadra',
-              fontWeight: FontWeight.w600,
-              color:
-                  isPlaceholder
-                      ? const Color(0xFFCBD5E1)
-                      : const Color(0xFF334155),
-              letterSpacing: -0.2,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[500],
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isPhone ? const Color(0xFF2563EB) : const Color(0xFF334155),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ],
@@ -248,45 +737,63 @@ class _TechnicalDataRow extends StatelessWidget {
   }
 }
 
-class _AvatarSection extends StatelessWidget {
-  final String name;
-  final String? photoUrl;
-
-  const _AvatarSection({required this.name, this.photoUrl});
+class _RoleBadge extends StatelessWidget {
+  final UserRole role;
+  const _RoleBadge({required this.role});
 
   @override
   Widget build(BuildContext context) {
-    final String initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final bool hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
+    Color color;
+    String label;
+    
+    switch (role) {
+      case UserRole.admin:
+        color = const Color(0xFFEF4444);
+        label = "ADMIN";
+        break;
+      case UserRole.operator:
+        color = const Color(0xFFF59E0B);
+        label = "OPERATOR";
+        break;
+      case UserRole.view:
+        color = const Color(0xFF6366F1);
+        label = "VIEWER";
+        break;
+      default:
+        color = Colors.grey;
+        label = "UNKNOWN";
+    }
 
     return Container(
-      width: 56,
-      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-        image:
-            hasPhoto
-                ? DecorationImage(
-                  image: NetworkImage(photoUrl!),
-                  fit: BoxFit.cover,
-                )
-                : null,
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child:
-          hasPhoto
-              ? null
-              : Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -295,63 +802,62 @@ class _ActionMenu extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  const _ActionMenu({this.onEdit, this.onDelete});
+  const _ActionMenu({
+    this.onEdit,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: PopupMenuButton<String>(
-        padding: EdgeInsets.zero,
-        icon: const Icon(Icons.more_horiz, color: Color(0xFF94A3B8)),
-        elevation: 4,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        onSelected: (value) {
-          if (value == 'edit' && onEdit != null) onEdit!();
-          if (value == 'delete' && onDelete != null) onDelete!();
-        },
-        itemBuilder:
-            (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                height: 40,
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_note, color: Colors.black87, size: 18),
-                    SizedBox(width: 12),
-                    Text(
-                      "Edit Data",
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(
+          Icons.more_horiz,
+          color: Color(0xFF64748B),
+          size: 20,
+        ),
+      ),
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      onSelected: (v) => v == 'edit' ? onEdit?.call() : onDelete?.call(),
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 20, color: Colors.blue[600]),
+              const SizedBox(width: 12),
+              const Text(
+                "Ubah Data",
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              const PopupMenuDivider(height: 1),
-              const PopupMenuItem(
-                value: 'delete',
-                height: 40,
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_forever, color: Colors.red, size: 18),
-                    SizedBox(width: 12),
-                    Text(
-                      "Hapus",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              const SizedBox(width: 12),
+              const Text(
+                "Hapus",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

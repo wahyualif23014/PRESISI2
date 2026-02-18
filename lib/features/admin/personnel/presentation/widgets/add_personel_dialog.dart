@@ -1,9 +1,8 @@
-import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
-import 'package:KETAHANANPANGAN/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-// Import Provider & Model yang benar
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
+import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
+import 'package:KETAHANANPANGAN/auth/models/unit_model.dart'; // Import JabatanModel
 import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
 
 class AddPersonelDialog extends StatefulWidget {
@@ -15,295 +14,304 @@ class AddPersonelDialog extends StatefulWidget {
 
 class _AddPersonelDialogState extends State<AddPersonelDialog> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Controllers
   final _nameController = TextEditingController();
-  final _idTugasController = TextEditingController(); // Ganti NRP -> ID Tugas
-  final _jabatanController = TextEditingController();
+  final _nrpController = TextEditingController();
+  final _idTugasController = TextEditingController();
+  final _jabatanIdController = TextEditingController();
   final _telpController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _usernameController = TextEditingController(); // Tambahan Username (Wajib buat login)
-
-  // State Dropdown (Default '3' = View Only)
-  String _selectedRole = '3'; 
+  
+  UserRole _selectedRole = UserRole.view;
+  bool _isObscure = true;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _nrpController.dispose();
     _idTugasController.dispose();
-    _jabatanController.dispose();
+    _jabatanIdController.dispose();
     _telpController.dispose();
     _passwordController.dispose();
-    _usernameController.dispose();
     super.dispose();
-  }
-
-  void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      // Tutup dialog dulu agar UX lebih cepat
-      Navigator.pop(context);
-
-      try {
-        // Buat Object UserModel Baru
-        // ID dikosongkan (0) karena auto-increment di DB
-        final newUser = UserModel(
-          id: 0, 
-          namaLengkap: _nameController.text,
-          idTugas: _idTugasController.text,
-          username: _usernameController.text,
-          idJabatan: 0, 
-          role: _selectedRole, // Kirim '1', '2', atau '3'
-          noTelp: _telpController.text.isNotEmpty ? _telpController.text : "-",
-          fotoProfil: "", // Kosongkan dulu
-        );
-
-        // Panggil Provider untuk Add Data
-        await context.read<PersonelProvider>().addPersonel(newUser, _passwordController.text);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Berhasil menambah personel"),
-              backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Gagal: $e"),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      actionsPadding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
-      title: const Row(
-        children: [
-          Icon(Icons.person_add_alt_1, color: AppColors.greenPrimary, size: 28),
-          SizedBox(width: 12),
-          Text(
-            "Tambah Personel",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.slate800,
-            ),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 400,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildTextField(
-                  controller: _nameController,
-                  label: "Nama Lengkap",
-                  icon: Icons.person_outline,
-                  validator: (v) => v!.isEmpty ? "Nama wajib diisi" : null,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _usernameController,
-                  label: "Username",
-                  icon: Icons.account_circle_outlined,
-                  validator: (v) => v!.isEmpty ? "Username wajib diisi" : null,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _idTugasController,
-                  label: "ID Tugas / NRP",
-                  icon: Icons.badge_outlined,
-                  isNumber: true,
-                  validator: (v) => v!.isEmpty ? "ID Tugas wajib diisi" : null,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _jabatanController,
-                  label: "Jabatan (Teks)",
-                  icon: Icons.work_outline,
-                  validator: (v) => v!.isEmpty ? "Jabatan wajib diisi" : null,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _telpController,
-                  label: "Nomor Telepon",
-                  icon: Icons.phone_android_outlined,
-                  isNumber: true,
-                ),
-                const SizedBox(height: 16),
-                
-                // Dropdown Role String
-                _buildDropdownField(),
-                
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _passwordController,
-                  label: "Password Awal",
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  validator: (v) =>
-                      v!.length < 6 ? "Minimal 6 karakter" : null,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        Row(
+    const primaryColor = Color(0xFF1E293B); // Slate 800
+    const accentColor = Color(0xFF10B981);  // Emerald 500
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: const BorderSide(color: AppColors.slate300),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+            // --- Header Dialog ---
+            Container(
+              padding: const EdgeInsets.all(20),
+              color: primaryColor,
+              child: Row(
+                children: [
+                  const Icon(Icons.person_add_rounded, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Text(
+                    "Registrasi Personel",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-                child: const Text(
-                  "Batal",
-                  style: TextStyle(
-                    color: AppColors.slate600,
-                    fontWeight: FontWeight.w600,
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                  )
+                ],
+              ),
+            ),
+
+            // --- Form Content ---
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle("INFORMASI PERSONAL"),
+                      const SizedBox(height: 12),
+                      _buildField(
+                        controller: _nameController,
+                        label: "Nama Lengkap",
+                        hint: "Masukkan nama sesuai KTP/NRP",
+                        icon: Icons.person_outline_rounded,
+                      ),
+                      _buildField(
+                        controller: _telpController,
+                        label: "Nomor WhatsApp",
+                        hint: "Contoh: 081234567xxx",
+                        icon: Icons.phone_android_rounded,
+                        inputType: TextInputType.phone,
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      _buildSectionTitle("STRUKTUR TUGAS"),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: _nrpController,
+                              label: "NRP / Username",
+                              hint: "Username login",
+                              icon: Icons.badge_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildField(
+                              controller: _idTugasController,
+                              label: "Kode Unit",
+                              hint: "Contoh: 11",
+                              icon: Icons.account_balance_outlined,
+                            ),
+                          ),
+                        ],
+                      ),
+                      _buildField(
+                        controller: _jabatanIdController,
+                        label: "ID Jabatan",
+                        hint: "Gunakan angka ID jabatan",
+                        icon: Icons.work_outline_rounded,
+                        isNumber: true,
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      _buildSectionTitle("AKSES & KEAMANAN"),
+                      const SizedBox(height: 12),
+                      _buildRoleDropdown(primaryColor),
+                      const SizedBox(height: 16),
+                      _buildField(
+                        controller: _passwordController,
+                        label: "Kata Sandi",
+                        hint: "Minimal 6 karakter",
+                        icon: Icons.lock_outline_rounded,
+                        isPassword: true,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.greenPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+
+            // --- Action Buttons ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text("Batal", style: TextStyle(color: Colors.blueGrey)),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  "Simpan",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        "Simpan Personel",
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildTextField({
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Mapping Jabatan dari ID Input
+    final jabatanId = int.tryParse(_jabatanIdController.text) ?? 0;
+    
+    final newUser = UserModel(
+      id: 0,
+      namaLengkap: _nameController.text,
+      nrp: _nrpController.text,
+      noTelp: _telpController.text,
+      idTugas: _idTugasController.text,
+      role: _selectedRole,
+      jabatanDetail: JabatanModel(id: jabatanId, namaJabatan: ""), // Akan diisi lengkap oleh Backend
+    );
+
+    try {
+      await context.read<PersonelProvider>().addPersonel(newUser, _passwordController.text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Personel berhasil didaftarkan"), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // --- Helper Widgets ---
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: Colors.blueGrey.shade400,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  Widget _buildField({
     required TextEditingController controller,
     required String label,
+    required String hint,
     required IconData icon,
-    bool isNumber = false,
     bool isPassword = false,
-    String? Function(String?)? validator,
+    bool isNumber = false,
+    TextInputType? inputType,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      obscureText: isPassword,
-      validator: validator,
-      style: const TextStyle(
-        color: AppColors.slate800,
-        fontWeight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: AppColors.slate500, fontSize: 14),
-        prefixIcon: Icon(icon, color: AppColors.slate400, size: 22),
-        filled: true,
-        fillColor: AppColors.slate50,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.slate200),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword ? _isObscure : false,
+        keyboardType: isNumber ? TextInputType.number : inputType,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+          prefixIcon: Icon(icon, size: 20),
+          suffixIcon: isPassword 
+            ? IconButton(
+                icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility, size: 18),
+                onPressed: () => setState(() => _isObscure = !_isObscure),
+              )
+            : null,
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.slate200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.greenPrimary),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        validator: (v) => v!.isEmpty ? "Wajib diisi" : null,
       ),
     );
   }
 
-  Widget _buildDropdownField() {
-    return DropdownButtonFormField<String>(
-      value: _selectedRole,
-      style: const TextStyle(
-        color: AppColors.slate800,
-        fontWeight: FontWeight.w500,
-        fontFamily: 'Roboto',
+  Widget _buildRoleDropdown(Color primary) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.slate400),
-      decoration: InputDecoration(
-        labelText: "Role Akses",
-        labelStyle: const TextStyle(color: AppColors.slate500, fontSize: 14),
-        prefixIcon: const Icon(Icons.security_outlined,
-            color: AppColors.slate400, size: 22),
-        filled: true,
-        fillColor: AppColors.slate50,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.slate200),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: DropdownButtonFormField<UserRole>(
+        value: _selectedRole,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          labelText: "Hak Akses Aplikasi",
+          prefixIcon: Icon(Icons.admin_panel_settings_outlined, size: 20),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.slate200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.greenPrimary),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        items: UserRole.values.where((e) => e != UserRole.unknown).map((role) {
+          return DropdownMenuItem(
+            value: role, 
+            child: Text(
+              role.label.toUpperCase(), 
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          );
+        }).toList(),
+        onChanged: (val) => setState(() => _selectedRole = val!),
       ),
-      // Item Dropdown Manual sesuai Logic Database ('1','2','3')
-      items: const [
-        DropdownMenuItem(value: '1', child: Text("ADMINISTRATOR")),
-        DropdownMenuItem(value: '2', child: Text("OPERATOR")),
-        DropdownMenuItem(value: '3', child: Text("VIEW ONLY")),
-      ],
-      onChanged: (val) {
-        if (val != null) {
-          setState(() => _selectedRole = val);
-        }
-      },
     );
   }
 }

@@ -1,26 +1,23 @@
-import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:flutter/material.dart';
+// Import Master Model tunggal dari folder Auth agar konsisten di seluruh aplikasi
+import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import '../data/services/personel_services.dart';
 
 class PersonelProvider with ChangeNotifier {
   final PersonelService _service = PersonelService();
 
-  // State Variables
-  List<UserModel> _personelList = []; // List Utama (Hasil Filter)
-  List<UserModel> _fullList = [];     // List Cadangan (Master Data)
-  int _currentLimit = 10;
-  
+  // --- STATE VARIABLES ---
+  List<UserModel> _personelList = []; // List yang aktif ditampilkan di UI
+  List<UserModel> _fullList = [];     // Backup data asli (Cache) untuk keperluan filtering
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getters
+  // --- GETTERS ---
   List<UserModel> get personelList => _personelList;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  int get currentLimit => _currentLimit;
-  List<UserModel> get personelListWithLimit => _personelList.take(_currentLimit).toList();
 
-  // --- FETCH DATA ---
+  // --- 1. FETCH DATA (Ambil Semua Data) ---
   Future<void> fetchPersonel() async {
     _isLoading = true;
     _errorMessage = null;
@@ -28,79 +25,93 @@ class PersonelProvider with ChangeNotifier {
 
     try {
       final data = await _service.getAllPersonel();
-      _fullList = data;     // Simpan ke master
-      _personelList = data; // Tampilkan semua di awal
+      _fullList = data;
+      _personelList = List.from(data); // Inisialisasi list tampilan
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = "Gagal mengambil data: $e";
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // fungsi update limit 
-  void updateLimit(int newLimit){
-    if (_currentLimit != newLimit){
-      _currentLimit = newLimit;
-      notifyListeners();
-    }
-  }
-
-  // --- SEARCH (Client Side) ---
-  void search(String keyword) {
+  // --- 2. SEARCH / FILTER LOGIC (Pencarian Mendalam) ---
+  void filterPersonel(String keyword) {
     if (keyword.isEmpty) {
-      _personelList = _fullList; // Reset ke list penuh
+      // Jika input kosong, kembalikan ke data asli dari cache
+      _personelList = List.from(_fullList);
     } else {
       final query = keyword.toLowerCase();
       _personelList = _fullList.where((user) {
-        return user.namaLengkap.toLowerCase().contains(query) ||
-               user.idTugas.toLowerCase().contains(query) || // Cari by ID Tugas
-               user.username.toLowerCase().contains(query);
+        // Logic: Mencari kecocokan di Nama, NRP, Nama Jabatan, dan Nama Unit/Lokasi
+        final matchesName = user.namaLengkap.toLowerCase().contains(query);
+        final matchesNrp = user.nrp.toLowerCase().contains(query);
+        final matchesJabatan = user.jabatanDetail?.namaJabatan.toLowerCase().contains(query) ?? false;
+        final matchesUnit = user.tingkatDetail?.nama.toLowerCase().contains(query) ?? false;
+
+        return matchesName || matchesNrp || matchesJabatan || matchesUnit;
       }).toList();
     }
     notifyListeners();
   }
-  // --- CRUD ACTIONS ---
 
+  // --- 3. ADD PERSONEL (Tambah Data Baru) ---
   Future<void> addPersonel(UserModel user, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
       await _service.addPersonel(user, password);
-      await fetchPersonel(); // Refresh list otomatis
+      // Refresh data dari server agar mendapatkan ID terbaru dan relasi lengkap
+      await fetchPersonel(); 
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = "Gagal menambah personel: $e";
+      rethrow;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      rethrow; // Lempar error ke UI utk SnackBar
     }
   }
 
-  Future<void> updatePersonel(UserModel user) async {
+  // --- 4. UPDATE PERSONEL (Optimistic UI Update) ---
+  Future<void> updatePersonel(UserModel updatedUser) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await _service.updatePersonel(user);
-      await fetchPersonel();
+      // Hit API Update
+      await _service.updatePersonel(updatedUser);
+
+      // Sinkronisasi Cache Lokal: Cari index user yang di-update
+      final index = _fullList.indexWhere((u) => u.id == updatedUser.id);
+      if (index != -1) {
+        // Perbarui data di cache memori
+        _fullList[index] = updatedUser;
+
+        // Perbarui tampilan (Hanya jika sedang tidak melakukan filter)
+        _personelList = List.from(_fullList);
+      }
+      _errorMessage = null;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = "Gagal memperbarui data: $e";
+      rethrow;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      rethrow;
     }
   }
 
+  // --- 5. DELETE PERSONEL (Hapus Data) ---
   Future<void> deletePersonel(int id) async {
-    _isLoading = true;
-    notifyListeners();
     try {
       await _service.deletePersonel(id);
-      await fetchPersonel();
-    } catch (e) {
-      _errorMessage = e.toString();
-      _isLoading = false;
+      
+      // Hapus dari cache lokal secara instan agar UI terasa cepat
+      _fullList.removeWhere((u) => u.id == id);
+      _personelList.removeWhere((u) => u.id == id);
+      
       notifyListeners();
+    } catch (e) {
+      _errorMessage = "Gagal menghapus: $e";
       rethrow;
     }
   }
-} 
+}

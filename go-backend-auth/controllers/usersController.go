@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wahyualif23014/backendGO/initializers"
@@ -9,180 +10,132 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// --- STRUCTS (DTO) ---
-
 type CreateUserInput struct {
 	NamaLengkap string `json:"nama_lengkap" binding:"required"`
 	IDTugas     string `json:"id_tugas" binding:"required"`
 	Username    string `json:"username" binding:"required"`
 	JabatanID   uint64 `json:"id_jabatan" binding:"required"`
 	Password    string `json:"password" binding:"required"`
-	Role        string `json:"role" binding:"required"` // '1', '2', '3'
-	NoTelp      string `json:"no_telp" binding:"required"`
+	Role        string `json:"role" binding:"required"`
+	NoTelp      string `json:"no_telp"`
 }
 
 type UpdateUserInput struct {
-	NamaLengkap string  `json:"nama_lengkap" binding:"omitempty"`
-	JabatanID   *uint64 `json:"id_jabatan" binding:"omitempty"`
-	Role        string  `json:"role" binding:"omitempty"`
-	NoTelp      string  `json:"no_telp" binding:"omitempty"`
+	NamaLengkap string  `json:"nama_lengkap"`
+	NoTelp      string  `json:"no_telp"`
+	IDTugas     string  `json:"id_tugas"`
+	IDJabatan   *uint64 `json:"id_jabatan"`
+	Role        string  `json:"role"`
 }
 
-// --- HANDLERS ---
-
-// 1. CreateUser (Admin Only)
 func CreateUser(c *gin.Context) {
-	var body CreateUserInput
-
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data salah: " + err.Error()})
+	var input CreateUserInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Hash Password
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hash password"})
-		return
-	}
+	hash, _ := bcrypt.GenerateFromPassword([]byte(input.Password), 10)
+
+	userValue, _ := c.Get("user")
+	adminUser := userValue.(models.User)
 
 	user := models.User{
-		NamaLengkap:  body.NamaLengkap,
-		IDTugas:      body.IDTugas,
-		Username:     body.Username,
-		JabatanID:    &body.JabatanID,
-		KataSandi:    string(hash),
-		Role:         body.Role,
-		NoTelp:       body.NoTelp,
-		DeleteStatus: models.StatusActive, // Default '2'
-		IDPengguna:   1,                   // Default Admin ID (sementara hardcode)
+		NamaLengkap:     input.NamaLengkap,
+		Username:        input.Username,
+		KataSandi:       string(hash),
+		IDTugas:         input.IDTugas,
+		IDJabatan:       &input.JabatanID,
+		Role:            input.Role,
+		NoTelp:          input.NoTelp,
+		IDPengguna:      adminUser.ID,
+		DeleteStatus:    models.StatusActive,
+		DateTransaction: time.Now(),
 	}
 
-	result := initializers.DB.Create(&user)
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal simpan. ID Tugas/Username mungkin duplikat."})
+	if err := initializers.DB.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database Error: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User berhasil ditambahkan",
-		"data":    user,
-	})
+	c.JSON(http.StatusCreated, gin.H{"message": "User berhasil didaftarkan", "data": user})
 }
 
-// 2. GetUsers (Read All Active Users)
 func GetUsers(c *gin.Context) {
 	var users []models.User
 
-	// Preload("Jabatan") -> Join tabel Jabatan otomatis
-	result := initializers.DB.
+	// Implementasi Preload untuk mengambil detail Jabatan & Tingkat
+	err := initializers.DB.
 		Preload("Jabatan").
-		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
+		Preload("TingkatDetail"). 
 		Where("deletestatus = ?", models.StatusActive).
-		Find(&users)
+		Find(&users).Error
 
-	if result.Error != nil {
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
 		return
 	}
 
-	// Mapping result agar JSON response rapi & menyertakan detail jabatan
-	var responseData []gin.H
-	for _, u := range users {
-		responseData = append(responseData, gin.H{
-			"id":             u.ID,          // idanggota
-			"nama_lengkap":   u.NamaLengkap, // nama
-			"id_tugas":       u.IDTugas,     // idtugas
-			"username":       u.Username,    // username
-			"role":           u.Role,        // statusadmin
-			"no_telp":        u.NoTelp,      // hp
-			"id_jabatan":     u.JabatanID,   // idjabatan (FK)
-			"jabatan_detail": u.Jabatan,     // Object Jabatan (Relasi)
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": responseData})
+	c.JSON(http.StatusOK, gin.H{"data": users})
 }
 
-// 3. GetUserByID (Read Single User)
 func GetUserByID(c *gin.Context) {
 	id := c.Param("id")
 	var user models.User
 
-	result := initializers.DB.
+	err := initializers.DB.
 		Preload("Jabatan").
-		Select("idanggota", "nama", "idtugas", "username", "statusadmin", "idjabatan", "hp").
+		Preload("TingkatDetail").
 		Where("idanggota = ? AND deletestatus = ?", id, models.StatusActive).
-		First(&user)
+		First(&user).Error
 
-	if result.Error != nil {
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": gin.H{
-			"id":             user.ID,
-			"nama_lengkap":   user.NamaLengkap,
-			"id_tugas":       user.IDTugas,
-			"username":       user.Username,
-			"role":           user.Role,
-			"no_telp":        user.NoTelp,
-			"id_jabatan":     user.JabatanID,
-			"jabatan_detail": user.Jabatan, // Object Jabatan
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"data": user})
 }
 
-// 4. UpdateUser
 func UpdateUser(c *gin.Context) {
 	id := c.Param("id")
-	var user models.User
+	var input UpdateUserInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	// Cek user exist
+	var user models.User
 	if err := initializers.DB.Where("idanggota = ?", id).First(&user).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
 		return
 	}
 
-	var body UpdateUserInput
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data salah"})
-		return
-	}
-
-	// Update Map (Hanya field yang dikirim yang diupdate)
 	updates := make(map[string]interface{})
-	if body.NamaLengkap != "" {
-		updates["nama"] = body.NamaLengkap
-	}
-	if body.JabatanID != nil {
-		updates["idjabatan"] = *body.JabatanID
-	}
-	if body.NoTelp != "" {
-		updates["hp"] = body.NoTelp
-	}
-	if body.Role != "" {
-		updates["statusadmin"] = body.Role
-	}
+	if input.NamaLengkap != "" { updates["nama"] = input.NamaLengkap }
+	if input.NoTelp != ""      { updates["hp"] = input.NoTelp }
+	if input.IDTugas != ""      { updates["idtugas"] = input.IDTugas }
+	if input.IDJabatan != nil   { updates["idjabatan"] = *input.IDJabatan }
+	if input.Role != ""         { updates["statusadmin"] = input.Role }
 
 	initializers.DB.Model(&user).Updates(updates)
-	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate"})
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "data": user})
 }
 
-// 5. DeleteUser (Soft Delete)
 func DeleteUser(c *gin.Context) {
 	id := c.Param("id")
-
-	// Set deletestatus = '1'
 	result := initializers.DB.Model(&models.User{}).
 		Where("idanggota = ?", id).
 		Update("deletestatus", models.StatusDeleted)
 
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus data"})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User berhasil dihapus (Soft Delete)"})
+func GetProfile(c *gin.Context) {
+	user, _ := c.Get("user")
+	c.JSON(http.StatusOK, gin.H{"data": user})
 }

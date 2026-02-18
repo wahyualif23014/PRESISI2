@@ -41,78 +41,73 @@ func main() {
 		c.JSON(200, gin.H{"message": "SIKAP PRESISI Backend v2.0 Online"})
 	})
 
-	r.POST("/signup", controllers.Signup)
+	// --- PUBLIC ACCESS ---
+	// Sesuai IAM: Tidak ada Signup publik. User didaftarkan oleh Admin.
 	r.POST("/login", controllers.Login)
-	r.GET("/jabatan", controllers.GetJabatan)
 
+	// --- PROTECTED API AREA ---
 	api := r.Group("/api")
 	api.Use(middleware.RequireAuth)
 	{
-		// A. ADMIN ONLY RESOURCE (/api/admin)
+		// A. ADMIN ONLY RESOURCE (Role 1)
+		// Fokus: User Management & Master Data
 		admin := api.Group("/admin")
 		admin.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
-			// Personel Management
+			// Personel Management (IAM: Admin mendaftarkan user)
 			admin.POST("/users", controllers.CreateUser)
 			admin.GET("/users", controllers.GetUsers)
 			admin.GET("/users/:id", controllers.GetUserByID)
 			admin.PUT("/users/:id", controllers.UpdateUser)
 			admin.DELETE("/users/:id", controllers.DeleteUser)
 
-			// Master Jabatan CUD
-			admin.GET("/jabatan", controllers.GetJabatan)
+			// Master Jabatan
 			admin.POST("/jabatan", controllers.CreateJabatan)
+			admin.GET("/jabatan", controllers.GetJabatan)
 			admin.PUT("/jabatan/:id", controllers.UpdateJabatan)
 			admin.DELETE("/jabatan/:id", controllers.DeleteJabatan)
 
-			// Data Wilayah & Tingkat
 			admin.GET("/tingkat", controllers.GetTingkat)
-			admin.GET("/wilayah", controllers.GetWilayah)
-			admin.PUT("/wilayah/:id", controllers.UpdateWilayah)
 
-			// --- KOMODITAS MANAGEMENT (ADMIN AREA) ---
+			// Master Wilayah
+			admin.PUT("/wilayah/:id", controllers.UpdateWilayah)
+			admin.GET("/wilayah", controllers.GetWilayah)
+
+			// Master Komoditas
 			admin.GET("/categories", controllers.GetCategories)
+			admin.GET("/commodities", controllers.GetCommodities)
 			admin.POST("/categories", controllers.CreateCommodity)
 			admin.POST("/categories/delete", controllers.DeleteCategory)
-			admin.GET("/commodities", controllers.GetCommodities)
 			admin.POST("/commodity/update", controllers.UpdateCommodity)
 			admin.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
-
-			admin.GET("", controllers.GetPotensiLahan)
-			admin.GET("/filters", controllers.GetFilterOptions)
-			admin.POST("", controllers.CreatePotensiLahan)
-			admin.PUT("/:id", controllers.UpdatePotensiLahan)
-			admin.DELETE("/:id", controllers.DeletePotensiLahan)
-			admin.GET("/summary", controllers.GetSummaryLahan)
-			admin.GET("/no-potential", controllers.GetNoPotentialLahan)
-
-			admin.GET("/recap", func(c *gin.Context) {
-				c.JSON(200, gin.H{"message": "Full Recap Data"})
-			})
 		}
 
-		// B. DATA INPUT & OPERATIONAL (/api/input)
+		// B. OPERATIONAL & INPUT (Role 1 & 2)
+		// Fokus: Transaksi data Lahan & Laporan
 		input := api.Group("/input")
 		input.Use(middleware.RequireRoles(models.RoleAdmin, models.RoleOperator))
 		{
-			input.POST("/laporan", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Input Sukses"}) })
-			input.POST("/lahan", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Input Lahan Sukses"}) })
-			input.GET("", controllers.GetPotensiLahan)
-			input.GET("/filters", controllers.GetFilterOptions)
-			input.POST("", controllers.CreatePotensiLahan)
-			input.PUT("/:id", controllers.UpdatePotensiLahan)
-			input.DELETE("/:id", controllers.DeletePotensiLahan)
-			input.GET("/summary", controllers.GetSummaryLahan)
-			input.GET("/no-potential", controllers.GetNoPotentialLahan)
+			input.POST("/lahan", controllers.CreatePotensiLahan)
+			// input.PUT("/lahan/:id", controllers.UpdatePotensiLahan)
+			// input.DELETE("/lahan/:id", controllers.DeletePotensiLahan)
 		}
 
-		// C. GENERAL VIEW (/api/view)
+		// C. GENERAL VIEW & SHARED RESOURCE (Role 1, 2, 3)
+		// Fokus: Read-only data untuk Dashboard & Mobile View
 		view := api.Group("/view")
 		{
-			view.GET("/dashboard", func(c *gin.Context) {
-				u, _ := c.Get("user")
-				c.JSON(200, gin.H{"user_info": u})
-			})
+			view.GET("/profile", controllers.GetProfile)
+			view.GET("/jabatan", controllers.GetJabatan)
+			view.GET("/tingkat", controllers.GetTingkat)
+			view.GET("/wilayah", controllers.GetWilayah)
+			view.GET("/categories", controllers.GetCategories)
+			view.GET("/commodities", controllers.GetCommodities)
+
+			// Lahan Resource (Read-only for all authenticated)
+			view.GET("/lahan", controllers.GetPotensiLahan)
+			// view.GET("/lahan/filters", controllers.GetFilterOptions)
+			// view.GET("/lahan/summary", controllers.GetSummaryLahan)
+			// view.GET("/lahan/no-potential", controllers.GetNoPotentialLahan)
 		}
 	}
 

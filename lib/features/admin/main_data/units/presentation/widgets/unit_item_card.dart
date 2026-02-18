@@ -39,9 +39,6 @@ class UnitItemCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // --- BAGIAN TEKS UTAMA ---
-              // Menggunakan Expanded agar teks mengisi ruang yang tersedia
-              // dan tidak overflow ke kanan.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
