@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // Buat jaga-jaga
 import '../models/kesatuan_model.dart';
 
 class KesatuanService {
-  final String baseUrl = "http://10.16.2.233:8080/api/admin/tingkat";
+  final String baseUrl = "http://10.16.9.254:8080/api/admin/tingkat";
   Future<List<KesatuanModel>> getKesatuan() async {
     String? token;
 

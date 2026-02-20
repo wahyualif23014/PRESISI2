@@ -1,102 +1,200 @@
-import 'package:KETAHANANPANGAN/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '/router/route_names.dart';
+import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
+import 'package:KETAHANANPANGAN/router/route_names.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
-  const CustomBottomNavBar({super.key});
-
-  static const List<_NavItemModel> _navItems = [
-    _NavItemModel(
-      label: "Rekap",
-      icon: Icons.print_outlined,
-      activeIcon: Icons.print_rounded,
-      route: RouteNames.recap,
-    ),
-    _NavItemModel(
-      label: "Data",
-      icon: Icons.storage_outlined,
-      activeIcon: Icons.storage_rounded,
-      route: RouteNames.data,
-    ),
-    _NavItemModel(
-      label: "Beranda",
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
-      route: RouteNames.dashboard,
-    ),
-    _NavItemModel(
-      label: "Lahan",
-      icon: Icons.spa_outlined,
-      activeIcon: Icons.spa_rounded,
-      route: RouteNames.landManagement,
-    ),
-    _NavItemModel(
-      label: "Personel",
-      icon: Icons.person_outline,
-      activeIcon: Icons.person_rounded,
-      route: RouteNames.personnel,
-    ),
-  ];
-
+  final UserRole role;
+  
   static const double _navHeight = 80.0;
+  
+  const CustomBottomNavBar({super.key, required this.role});
 
-  int _calculateSelectedIndex(String location) {
-    final index = _navItems.indexWhere(
-      (item) => location.startsWith(item.route),
-    );
-    return index != -1 ? index : 2;
+  List<_NavItemModel> _getNavItems(UserRole role) {
+    switch (role) {
+      case UserRole.admin:
+        return [
+          const _NavItemModel(
+            label: "Rekap", 
+            icon: Icons.print_outlined, 
+            activeIcon: Icons.print_rounded, 
+            route: RouteNames.recap
+          ),
+          const _NavItemModel(
+            label: "Data Utama", 
+            icon: Icons.map_outlined, 
+            activeIcon: Icons.map_rounded, 
+            route: RouteNames.data
+          ),
+          const _NavItemModel(
+            label: "Beranda", 
+            icon: Icons.home_outlined, 
+            activeIcon: Icons.home_rounded, 
+            route: RouteNames.dashboard
+          ),
+          const _NavItemModel(
+            label: "Kelola Lahan", 
+            icon: Icons.spa_outlined, 
+            activeIcon: Icons.spa_rounded, 
+            route: RouteNames.landManagement
+          ),
+          const _NavItemModel(
+            label: "Personel", 
+            icon: Icons.people_outline, 
+            activeIcon: Icons.people_rounded, 
+            route: RouteNames.personnel
+          ),
+        ];
+      
+      case UserRole.operator:
+        return [
+          const _NavItemModel(
+            label: "Potensi",
+            icon: Icons.terrain_outlined, 
+            activeIcon: Icons.terrain_rounded, 
+            route: RouteNames.landOverview
+          ),
+          const _NavItemModel(
+            label: "Kelola",
+            icon: Icons.spa_outlined, 
+            activeIcon: Icons.spa_rounded, 
+            route: RouteNames.landPlots
+          ),
+          const _NavItemModel(
+            label: "Beranda",
+            icon: Icons.home_outlined, 
+            activeIcon: Icons.home_rounded, 
+            route: RouteNames.dashboard
+          ),
+          const _NavItemModel(
+            label: "Riwayat",
+            icon: Icons.history_outlined, 
+            activeIcon: Icons.history_rounded, 
+            route: RouteNames.landCrops
+          ),
+          const _NavItemModel(
+            label: "Rekap",
+            icon: Icons.print_outlined, 
+            activeIcon: Icons.print_rounded, 
+            route: RouteNames.recap
+          ),
+        ];
+      
+      case UserRole.view:
+      default:
+        return [
+          const _NavItemModel(
+            label: "Rekap", 
+            icon: Icons.print_outlined, 
+            activeIcon: Icons.print_rounded, 
+            route: RouteNames.recap
+          ),
+          const _NavItemModel(
+            label: "Beranda", 
+            icon: Icons.home_outlined, 
+            activeIcon: Icons.home_rounded, 
+            route: RouteNames.dashboard
+          ),
+          const _NavItemModel(
+            label: "Profil", 
+            icon: Icons.person_outline, 
+            activeIcon: Icons.person_rounded, 
+            route: RouteNames.profile
+          ),
+        ];
+    }
   }
 
-
-  void _onItemTapped(BuildContext context, int index, int currentIndex) {
-    context.go(_navItems[index].route);
+  int _calculateSelectedIndex(String location, List<_NavItemModel> items) {
+    for (int i = 0; i < items.length; i++) {
+      if (location == items[i].route) return i;
+    }
+    
+    if (location.startsWith(RouteNames.landManagement)) {
+      for (int i = 0; i < items.length; i++) {
+        if (items[i].route == RouteNames.landManagement) return i;
+      }
+    }
+    
+    if (location.startsWith('/data/')) {
+      for (int i = 0; i < items.length; i++) {
+        if (items[i].route == RouteNames.data) return i;
+      }
+    }
+    
+    for (int i = 0; i < items.length; i++) {
+      final route = items[i].route;
+      if (location.startsWith(route) && route != '/') {
+        return i;
+      }
+    }
+    
+    return items.length > 3 ? 2 : (items.length ~/ 2);
   }
 
   @override
   Widget build(BuildContext context) {
+    final navItems = _getNavItems(role);
+
     final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-    if (isKeyboardOpen) {
-      return const SizedBox.shrink();
-    }
+    if (isKeyboardOpen) return const SizedBox.shrink();
     
     final size = MediaQuery.of(context).size;
-    final location = GoRouterState.of(context).uri.toString();
-    final currentIndex = _calculateSelectedIndex(location);
-    final itemWidth = size.width / _navItems.length;
-
     
+    String location;
+    try {
+      location = GoRouterState.of(context).uri.toString();
+    } catch (e) {
+      location = RouteNames.dashboard;
+    }
+    
+    final currentIndex = _calculateSelectedIndex(location, navItems);
+    final itemWidth = size.width / navItems.length;
 
-    return SizedBox(
-      height: _navHeight,
-      width: size.width,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          _NavCurveBackground(
-            currentIndex: currentIndex,
-            itemWidth: itemWidth,
-            height: _navHeight,
-          ),
-          Row(
-            children: List.generate(_navItems.length, (index) {
-              return _NavBarItem(
-                data: _navItems[index],
-                isSelected: index == currentIndex,
-                width: itemWidth,
-                onTap: () => _onItemTapped(context, index, currentIndex),
-              );
-            }),
-          ),
-        ],
+    // ✅ OPTIMASI: Gunakan RepaintBoundary untuk mengurangi repaint
+    return RepaintBoundary(
+      child: SizedBox(
+        height: _navHeight,
+        width: size.width,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // ✅ OPTIMASI: CustomPaint dengan cache
+            _NavCurveBackground(
+              currentIndex: currentIndex,
+              itemWidth: itemWidth,
+              height: _navHeight,
+            ),
+            // ✅ OPTIMASI: Row tanpa LayoutBuilder, gunakan SizedBox.expand
+            SizedBox.expand(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: List.generate(navItems.length, (index) {
+                  final isSelected = index == currentIndex;
+                  return Expanded(
+                    child: _NavBarItem(
+                      data: navItems[index],
+                      isSelected: isSelected,
+                      onTap: () {
+                        final route = navItems[index].route;
+                        if (route.isNotEmpty) {
+                          HapticFeedback.lightImpact();
+                          context.go(route);
+                        }
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-
-// -----------------------------------------------------------------------------
-// PRIVATE CLASSES (Model & Widgets)
-// -----------------------------------------------------------------------------
 
 class _NavItemModel {
   final String label;
@@ -115,16 +213,14 @@ class _NavItemModel {
 class _NavBarItem extends StatelessWidget {
   final _NavItemModel data;
   final bool isSelected;
-  final double width;
   final VoidCallback onTap;
 
-  static const Color primaryColor = Color(0xFF7C6FDE);
-  static const Color inactiveColor = Color(0xFF0F172A);
+  static const Color primaryColor = Color(0xFF10B981);
+  static const Color inactiveColor = Color(0xFF64748B);
 
   const _NavBarItem({
     required this.data,
     required this.isSelected,
-    required this.width,
     required this.onTap,
   });
 
@@ -133,68 +229,55 @@ class _NavBarItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: width,
-        height: 90,
-        child: Stack(
-          alignment: Alignment.center,
+      // ✅ OPTIMASI: Container dengan constraint yang jelas
+      child: SizedBox.expand(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              top: isSelected ? 8 : 24,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildIconContainer(),
-                  const SizedBox(height: 6),
-                  _buildLabel(),
-                ],
+            // ✅ OPTIMASI: AnimatedContainer dengan transform yang smooth
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutBack,
+              transform: Matrix4.translationValues(0, isSelected ? -20 : 0, 0),
+              padding: EdgeInsets.all(isSelected ? 14 : 8),
+              decoration: isSelected
+                ? BoxDecoration(
+                    color: primaryColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withOpacity(0.3),
+                        blurRadius: 15.0,
+                        spreadRadius: 0.0,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  )
+                : const BoxDecoration(
+                    color: Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+              child: Icon(
+                isSelected ? data.activeIcon : data.icon,
+                size: isSelected ? 28 : 24,
+                color: isSelected ? Colors.white : inactiveColor,
               ),
             ),
+            const SizedBox(height: 4),
+            // ✅ OPTIMASI: Text tanpa shadow yang bermasalah
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? primaryColor : inactiveColor,
+                letterSpacing: 0.2,
+                // ✅ FIX: Tidak ada shadows property
+              ),
+              child: Text(data.label),
+            ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIconContainer() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.all(isSelected ? 12 : 0),
-      decoration: BoxDecoration(
-        color: isSelected ? primaryColor : Colors.transparent,
-        shape: BoxShape.circle,
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.4),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : [],
-      ),
-      child: Icon(
-        isSelected ? data.activeIcon : data.icon,
-        size: 24,
-        color: isSelected ? Colors.white : inactiveColor,
-      ),
-    );
-  }
-
-  Widget _buildLabel() {
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 200),
-      opacity: 1.0,
-      child: Text(
-        data.label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          color: isSelected ? primaryColor : inactiveColor,
-          letterSpacing: 0.3,
         ),
       ),
     );
@@ -214,17 +297,19 @@ class _NavCurveBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ OPTIMASI: TweenAnimationBuilder dengan proper caching
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: currentIndex.toDouble()),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, _) {
+      key: ValueKey(currentIndex), // ✅ Membantu Flutter mengidentifikasi animasi
+      tween: Tween(end: currentIndex.toDouble()),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
+      builder: (context, value, child) {
         return CustomPaint(
           size: Size(MediaQuery.of(context).size.width, height),
           painter: _NavCurvePainter(
             position: value,
             itemWidth: itemWidth,
-            color: const Color.fromARGB(255, 230, 234, 245),
+            color: Colors.white,
           ),
         );
       },
@@ -250,33 +335,44 @@ class _NavCurvePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final path = Path();
-    final centerX = (position * itemWidth) + (itemWidth / 2);
+    
+    final safePosition = position.isFinite ? position : 0;
+    final centerX = (safePosition * itemWidth) + (itemWidth / 2);
 
-    const curveDepth = 22.0;
-    final curveWidth = itemWidth * 0.75;
+    const curveDepth = 25.0;
+    final curveWidth = itemWidth * 0.8;
     final curveStart = centerX - (curveWidth / 2);
     final curveEnd = centerX + (curveWidth / 2);
 
-    path.moveTo(0, 0);
-    path.lineTo(curveStart - 20, 0);
+    final safeCurveStart = curveStart.isFinite && curveStart >= 0 ? curveStart : 0;
+    final safeCurveEnd = curveEnd.isFinite && curveEnd <= size.width ? curveEnd : size.width;
+    final safeCenterX = centerX.isFinite ? centerX : size.width / 2;
 
+    path.moveTo(0, 0);
+    path.lineTo(safeCurveStart - 15, 0);
     path.cubicTo(
-      curveStart - 5,
+      safeCurveStart - 5,
       0,
-      curveStart + 5,
+      safeCurveStart + 10,
       -curveDepth,
-      centerX,
+      safeCenterX,
       -curveDepth,
     );
-
-    path.cubicTo(curveEnd - 5, -curveDepth, curveEnd + 5, 0, curveEnd + 20, 0);
-
+    path.cubicTo(
+      safeCurveEnd - 10,
+      -curveDepth,
+      safeCurveEnd + 5,
+      0,
+      safeCurveEnd + 15,
+      0,
+    );
     path.lineTo(size.width, 0);
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
 
-    canvas.drawShadow(path, Colors.black.withOpacity(0.15), 8, true);
+    // ✅ OPTIMASI: Shadow dengan nilai yang valid
+    canvas.drawShadow(path, Colors.black.withOpacity(0.1), 10, false);
     canvas.drawPath(path, paint);
   }
 

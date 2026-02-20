@@ -1,37 +1,79 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart'; // Wajib ada untuk ambil token
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminService {
-  final String baseUrl = 'http://10.16.2.233:8080'; 
+  final String baseUrl = 'http://10.16.9.254:8080'; 
 
-  // Fungsi untuk mengambil Data Users (Admin Only)
-  Future<List<dynamic>> getUsers() async {
+  // Helper Private untuk mengambil Header + Token secara konsisten
+  Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token'); 
+    final token = prefs.getString('jwt_token');
+    
+    if (token == null) throw Exception('Sesi berakhir. Silakan login ulang.');
 
-    // Cek apakah token ada
-    if (token == null) {
-      throw Exception('Token tidak ditemukan. Silakan Login ulang.');
-    }
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
 
-
+  // 1. GET: Ambil Semua Data User (Admin Only)
+  Future<List<dynamic>> getUsers() async {
+    final headers = await _getHeaders();
+    // Gunakan /api/admin sesuai rute di main.go
     final response = await http.get(
-      Uri.parse('$baseUrl/admin/users'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token', // <--- KUNCI UTAMA (Jangan lupa spasi setelah Bearer)
-      },
+      Uri.parse('$baseUrl/api/admin/users'), 
+      headers: headers,
     );
 
-    // 3. CEK RESPON
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return json['data']; // Mengembalikan list user
-    } else if (response.statusCode == 401) {
-      throw Exception('Sesi habis (401). Silakan Logout dan Login lagi.');
+      return json['data'];
     } else {
-      throw Exception('Gagal ambil data: ${response.statusCode}');
+      throw Exception('Gagal memuat data user: ${response.statusCode}');
+    }
+  }
+
+  // 2. POST: Daftarkan Personel Baru (IAM)
+  Future<void> createUser(Map<String, dynamic> userData) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/admin/users'),
+      headers: headers,
+      body: jsonEncode(userData),
+    );
+
+    if (response.statusCode != 201) {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Gagal mendaftarkan personel');
+    }
+  }
+
+  // 3. PUT: Update Data Personel
+  Future<void> updateUser(int id, Map<String, dynamic> userData) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/admin/users/$id'),
+      headers: headers,
+      body: jsonEncode(userData),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal memperbarui data personel');
+    }
+  }
+
+  // 4. DELETE: Hapus Personel (Soft Delete di Backend)
+  Future<void> deleteUser(int id) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/admin/users/$id'),
+      headers: headers,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal menghapus personel');
     }
   }
 }

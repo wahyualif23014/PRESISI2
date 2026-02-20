@@ -5,7 +5,7 @@ import '../model/land_potential_model.dart';
 class LandPotentialService {
   // GANTI IP INI SESUAI SERVER KAMU
   // Pastikan tidak pakai localhost jika di Emulator/HP
-  final String baseUrl = "http://10.16.7.4:8080/api/potensi-lahan";
+  final String baseUrl = "http://10.16.9.254:8080/api/potensi-lahan";
 
   // ==========================================
   // 1. GET DATA (READ) + FILTER + PAGINATION

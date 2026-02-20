@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Pakai ini saja biar sinkron
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+
+// Import Master Model dan Enum Role
 import '../models/auth_model.dart';
+import '../models/role_enum.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -12,70 +15,72 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   bool _isLoading = false;
 
+  // --- GETTERS ---
   UserModel? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
 
+  // Pengecekan autentikasi via validitas Token
   bool get isAuthenticated {
     if (_token == null) return false;
-    return !JwtDecoder.isExpired(_token!);
+    try {
+      return !JwtDecoder.isExpired(_token!);
+    } catch (e) {
+      return false;
+    }
   }
 
+  // --- IAM ROLE GETTERS (Untuk kemudahan UI) ---
+  UserRole get userRole => _user?.role ?? UserRole.unknown;
+  bool get isAdmin => userRole == UserRole.admin;
+  bool get isOperator => userRole == UserRole.operator;
+  bool get isViewer => userRole == UserRole.view;
+
+  // --- LOGIN LOGIC ---
   Future<String?> login(String username, String password) async {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _authService.login(username, password);
+    try {
+      final result = await _authService.login(username, password);
 
-    if (result['success']) {
-      final data = result['data'];
+      if (result['success']) {
+        final data = result['data'];
 
-      // 1. Ambil token dari Backend (biasanya key json-nya 'token')
-      _token = data['token'];
-      _user = UserModel.fromJson(data['user']);
+        // Ambil token dan data user dari response backend
+        _token = data['token'];
+        _user = UserModel.fromJson(data['data'] ?? data['user']);
 
-      // 2. SIMPAN KE HP DENGAN NAMA 'jwt_token'
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('jwt_token', _token!); // <--- KUNCI DIRUBAH DISINI
-      await prefs.setString('user_data', jsonEncode(_user!.toJson()));
+        // Simpan ke penyimpanan lokal (SharedPreferences)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token', _token!);
+        await prefs.setString('user_data', jsonEncode(_user!.toJson()));
 
+        _isLoading = false;
+        notifyListeners();
+        return null; // Sukses
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        return result['message'] ?? 'Login gagal, periksa kredensial Anda.';
+      }
+    } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return null;
-    } else {
-      _isLoading = false;
-      notifyListeners();
-      return result['message'];
+      return "Terjadi kesalahan sistem: $e";
     }
   }
 
-  Future<String?> register({
-    required String namaLengkap,
-    required String idTugas,
-    required String username,
-    required int idJabatan,
-    required String password,
-    required String noTelp,
-  }) async {
-    // ... (Kode register sama seperti sebelumnya) ...
-    return null;
-  }
-
+  // --- AUTO LOGIN (Restore Session) ---
   Future<void> tryAutoLogin() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // 3. CEK APAKAH ADA 'jwt_token'
     if (!prefs.containsKey('jwt_token')) return;
 
-    final savedToken = prefs.getString('jwt_token'); // <--- BACA DISINI
+    final savedToken = prefs.getString('jwt_token');
+    if (savedToken == null) return;
 
-    if (savedToken == null) {
-      _token = null;
-      _user = null;
-      notifyListeners();
-      return;
-    }
-
+    // Cek apakah token sudah expired
     if (JwtDecoder.isExpired(savedToken)) {
       await logout();
       return;
@@ -96,11 +101,45 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // --- REGISTER (Didaftarkan oleh Admin) ---
+  Future<String?> register({
+    required String namaLengkap,
+    required String idTugas,
+    required String username,
+    required int idJabatan,
+    required String password,
+    required String noTelp,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final result = await _authService.register(
+      namaLengkap: namaLengkap,
+      idTugas: idTugas,
+      username: username,
+      idJabatan: idJabatan,
+      password: password,
+      noTelp: noTelp,
+    );
+
+    _isLoading = false;
+    notifyListeners();
+
+    if (result['success']) {
+      return null; // Registrasi sukses
+    } else {
+      return result['message'];
+    }
+  }
+
+  // --- LOGOUT LOGIC ---
   Future<void> logout() async {
     _token = null;
     _user = null;
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear(); 
+    
     notifyListeners();
   }
 }

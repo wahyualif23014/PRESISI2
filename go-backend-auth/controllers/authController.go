@@ -25,16 +25,22 @@ func Login(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := initializers.DB.Where("username = ? AND deletestatus = ?", body.Username, models.StatusActive).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NRP or password"})
+	err := initializers.DB.Preload("Jabatan").Preload("TingkatDetail").
+		Where("username = ? AND deletestatus = ?", body.Username, models.StatusActive).
+		First(&user).Error
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "NRP atau Password salah"})
 		return
 	}
 
+	// --- VERIFIKASI PASSWORD ---
 	if err := bcrypt.CompareHashAndPassword([]byte(user.KataSandi), []byte(body.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid NRP or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "NRP atau Password salah"})
 		return
 	}
 
+	// --- GENERATE JWT TOKEN ---
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID,
 		"role": user.Role,
@@ -43,16 +49,12 @@ func Login(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat token"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": tokenString,
-		"user": gin.H{
-			"id":   user.ID,
-			"nama": user.NamaLengkap,
-			"role": user.Role,
-		},
+		"user":  user, 
 	})
 }

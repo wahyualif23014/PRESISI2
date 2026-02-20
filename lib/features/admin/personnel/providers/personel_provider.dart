@@ -1,32 +1,33 @@
+import 'package:KETAHANANPANGAN/auth/services/admin_service.dart';
 import 'package:flutter/material.dart';
-// Import Master Model tunggal dari folder Auth agar konsisten di seluruh aplikasi
 import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
-import '../data/services/personel_services.dart';
+// Pastikan mengarah ke AdminService yang baru
 
 class PersonelProvider with ChangeNotifier {
-  final PersonelService _service = PersonelService();
+  final AdminService _service = AdminService();
 
-  // --- STATE VARIABLES ---
-  List<UserModel> _personelList = []; // List yang aktif ditampilkan di UI
-  List<UserModel> _fullList = [];     // Backup data asli (Cache) untuk keperluan filtering
+  List<UserModel> _personelList = []; 
+  List<UserModel> _fullList = [];     
   bool _isLoading = false;
   String? _errorMessage;
 
-  // --- GETTERS ---
   List<UserModel> get personelList => _personelList;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // --- 1. FETCH DATA (Ambil Semua Data) ---
+  // --- 1. FETCH DATA (Sinkron dengan AdminService.getUsers) ---
   Future<void> fetchPersonel() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final data = await _service.getAllPersonel();
-      _fullList = data;
-      _personelList = List.from(data); // Inisialisasi list tampilan
+      // Mengambil data mentah (List of dynamic) dari service
+      final List<dynamic> rawData = await _service.getUsers();
+      
+      // Mapping ke List<UserModel>
+      _fullList = rawData.map((json) => UserModel.fromJson(json)).toList();
+      _personelList = List.from(_fullList);
     } catch (e) {
       _errorMessage = "Gagal mengambil data: $e";
     } finally {
@@ -35,15 +36,13 @@ class PersonelProvider with ChangeNotifier {
     }
   }
 
-  // --- 2. SEARCH / FILTER LOGIC (Pencarian Mendalam) ---
+  // --- 2. SEARCH / FILTER LOGIC (Tetap karena sudah efisien) ---
   void filterPersonel(String keyword) {
     if (keyword.isEmpty) {
-      // Jika input kosong, kembalikan ke data asli dari cache
       _personelList = List.from(_fullList);
     } else {
       final query = keyword.toLowerCase();
       _personelList = _fullList.where((user) {
-        // Logic: Mencari kecocokan di Nama, NRP, Nama Jabatan, dan Nama Unit/Lokasi
         final matchesName = user.namaLengkap.toLowerCase().contains(query);
         final matchesNrp = user.nrp.toLowerCase().contains(query);
         final matchesJabatan = user.jabatanDetail?.namaJabatan.toLowerCase().contains(query) ?? false;
@@ -55,13 +54,18 @@ class PersonelProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // --- 3. ADD PERSONEL (Tambah Data Baru) ---
+  // --- 3. ADD PERSONEL (Sinkron dengan AdminService.createUser) ---
   Future<void> addPersonel(UserModel user, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await _service.addPersonel(user, password);
-      // Refresh data dari server agar mendapatkan ID terbaru dan relasi lengkap
+      // Gabungkan data user dan password ke dalam satu Map sesuai request backend
+      final Map<String, dynamic> userData = user.toJson();
+      userData['password'] = password; // Tambahkan password ke payload JSON
+
+      await _service.createUser(userData);
+      
+      // Refresh data dari server agar relasi Preload (Jabatan/Tingkat) terisi lengkap
       await fetchPersonel(); 
     } catch (e) {
       _errorMessage = "Gagal menambah personel: $e";
@@ -72,21 +76,18 @@ class PersonelProvider with ChangeNotifier {
     }
   }
 
-  // --- 4. UPDATE PERSONEL (Optimistic UI Update) ---
+  // --- 4. UPDATE PERSONEL (Sinkron dengan AdminService.updateUser) ---
   Future<void> updatePersonel(UserModel updatedUser) async {
     _isLoading = true;
     notifyListeners();
     try {
-      // Hit API Update
-      await _service.updatePersonel(updatedUser);
+      // Hit API Update menggunakan ID dan JSON
+      await _service.updateUser(updatedUser.id, updatedUser.toJson());
 
-      // Sinkronisasi Cache Lokal: Cari index user yang di-update
+      // Update Cache Lokal
       final index = _fullList.indexWhere((u) => u.id == updatedUser.id);
       if (index != -1) {
-        // Perbarui data di cache memori
         _fullList[index] = updatedUser;
-
-        // Perbarui tampilan (Hanya jika sedang tidak melakukan filter)
         _personelList = List.from(_fullList);
       }
       _errorMessage = null;
@@ -99,12 +100,13 @@ class PersonelProvider with ChangeNotifier {
     }
   }
 
-  // --- 5. DELETE PERSONEL (Hapus Data) ---
+  // --- 5. DELETE PERSONEL (Sinkron dengan AdminService.deleteUser) ---
   Future<void> deletePersonel(int id) async {
     try {
-      await _service.deletePersonel(id);
+      // Hit API Delete (Soft Delete di Backend Go)
+      await _service.deleteUser(id);
       
-      // Hapus dari cache lokal secara instan agar UI terasa cepat
+      // Hapus dari cache lokal agar UI instan merespon
       _fullList.removeWhere((u) => u.id == id);
       _personelList.removeWhere((u) => u.id == id);
       

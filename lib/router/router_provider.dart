@@ -1,33 +1,33 @@
-import 'package:KETAHANANPANGAN/presentation/profile/profile_page.dart';
-import 'package:KETAHANANPANGAN/splash/pages/custom_splash_screen.dart';
+import 'package:KETAHANANPANGAN/features/operator/dashboard/presentation/dashboard_page.dart' show OperatorDashboardPage;
+import 'package:KETAHANANPANGAN/features/view/dashboard/presentation/dashboard_page.dart' show ViewerDashboardPage;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'route_names.dart';
 
-// Import Provider & Screens
+// --- AUTH & CORE ---
 import '../../auth/provider/auth_provider.dart';
+import '../../auth/models/role_enum.dart'; 
 import '../../auth/pages/login_screen.dart';
-import '../../auth/pages/register_screen.dart';
 import '../../presentation/main_layout.dart';
+import '../../presentation/profile/profile_page.dart';
+import '../../splash/pages/custom_splash_screen.dart';
 
-// Import Feature Pages
-import '../../features/admin/dashboard/presentation/dashboard_page.dart';
+// --- FEATURE PAGES ---
+import '../../features/admin/dashboard/presentation/dashboard_page.dart' as admin;
 import '../../features/admin/personnel/presentation/personel_page.dart';
 import '../../features/admin/recap/page_recap.dart';
-import '../../features/admin/main_data/main_data_shell_page.dart';
 import '../../features/admin/main_data/units/units.dart';
 import '../../features/admin/main_data/positions/position_page.dart';
 import '../../features/admin/main_data/regions/regions_page.dart';
 import '../../features/admin/main_data/commodities/presentation/pages/comodities_page.dart';
+import '../../features/admin/main_data/main_data_shell_page.dart';
 import '../../features/admin/land_management/land_shell_page.dart';
 import '../../features/admin/land_management/Potensi_lahan/potensi_page.dart';
 import '../../features/admin/land_management/kelola_lahan/Kelola_lahan_page.dart';
 import '../../features/admin/land_management/riwayat_lahan/riwayat_lahan_page.dart';
 
-
 class AppRouter {
   final AuthProvider authProvider;
-
   AppRouter(this.authProvider);
 
   static final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -37,27 +37,38 @@ class AppRouter {
     navigatorKey: _rootNavigatorKey,
     initialLocation: RouteNames.splash,
     refreshListenable: authProvider,
+    debugLogDiagnostics: true,
 
     redirect: (context, state) {
       final isLoggedIn = authProvider.isAuthenticated;
+      final role = authProvider.userRole;
       final location = state.matchedLocation;
 
       if (location == RouteNames.splash) return null;
 
-      final isAuthRoute = location == RouteNames.login || location == RouteNames.register;
-
-      if (isLoggedIn) {
-        if (isAuthRoute) return RouteNames.dashboard;
-        return null;
-      }
+      final isAuthRoute = location == RouteNames.login || 
+                          location == RouteNames.register;
 
       if (!isLoggedIn) {
-        if (!isAuthRoute) return RouteNames.login;
-        return null;
+        return isAuthRoute ? null : RouteNames.login;
+      }
+
+      if (isAuthRoute) {
+        return RouteNames.dashboard;
+      }
+
+      if (!RouteNames.isAllowedForRole(location, role)) {
+        return RouteNames.dashboard;
       }
 
       return null;
     },
+
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Text('Route tidak ditemukan: ${state.uri.path}'),
+      ),
+    ),
 
     routes: [
       // --- SPLASH ---
@@ -67,45 +78,52 @@ class AppRouter {
         builder: (context, state) => const CustomSplashScreen(),
       ),
 
-      // --- AUTH ---
+      // --- LOGIN ---
       GoRoute(
         path: RouteNames.login,
         name: RouteNames.login,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, __) => const LoginScreen(),
       ),
-      GoRoute(
-        path: RouteNames.register,
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, __) => const RegisterScreen(),
-      ),
 
-      // --- MAIN APP (BOTTOM NAVBAR) ---
+      // --- MAIN APP SHELL ---
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
-        builder: (context, state, child) {
-          return MainLayout(child: child);
-        },
+        builder: (context, state, child) => MainLayout(child: child),
         routes: [
-          // Dashboard
+          
+          // DASHBOARD
           GoRoute(
             path: RouteNames.dashboard,
             name: RouteNames.dashboard,
-            pageBuilder: (_, __) => const NoTransitionPage(child: DashboardPage()),
+            pageBuilder: (context, state) {
+              final role = authProvider.userRole;
+              
+              switch (role) {
+                case UserRole.admin:
+                  return NoTransitionPage(child: admin.DashboardPage());
+                case UserRole.operator:
+                  return const NoTransitionPage(child: OperatorDashboardPage());
+                case UserRole.view:
+                  return const NoTransitionPage(child: ViewerDashboardPage());
+                default:
+                  return const NoTransitionPage(child: PageRecap());
+              }
+            },
           ),
-          
-          // Personel
+
+          // PERSONEL (Admin only)
           GoRoute(
             path: RouteNames.personnel,
             name: RouteNames.personnel,
             pageBuilder: (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
-          
-          // Data Utama (Nested)
+
+          // DATA UTAMA (Admin only)
           ShellRoute(
             builder: (context, state, child) => MainDataShellPage(child: child),
             routes: [
-              GoRoute(path: RouteNames.data, pageBuilder: (_, __) => const NoTransitionPage(child: UnitsPage())),
+              GoRoute(path: RouteNames.data, redirect: (_, __) => RouteNames.dataUnits),
               GoRoute(path: RouteNames.dataUnits, pageBuilder: (_, __) => const NoTransitionPage(child: UnitsPage())),
               GoRoute(path: RouteNames.dataPositions, pageBuilder: (_, __) => const NoTransitionPage(child: PositionPage())),
               GoRoute(path: RouteNames.dataRegions, pageBuilder: (_, __) => const NoTransitionPage(child: RegionsPage())),
@@ -113,18 +131,51 @@ class AppRouter {
             ],
           ),
 
-          // Manajemen Lahan (Nested)
+          // ✅ STEP 2.1: LAND MANAGEMENT - ADMIN (Dengan Shell + Popup)
           ShellRoute(
             builder: (context, state, child) => LandShellPage(child: child),
             routes: [
-              GoRoute(path: RouteNames.landManagement, pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage())),
-              GoRoute(path: RouteNames.landOverview, pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage())),
-              GoRoute(path: RouteNames.landPlots, pageBuilder: (_, __) => const NoTransitionPage(child: KelolaLahanPage())),
-              GoRoute(path: RouteNames.landCrops, pageBuilder: (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage())),
+              GoRoute(
+                path: RouteNames.landManagement,
+                redirect: (_, __) => RouteNames.landOverview,
+              ),
+              GoRoute(
+                path: RouteNames.landOverview,
+                name: 'land-overview',
+                pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage()),
+              ),
+              GoRoute(
+                path: RouteNames.landPlots,
+                name: 'land-plots',
+                pageBuilder: (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
+              ),
+              GoRoute(
+                path: RouteNames.landCrops,
+                name: 'land-crops',
+                pageBuilder: (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage()),
+              ),
             ],
           ),
 
-          // Rekap
+          // ✅ STEP 2.2: LAND MANAGEMENT - OPERATOR (Tanpa Shell, Langsung ke Page)
+          // Operator bypass LandShellPage, jadi tidak ada popup
+          GoRoute(
+            path: RouteNames.landOverview,
+            name: 'operator-land-overview',
+            pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage()),
+          ),
+          GoRoute(
+            path: RouteNames.landPlots,
+            name: 'operator-land-plots',
+            pageBuilder: (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
+          ),
+          GoRoute(
+            path: RouteNames.landCrops,
+            name: 'operator-land-crops',
+            pageBuilder: (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage()),
+          ),
+
+          // REKAP
           GoRoute(
             path: RouteNames.recap,
             name: RouteNames.recap,
@@ -133,12 +184,12 @@ class AppRouter {
         ],
       ),
 
-      // --- NEW: PROFILE PAGE (Di luar ShellRoute agar Full Screen) ---
+      // PROFILE
       GoRoute(
         path: RouteNames.profile,
         name: RouteNames.profile,
-        parentNavigatorKey: _rootNavigatorKey, // Menutupi BottomNavbar
-        builder: (_, __) => ProfilePage(),
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, __) => const ProfilePage(),
       ),
     ],
   );

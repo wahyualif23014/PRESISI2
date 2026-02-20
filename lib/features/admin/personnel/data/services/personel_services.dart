@@ -6,7 +6,7 @@ import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 
 class PersonelService {
-  final String baseUrl = 'http://10.16.2.233:8080'; 
+  final String baseUrl = 'http://10.16.9.254:8080'; 
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
