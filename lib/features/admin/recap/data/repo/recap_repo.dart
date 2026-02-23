@@ -1,61 +1,59 @@
-import '../model/recap_model.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import '../model/recap_model.dart'; // Sesuaikan import
 
 class RecapRepo {
-  // Simulasi fetch data dari API
+  // Ganti IP sesuai konfigurasi jaringan
+  final String baseUrl = "http://192.168.100.195:8080/api/rekapitulasi";
+
   Future<List<RecapModel>> getRecapData() async {
-    await Future.delayed(const Duration(seconds: 1));
-    return _dummyData;
+    try {
+      final response = await http.get(Uri.parse(baseUrl));
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        final List<dynamic> data = body['data'];
+        return data
+            .map((json) => RecapModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception("Gagal mengambil data: HTTP ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Kesalahan Koneksi: $e");
+    }
   }
 
-  static final List<RecapModel> _dummyData = [
-    // --- LEVEL 1: POLRES (Header Utama) ---
-    RecapModel(
-      id: '1',
-      namaWilayah: 'POLRES BANGKALAN',
-      potensiLahan: 8, tanamLahan: 0, panenLuas: 0, panenTon: 0, serapan: 0,
-      type: RecapRowType.polres, // <--- Tipe Polres
-    ),
+  Future<String?> downloadExcel() async {
+    try {
+      final dio = Dio();
+      dio.options.connectTimeout = const Duration(seconds: 15);
+      dio.options.receiveTimeout = const Duration(seconds: 15);
 
-    // --- LEVEL 2: POLSEK AROSBAYA ---
-    RecapModel(
-      id: '1-1',
-      namaWilayah: 'POLSEK AROSBAYA',
-      potensiLahan: 8, tanamLahan: 0, panenLuas: 0, panenTon: 0, serapan: 0,
-      type: RecapRowType.polsek, // <--- Tipe Polsek
-    ),
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
 
-    // --- LEVEL 3: DESA DI BAWAH AROSBAYA ---
-    // (Berdasarkan gambar, meski kecamatannya tertulis Konang, strukturnya ada di bawah header Polsek Arosbaya)
-    RecapModel(id: '1-1-a', namaWilayah: 'DESA DURIN BARAT KEC. KONANG', potensiLahan: 8, tanamLahan: 0, panenLuas: 0, panenTon: 0, serapan: 0, type: RecapRowType.desa),
-    RecapModel(id: '1-1-b', namaWilayah: 'DESA BANDUNG KEC. KONANG', potensiLahan: 8, tanamLahan: 0, panenLuas: 0, panenTon: 0, serapan: 0, type: RecapRowType.desa),
-    RecapModel(id: '1-1-c', namaWilayah: 'DESA BATOKABAN KEC. KONANG', potensiLahan: 8, tanamLahan: 0, panenLuas: 0, panenTon: 0, serapan: 0, type: RecapRowType.desa),
-    
-    // --- LEVEL 2: POLSEK GALIS (Contoh Polsek Lain) ---
-    RecapModel(
-      id: '1-2',
-      namaWilayah: 'POLSEK GALIS',
-      potensiLahan: 12, tanamLahan: 2, panenLuas: 0, panenTon: 0, serapan: 0,
-      type: RecapRowType.polsek,
-    ),
-    
-    // --- LEVEL 3: DESA DI BAWAH GALIS ---
-    RecapModel(id: '1-2-a', namaWilayah: 'DESA GALIS TIMUR', potensiLahan: 6, tanamLahan: 1, panenLuas: 0, panenTon: 0, serapan: 0, type: RecapRowType.desa),
-    RecapModel(id: '1-2-b', namaWilayah: 'DESA GALIS BARAT', potensiLahan: 6, tanamLahan: 1, panenLuas: 0, panenTon: 0, serapan: 0, type: RecapRowType.desa),
+      final String fileName =
+          "Rekap_Presisi_${DateTime.now().millisecondsSinceEpoch}.xlsx";
+      final String savePath = "${directory!.path}/$fileName";
 
+      final response = await dio.download("$baseUrl/export", savePath);
 
-    // --- CONTOH LAIN: POLRES SAMPANG ---
-    RecapModel(
-      id: '2',
-      namaWilayah: 'POLRES SAMPANG',
-      potensiLahan: 20, tanamLahan: 5, panenLuas: 1, panenTon: 5, serapan: 1,
-      type: RecapRowType.polres,
-    ),
-    RecapModel(
-      id: '2-1',
-      namaWilayah: 'POLSEK BANYUATES',
-      potensiLahan: 10, tanamLahan: 2, panenLuas: 0, panenTon: 0, serapan: 0,
-      type: RecapRowType.polsek,
-    ),
-    RecapModel(id: '2-1-a', namaWilayah: 'DESA BANYUATES A', potensiLahan: 10, tanamLahan: 2, panenLuas: 0, panenTon: 0, serapan: 0, type: RecapRowType.desa),
-  ];
+      if (response.statusCode == 200) {
+        return savePath;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

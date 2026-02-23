@@ -1,10 +1,9 @@
-// MODEL 1: Untuk Statistik Header (Kotak-kotak atas)
 class LandManagementSummaryModel {
-  final double totalPotensiLahan; // 6,124.35
-  final double totalTanamLahan;   // 620.45
-  final double totalPanenLahanHa; // 3.20
-  final double totalPanenLahanTon;// 16.00
-  final double totalSerapanTon;   // 0.00
+  final double totalPotensiLahan;
+  final double totalTanamLahan;
+  final double totalPanenLahanHa;
+  final double totalPanenLahanTon;
+  final double totalSerapanTon;
 
   LandManagementSummaryModel({
     required this.totalPotensiLahan,
@@ -14,32 +13,36 @@ class LandManagementSummaryModel {
     required this.totalSerapanTon,
   });
 
-  // Persiapan untuk API (JSON Parsing)
   factory LandManagementSummaryModel.fromJson(Map<String, dynamic> json) {
     return LandManagementSummaryModel(
-      totalPotensiLahan: (json['total_potensi'] as num).toDouble(),
-      totalTanamLahan: (json['total_tanam'] as num).toDouble(),
-      totalPanenLahanHa: (json['total_panen_ha'] as num).toDouble(),
-      totalPanenLahanTon: (json['total_panen_ton'] as num).toDouble(),
-      totalSerapanTon: (json['total_serapan'] as num).toDouble(),
+      totalPotensiLahan: (json['total_potensi'] as num?)?.toDouble() ?? 0.0,
+      totalTanamLahan: (json['total_tanam'] as num?)?.toDouble() ?? 0.0,
+      totalPanenLahanHa: (json['total_panen_ha'] as num?)?.toDouble() ?? 0.0,
+      totalPanenLahanTon: (json['total_panen_ton'] as num?)?.toDouble() ?? 0.0,
+      totalSerapanTon: (json['total_serapan'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
 
-// MODEL 2: Untuk Item List (Baris Data)
 class LandManagementItemModel {
   final String id;
-  final String regionGroup; 
-  final String subRegionGroup; 
-  
-  // Data Kolom
+  final String regionGroup;
+  final String subRegionGroup;
   final String policeName;
   final String policePhone;
-  final String picName; // Penanggung Jawab
+  final String picName;
   final String picPhone;
-  final double landArea; // Luas (HA)
-  final String status;   // Contoh: "PROSES PANEN", "PROSES TANAM"
-  final String statusColor; // Hex color code dari API (opsional) atau enum
+  final double landArea;
+
+  final double luasTanam;
+  final String estPanen;
+  final double luasPanen;
+  final double hasilPanen;
+  final double serapan;
+
+  final String status;
+  final String statusColor;
+  final String kategoriLahan;
 
   LandManagementItemModel({
     required this.id,
@@ -50,22 +53,37 @@ class LandManagementItemModel {
     required this.picName,
     required this.picPhone,
     required this.landArea,
+    required this.luasTanam,
+    required this.estPanen,
+    required this.luasPanen,
+    required this.hasilPanen,
+    required this.serapan,
     required this.status,
-    this.statusColor = '#FF9800', // Default Orange
+    required this.statusColor,
+    this.kategoriLahan = '-',
   });
 
   factory LandManagementItemModel.fromJson(Map<String, dynamic> json) {
     return LandManagementItemModel(
-      id: json['id'] ?? '',
-      regionGroup: json['region_group'] ?? '',
-      subRegionGroup: json['sub_region_group'] ?? '',
-      policeName: json['police_name'] ?? '',
-      policePhone: json['police_phone'] ?? '',
-      picName: json['pic_name'] ?? '',
-      picPhone: json['pic_phone'] ?? '',
-      landArea: (json['land_area'] as num).toDouble(),
-      status: json['status'] ?? 'PROSES PANEN',
+      id: json['id']?.toString() ?? '',
+      regionGroup: json['region_group'] ?? '-',
+      subRegionGroup: json['sub_region_group'] ?? '-',
+      policeName: json['police_name'] ?? '-',
+      policePhone: json['police_phone'] ?? '-',
+      picName: json['pic_name'] ?? '-',
+      picPhone: json['pic_phone'] ?? '-',
+
+      landArea: (json['land_area'] as num?)?.toDouble() ?? 0.0,
+
+      luasTanam: (json['luas_tanam'] as num?)?.toDouble() ?? 0.0,
+      estPanen: json['est_panen'] ?? '-',
+      luasPanen: (json['luas_panen'] as num?)?.toDouble() ?? 0.0,
+      hasilPanen: (json['berat_panen'] as num?)?.toDouble() ?? 0.0,
+      serapan: (json['serapan'] as num?)?.toDouble() ?? 0.0,
+
+      status: json['status'] ?? 'BELUM TANAM',
       statusColor: json['status_color'] ?? '#FF9800',
+      kategoriLahan: json['kategori_lahan'] ?? '-',
     );
   }
 }

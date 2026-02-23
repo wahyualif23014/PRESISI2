@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/repos/kelola_repo.dart';
 
 class FilterLahanDialog extends StatefulWidget {
-  final Function(String keyword, List<String> selectedFilters) onApply;
+  final Function(Map<String, String> filters) onApply;
   final VoidCallback onReset;
 
   const FilterLahanDialog({
@@ -15,151 +16,299 @@ class FilterLahanDialog extends StatefulWidget {
 }
 
 class _FilterLahanDialogState extends State<FilterLahanDialog> {
-  final TextEditingController _searchController = TextEditingController();
-  
-  // Data dummy untuk opsi filter (sesuai gambar)
-  final List<String> _filterOptions = ['Kabupaten', 'Kecamatan', 'Desa', 'Dusun'];
-  final List<String> _selectedFilters = [];
+  final LandManagementRepository _repo = LandManagementRepository();
+  bool _isLoading = true;
+
+  // Data List Dropdown
+  List<String> _listPolres = [];
+  List<String> _listPolsek = [];
+  List<String> _listJenisLahan = [];
+  List<String> _listKomoditas = [];
+
+  // Nilai Terpilih
+  String? _selectedPolres;
+  String? _selectedPolsek;
+  String? _selectedJenisLahan;
+  String? _selectedKomoditas;
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadInitialData();
   }
 
-  void _toggleFilter(String option, bool? value) {
+  // Load awal (Hanya Polres yang full, sisanya kosong/menyesuaikan)
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+    final data = await _repo.getFilterOptions();
+    if (mounted) {
+      setState(() {
+        _listPolres = data['polres'] ?? [];
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Load cascading (saat Polres dipilih, load Polsek)
+  Future<void> _onPolresChanged(String? val) async {
     setState(() {
-      if (value == true) {
-        _selectedFilters.add(option);
-      } else {
-        _selectedFilters.remove(option);
-      }
+      _selectedPolres = val;
+      _selectedPolsek = null; // Reset anak-anaknya
+      _selectedJenisLahan = null;
+      _selectedKomoditas = null;
+      _listPolsek = []; // Kosongkan dulu
+      _isLoading = true;
     });
+
+    if (val != null) {
+      final data = await _repo.getFilterOptions(polres: val);
+      if (mounted) {
+        setState(() {
+          _listPolsek = data['polsek'] ?? [];
+          // Jenis lahan & komoditas juga bisa berubah sesuai wilayah
+          _listJenisLahan = data['jenis_lahan'] ?? [];
+          _listKomoditas = data['komoditas'] ?? [];
+          _isLoading = false;
+        });
+      }
+    } else {
+      // Jika di-unselect, reset ke awal
+      _loadInitialData();
+    }
+  }
+
+  // Load cascading (saat Polsek dipilih)
+  Future<void> _onPolsekChanged(String? val) async {
+    setState(() {
+      _selectedPolsek = val;
+      _isLoading = true;
+    });
+
+    if (val != null) {
+      final data = await _repo.getFilterOptions(
+        polres: _selectedPolres,
+        polsek: val,
+      );
+      if (mounted) {
+        setState(() {
+          _listJenisLahan = data['jenis_lahan'] ?? [];
+          _listKomoditas = data['komoditas'] ?? [];
+          _isLoading = false;
+        });
+      }
+    } else {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // Penting agar dialog tidak full screen
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Filter Data Lahan",
-              style: TextStyle(
-                fontSize: 14, 
-                color: Colors.grey, 
-                fontWeight: FontWeight.w500
-              ),
-            ),
-            const SizedBox(height: 12),
-            
-            // Search Input
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: "Cari Data",
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.grey),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Checkbox List
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _filterOptions.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final option = _filterOptions[index];
-                  final isSelected = _selectedFilters.contains(option);
-                  
-                  return GestureDetector(
-                    onTap: () => _toggleFilter(option, !isSelected),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: Checkbox(
-                            value: isSelected,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            side: const BorderSide(color: Colors.grey),
-                            onChanged: (val) => _toggleFilter(option, val),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          option,
-                          style: const TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                      ],
+      insetPadding: const EdgeInsets.all(20),
+      child: SingleChildScrollView(
+        // Agar aman di layar kecil
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Filter Data Lahan",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onApply(_searchController.text, _selectedFilters);
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B9D5E), // Warna Hijau sesuai gambar
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text("Apply"),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      widget.onReset();
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black87,
-                      side: const BorderSide(color: Colors.black87),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                  if (_isLoading)
+                    const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    child: const Text("Reset"),
+                ],
+              ),
+              const Divider(height: 30),
+
+              // 1. KEPOLISIAN RESOR (POLRES)
+              _buildDropdown(
+                label: "Kepolisian Resor",
+                hint: "Pilih Polres",
+                value: _selectedPolres,
+                items: _listPolres,
+                onChanged: _onPolresChanged,
+                icon: Icons.local_police,
+              ),
+              const SizedBox(height: 16),
+
+              // 2. KEPOLISIAN SEKTOR (POLSEK)
+              _buildDropdown(
+                label: "Kepolisian Sektor",
+                hint:
+                    _selectedPolres == null
+                        ? "Pilih Polres Terlebih Dahulu"
+                        : "Pilih Polsek",
+                value: _selectedPolsek,
+                items: _listPolsek,
+                onChanged:
+                    _selectedPolres == null
+                        ? null
+                        : _onPolsekChanged, // Disable jika Polres belum dipilih
+                icon: Icons.shield,
+              ),
+              const SizedBox(height: 16),
+
+              // 3. JENIS LAHAN
+              _buildDropdown(
+                label: "Jenis Lahan",
+                hint: "Pilih Jenis Lahan",
+                value: _selectedJenisLahan,
+                items: _listJenisLahan,
+                onChanged: (val) => setState(() => _selectedJenisLahan = val),
+                icon: Icons.landscape,
+              ),
+              const SizedBox(height: 16),
+
+              // 4. KOMODITI LAHAN
+              _buildDropdown(
+                label: "Komoditi Lahan",
+                hint: "Pilih Komoditas",
+                value: _selectedKomoditas,
+                items: _listKomoditas,
+                onChanged: (val) => setState(() => _selectedKomoditas = val),
+                icon: Icons.grass,
+              ),
+
+              const SizedBox(height: 32),
+
+              // ACTION BUTTONS
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        widget.onReset();
+                        Navigator.pop(context);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: Colors.grey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Reset",
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            )
-          ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Kirim Data Map Filter
+                        widget.onApply({
+                          'polres': _selectedPolres ?? '',
+                          'polsek': _selectedPolsek ?? '',
+                          'jenis_lahan': _selectedJenisLahan ?? '',
+                          'komoditas': _selectedKomoditas ?? '',
+                        });
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0097B2), // Cyan
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Terapkan Filter",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String hint,
+    required String? value,
+    required List<String> items,
+    required Function(String?)? onChanged,
+    required IconData icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color:
+                onChanged == null ? Colors.grey.shade100 : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              hint: Row(
+                children: [
+                  Icon(icon, size: 18, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    hint,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+              isExpanded: true,
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+              items:
+                  items.map((String item) {
+                    return DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(
+                        item,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

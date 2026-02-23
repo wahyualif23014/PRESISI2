@@ -1,10 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-
-// 1. IMPORT MODEL & SERVICE
 import 'data/model/land_potential_model.dart';
 import 'data/service/land_potential_service.dart';
-
-// 2. IMPORT WIDGET LAINNYA
 import 'presentation/widget/add_land_data_page.dart';
 import 'presentation/widget/land_filter_dialog.dart';
 import 'presentation/widget/land_potential_group.dart';
@@ -22,21 +19,17 @@ class OverviewPage extends StatefulWidget {
 class _OverviewPageState extends State<OverviewPage> {
   final LandPotentialService _service = LandPotentialService();
 
-  // --- STATE VARIABLES ---
+  // REFAKTOR: Tambahkan GlobalKey untuk memicu update widget summary
+  final GlobalKey<LandSummaryWidgetState> _summaryKey = GlobalKey();
+  final GlobalKey<NoLandPotentialWidgetState> _noLandKey = GlobalKey();
+
   bool _isLoading = true;
   bool _isError = false;
   Map<String, List<LandPotentialModel>> _groupedData = {};
-
-  // --- FILTER & PAGINATION ---
   String _currentSearch = "";
-  String _currentStatus = "";
-  String? _filterPolres;
-  String? _filterPolsek;
-  String? _filterJenisLahan;
-
+  Map<String, String>? _activeFilters;
   int _currentPage = 1;
-  final int _limitPerPage = 50; // LIMIT 10 DATA
-  bool _hasMoreData = true;
+  final int _limitPerPage = 50;
 
   @override
   void initState() {
@@ -44,41 +37,39 @@ class _OverviewPageState extends State<OverviewPage> {
     _fetchData();
   }
 
-  // --- AMBIL DATA DARI SERVER ---
-  Future<void> _fetchData() async {
+  // REFAKTOR: Fungsi untuk menyegarkan angka-angka summary
+  void _refreshSummaries() {
+    _summaryKey.currentState?.fetchSummaryData();
+    _noLandKey.currentState?.fetchData();
+  }
+
+  Future<void> _fetchData({
+    String keyword = "",
+    Map<String, String>? filters,
+  }) async {
     setState(() {
       _isLoading = true;
       _isError = false;
     });
 
+    if (filters != null) _activeFilters = filters;
+    if (keyword.isNotEmpty) _currentSearch = keyword;
+
     try {
       final List<LandPotentialModel> data = await _service.fetchLandData(
-        search: _currentSearch,
-        status: _currentStatus,
-        polres: _filterPolres,
-        polsek: _filterPolsek,
-        jenisLahan: _filterJenisLahan,
+        search: keyword.isNotEmpty ? keyword : _currentSearch,
+        polres: _activeFilters?['polres'],
+        polsek: _activeFilters?['polsek'],
         page: _currentPage,
         limit: _limitPerPage,
       );
 
-      _hasMoreData = data.length == _limitPerPage;
-
-      // Grouping Data
       Map<String, List<LandPotentialModel>> grouped = {};
       for (var item in data) {
-        String namaKabupaten = item.kabupaten.toUpperCase();
-
-        // Fix Nama Kabupaten
-        if (!namaKabupaten.startsWith("KABUPATEN") &&
-            !namaKabupaten.startsWith("KOTA")) {
-          namaKabupaten = "KABUPATEN $namaKabupaten";
-        }
-
-        if (!grouped.containsKey(namaKabupaten)) {
-          grouped[namaKabupaten] = [];
-        }
-        grouped[namaKabupaten]!.add(item);
+        String fullRegion =
+            "KAB. ${item.kabupaten} KEC. ${item.kecamatan} DESA ${item.desa}";
+        if (!grouped.containsKey(fullRegion)) grouped[fullRegion] = [];
+        grouped[fullRegion]!.add(item);
       }
 
       if (mounted) {
@@ -86,115 +77,16 @@ class _OverviewPageState extends State<OverviewPage> {
           _groupedData = grouped;
           _isLoading = false;
         });
+        // REFAKTOR: Panggil update summary setiap kali data list berubah
+        _refreshSummaries();
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         setState(() {
           _isError = true;
           _isLoading = false;
         });
-      }
     }
-  }
-
-  // --- LOGIKA EDIT ---
-  void _onEdit(LandPotentialModel item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (c) => AddLandDataPage(editData: item)),
-    ).then((_) => _fetchData()); // Refresh setelah edit
-  }
-
-  // --- LOGIKA HAPUS ---
-  void _onDelete(LandPotentialModel item) {
-    showDialog(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text("Hapus Data"),
-            content: Text(
-              "Yakin ingin menghapus data lahan di ${item.alamatLahan}?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Batal"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () async {
-                  Navigator.pop(ctx); // Tutup dialog
-
-                  // Loading SnackBar
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Menghapus data...")),
-                  );
-
-                  // Panggil Service Hapus
-                  bool success = await _service.deleteLandData(item.id);
-
-                  if (success) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Data berhasil dihapus"),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                    _fetchData(); // Refresh data
-                  } else {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Gagal menghapus data"),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text(
-                  "Hapus",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
-
-  // --- FILTER & SEARCH ---
-  void _onSearch(String val) {
-    _currentSearch = val;
-    _currentPage = 1;
-    _fetchData();
-  }
-
-  void _onFilterTap() async {
-    final result = await showDialog(
-      context: context,
-      builder: (context) => const LandFilterDialog(),
-    );
-
-    if (result != null && result is Map) {
-      _currentStatus = result['status'] ?? "";
-      _filterPolres = result['polres'];
-      _filterPolsek = result['polsek'];
-      _filterJenisLahan = result['jenis_lahan'];
-
-      _currentPage = 1;
-      _fetchData();
-    }
-  }
-
-  // --- PAGINATION ---
-  void _changePage(int newPage) {
-    if (newPage < 1) return;
-    setState(() {
-      _currentPage = newPage;
-    });
-    _fetchData();
   }
 
   @override
@@ -203,109 +95,38 @@ class _OverviewPageState extends State<OverviewPage> {
       color: Colors.white,
       child: Column(
         children: [
-          // 1. TOOLBAR
           LandPotentialToolbar(
             onSearchChanged: _onSearch,
             onFilterTap: _onFilterTap,
-            onAddTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (c) => const AddLandDataPage()),
-              ).then((_) => _fetchData());
-            },
+            onAddTap:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (c) => const AddLandDataPage()),
+                ).then((_) => _fetchData()),
           ),
-
-          // 2. LIST DATA
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(bottom: 20),
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: LandSummaryWidget(),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-                  child: NoLandPotentialWidget(),
-                ),
-                _buildHeaderPembatas("DAFTAR POTENSI LAHAN"),
+                // REFAKTOR: Pasang Key pada widget summary
+                LandSummaryWidget(key: _summaryKey),
+                NoLandPotentialWidget(key: _noLandKey),
 
-                // LOGIC TAMPILAN
+                _buildHeaderPembatas("DAFTAR POTENSI LAHAN"),
                 if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 50),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_isError)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 50),
-                    child: Center(
-                      child: Text(
-                        "Gagal terhubung ke server",
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  )
-                else if (_groupedData.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 50),
-                    child: Center(
-                      child: Text(
-                        "Belum ada data potensi lahan",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  )
+                  const Center(child: CircularProgressIndicator())
                 else
-                  // TAMPILKAN DATA PER KABUPATEN
-                  ..._groupedData.entries.map((entry) {
-                    return KabupatenExpansionTile(
+                  ..._groupedData.entries.map(
+                    (entry) => KabupatenExpansionTile(
                       kabupatenName: entry.key,
                       itemsInKabupaten: entry.value,
-                      onEdit: _onEdit, // Pass Fungsi Edit
-                      onDelete: _onDelete, // Pass Fungsi Hapus
-                    );
-                  }),
-
-                // TOMBOL PAGINATION
-                if (!_isLoading && !_isError && _groupedData.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          onPressed:
-                              _currentPage > 1
-                                  ? () => _changePage(_currentPage - 1)
-                                  : null,
-                          icon: const Icon(Icons.arrow_back_ios, size: 16),
-                          color: _currentPage > 1 ? Colors.black : Colors.grey,
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Text(
-                            "Halaman $_currentPage",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed:
-                              _hasMoreData
-                                  ? () => _changePage(_currentPage + 1)
-                                  : null,
-                          icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                          color: _hasMoreData ? Colors.black : Colors.grey,
-                        ),
-                      ],
+                      onEdit:
+                          (item) => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (c) => AddLandDataPage(editData: item),
+                            ),
+                          ).then((_) => _fetchData()),
+                      onDelete: (item) => _confirmDelete(item),
                     ),
                   ),
               ],
@@ -316,21 +137,60 @@ class _OverviewPageState extends State<OverviewPage> {
     );
   }
 
-  Widget _buildHeaderPembatas(String title) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      padding: const EdgeInsets.only(left: 12.0),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Colors.black, width: 4.0)),
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-      ),
+  void _onSearch(String val) {
+    _currentPage = 1;
+    _fetchData(keyword: val);
+  }
+
+  void _onFilterTap() {
+    showDialog(
+      context: context,
+      builder:
+          (c) => LandFilterDialog(
+            onApply: (f) {
+              _currentPage = 1;
+              _fetchData(filters: f);
+            },
+            onReset: () {
+              _activeFilters = null;
+              _fetchData();
+            },
+          ),
     );
   }
+
+  void _confirmDelete(LandPotentialModel item) {
+    showDialog(
+      context: context,
+      builder:
+          (c) => AlertDialog(
+            title: const Text("Hapus Data"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c),
+                child: const Text("Batal"),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(c);
+                  if (await _service.deleteLandData(item.id)) _fetchData();
+                },
+                child: const Text("Hapus"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _buildHeaderPembatas(String title) => Container(
+    margin: const EdgeInsets.all(16),
+    padding: const EdgeInsets.only(left: 12),
+    decoration: const BoxDecoration(
+      border: Border(left: BorderSide(color: Colors.black, width: 4)),
+    ),
+    child: Text(
+      title,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    ),
+  );
 }

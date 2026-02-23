@@ -1,140 +1,241 @@
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
 
-
-class RegionExpansionTile extends StatelessWidget {
+class KelolaRegionExpansionGroup extends StatelessWidget {
   final String title;
   final List<LandManagementItemModel> items;
-
-  const RegionExpansionTile({
+  const KelolaRegionExpansionGroup({
     super.key,
     required this.title,
     required this.items,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    Map<String, List<LandManagementItemModel>> groupedByDusun = {};
-    for (var item in items) {
-      if (!groupedByDusun.containsKey(item.subRegionGroup)) {
-        groupedByDusun[item.subRegionGroup] = [];
-      }
-      groupedByDusun[item.subRegionGroup]!.add(item);
-    }
-
-    return ExpansionTile(
-      initiallyExpanded: true,
-      collapsedBackgroundColor: const Color(0xFFC5CAE9), // Ungu Tua (Indigo 100)
-      backgroundColor: const Color(0xFFC5CAE9),
-      shape: const Border(), // Hilangkan garis border default
-      textColor: Colors.black,
-      iconColor: Colors.black,
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-      ),
-      children: groupedByDusun.entries.map((entry) {
-        return SubRegionExpansionTile(
-          title: entry.key,
-          items: entry.value,
-        );
-      }).toList(),
-    );
-  }
-}
-
-// =========================================================
-// LEVEL 2: GROUP DUSUN - UNGU MUDA (MENJOROK)
-// =========================================================
-class SubRegionExpansionTile extends StatelessWidget {
-  final String title;
-  final List<LandManagementItemModel> items;
-
-  const SubRegionExpansionTile({
-    super.key,
-    required this.title,
-    required this.items,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ExpansionTile(
-      initiallyExpanded: true,
-      collapsedBackgroundColor: const Color(0xFFE8EAF6), // Ungu Muda (Indigo 50)
-      backgroundColor: const Color(0xFFE8EAF6),
-      shape: const Border(),
-      tilePadding: const EdgeInsets.only(left: 20, right: 16), // Menjorok ke dalam
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-      ),
-      children: items.map((item) => LandManagementRow(item: item)).toList(),
-    );
-  }
-}
-
-// =========================================================
-// LEVEL 3: DATA ITEM ROW
-// =========================================================
-class LandManagementRow extends StatelessWidget {
-  final LandManagementItemModel item;
-
-  const LandManagementRow({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      margin: const EdgeInsets.only(bottom: 1), // Garis pemisah tipis
+      margin: const EdgeInsets.only(bottom: 2),
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        collapsedBackgroundColor: const Color(0xFF9FA8DA).withOpacity(0.5),
+        backgroundColor: const Color(0xFFC5CAE9).withOpacity(0.5),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+        title: Text(
+          title.toUpperCase(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
+            color: Colors.black87,
+          ),
+        ),
+        children:
+            items.map((data) => KelolaItemDetailCard(item: data)).toList(),
+      ),
+    );
+  }
+}
+
+class KelolaItemDetailCard extends StatelessWidget {
+  final LandManagementItemModel item;
+  const KelolaItemDetailCard({super.key, required this.item});
+
+  void _showDetailDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            title: const Text(
+              "DETAIL LAHAN",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _detailRow("Polisi Penggerak", item.policeName),
+                  _detailRow("Penanggung Jawab", item.picName),
+                  _detailRow("Luas (Ha)", "${item.luasTanam}"),
+                  _detailRow("Est. Panen", item.estPanen),
+                  _detailRow("Panen (Ha)", "${item.hasilPanen}"),
+                  _detailRow("Serapan (Ton)", "${item.serapan}"),
+                  _detailRow("Validasi", item.status),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("TUTUP"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+            ),
+          ),
+          const Text(" : "),
+          Expanded(
+            flex: 6,
+            child: Text(value, style: const TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isValid =
+        item.status == 'TERVALIDASI' || item.status == 'VALIDATED';
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 1. POLISI PENGGERAK (Flex 3)
           Expanded(
-            flex: 3,
-            child: _buildPersonInfo(item.policeName, item.policePhone),
-          ),
-          
-          // 2. PJ (Flex 3)
-          Expanded(
-            flex: 3,
-            child: _buildPersonInfo(item.picName, item.picPhone),
-          ),
-          
-          // 3. LUAS (Flex 1)
-          Expanded(
-            flex: 1,
-            child: Text(
-              item.landArea.toString(),
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+            flex: 6,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // POLISI
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Polisi Pengerak",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            item.policeName,
+                            style: _nameStyle(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            item.policePhone,
+                            style: _subStyle(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // PENANGGUNG JAWAB
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Penanggung Jawab",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            item.picName,
+                            style: _nameStyle(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            item.picPhone,
+                            style: _subStyle(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-
-          // 4. VALIDASI / STATUS (Flex 2)
+          const SizedBox(width: 8),
           Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-              decoration: BoxDecoration(
-                color: Color(int.parse(item.statusColor.replaceAll('#', '0xFF'))),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Text(
-                item.status,
-                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-
-          // 5. AKSI (Flex 1)
-          Expanded(
-            flex: 1,
-            child: InkWell(
-              onTap: () {},
-              child: const Icon(Icons.remove_red_eye_outlined, size: 20),
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FittedBox(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: isValid ? Colors.green : Colors.orange,
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      item.status.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 8,
+                        color: isValid ? Colors.green : Colors.orange,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: () => _showDetailDialog(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "VIEW DETAIL",
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -142,23 +243,18 @@ class LandManagementRow extends StatelessWidget {
     );
   }
 
-  Widget _buildPersonInfo(String name, String phone) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          name,
-          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          phone,
-          style: const TextStyle(fontSize: 8, color: Colors.grey),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
+  Widget _label(String t) => Text(
+    t,
+    style: const TextStyle(
+      fontSize: 8,
+      color: Colors.grey,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  TextStyle _nameStyle() => const TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w800,
+    color: Colors.black,
+  );
+  TextStyle _subStyle() => const TextStyle(fontSize: 9, color: Colors.black54);
 }

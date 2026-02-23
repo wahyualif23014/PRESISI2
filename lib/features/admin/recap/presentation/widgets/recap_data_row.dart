@@ -1,7 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../data/model/recap_model.dart';
 
-// 1. LEVEL POLRES (Parent)
+// --- KONFIGURASI WARNA ---
+class AppColors {
+  static const Color primary = Color(0xFF673AB7);
+  static const Color accent = Color(0xFFF3E5F5);
+  static const Color textDark = Color(0xFF1E293B);
+  static const Color textGrey = Color(0xFF64748B);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color surface = Colors.white;
+}
+
+// --- FUNGSI PEMBANTU ---
+double _sum(List<RecapModel> items, double Function(RecapModel) selector) {
+  if (items.isEmpty) return 0.0;
+  return items.map(selector).fold(0.0, (a, b) => a + b);
+}
+
+// =========================================================
+// 1. SEKSI POLRES (KONTINER UTAMA)
+// =========================================================
 class RecapPolresSection extends StatelessWidget {
   final String polresName;
   final List<RecapModel> itemsInPolres;
@@ -14,216 +32,98 @@ class RecapPolresSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Logic Grouping
+    // Grouping Polsek & Hapus data yang tidak memiliki nama polsek
     final Map<String, List<RecapModel>> groupedByPolsek = {};
     for (var item in itemsInPolres) {
-      final key = item.namaPolsek ?? 'Lainnya';
-      if (!groupedByPolsek.containsKey(key)) {
-        groupedByPolsek[key] = [];
-      }
+      final key = item.namaPolsek ?? '';
+      if (key.isEmpty) continue;
+
+      if (!groupedByPolsek.containsKey(key)) groupedByPolsek[key] = [];
       groupedByPolsek[key]!.add(item);
     }
 
-    // 2. Kalkulasi Total
+    // Kalkulasi Total Polres
     final totalPotensi = _sum(itemsInPolres, (m) => m.potensiLahan);
     final totalTanam = _sum(itemsInPolres, (m) => m.tanamLahan);
     final totalPanenLuas = _sum(itemsInPolres, (m) => m.panenLuas);
     final totalPanenTon = _sum(itemsInPolres, (m) => m.panenTon);
-    final avgSerapan = _avg(itemsInPolres, (m) => m.serapan);
+    final totalSerapan = _sum(itemsInPolres, (m) => m.serapan);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
+      margin: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.05),
             offset: const Offset(0, 4),
+            blurRadius: 12,
           ),
         ],
+        border: Border.all(color: AppColors.border),
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: true,
-          backgroundColor: Colors.transparent,
-          collapsedBackgroundColor: Colors.transparent,
-          tilePadding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-          iconColor: Colors.grey.shade600,
-          collapsedIconColor: Colors.grey.shade600,
+      child: Column(
+        children: [
+          // Header Judul Polres
+          _buildHeaderPolres(polresName),
 
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- H1: HEADER NAME ---
-              Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A237E),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    polresName.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1E293B),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // --- DIVIDER ---
-              Divider(color: Colors.grey.shade200, thickness: 1.5, height: 1),
-
-              const SizedBox(height: 12),
-
-              // --- H2: LABEL JUDUL TOTAL ---
-              // Dipisah ke atas sesuai request
-              const Text(
-                "TOTAL REKAPITULASI",
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF64748B), // Slate Grey (Muted)
-                  letterSpacing: 1.0,
-                ),
-              ),
-
-              const SizedBox(height: 8), // Jarak antara H2 dan Angka
-
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start, // Rata atas
-                children: [
-                  const Expanded(flex: 3, child: SizedBox()),
-
-                  _buildStackedCell(totalPotensi.toInt().toString(), "HA", 2),
-
-                  // Flex 2: Tanam
-                  _buildStackedCell(totalTanam.toInt().toString(), "HA", 2),
-
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      children: [
-                        RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            style: const TextStyle(
-                              color: Color(0xFF1A237E),
-                              fontFamily: 'Roboto',
-                            ), // Pastikan font family sama
-                            children: [
-                              TextSpan(
-                                text: "${totalPanenLuas.toStringAsFixed(0)} ",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const TextSpan(
-                                text: "HA",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 9,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 2,
-                        ), // Jarak tipis antar baris panen
-                        Container(
-                          height: 1,
-                          width: 20,
-                          color: Colors.grey.shade300,
-                        ), // Garis pemisah kecil
-                        const SizedBox(height: 2),
-                        RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            style: const TextStyle(
-                              color: Color(0xFF1A237E),
-                              fontFamily: 'Roboto',
-                            ),
-                            children: [
-                              TextSpan(
-                                text: "${totalPanenTon.toStringAsFixed(0)} ",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const TextSpan(
-                                text: "TON",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 9,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Flex 2: Serapan
-                  _buildStackedCell("${avgSerapan.toInt()}", "%", 2),
-                ],
-              ),
-            ],
+          // Baris Total Polres
+          Container(
+            color: AppColors.accent.withOpacity(0.4),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            child: _DataRowLayout(
+              label: polresName,
+              tag: "POLRES",
+              potensi: totalPotensi,
+              tanam: totalTanam,
+              panenLuas: totalPanenLuas,
+              panenTon: totalPanenTon,
+              serapan: totalSerapan,
+              isHeader: true,
+            ),
           ),
-          children:
-              groupedByPolsek.entries.map((entry) {
-                return RecapPolsekSection(
-                  polsekName: entry.key,
-                  itemsInPolsek: entry.value,
-                );
-              }).toList(),
-        ),
+
+          const Divider(height: 1, color: AppColors.border),
+
+          // Daftar Polsek di bawahnya
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: groupedByPolsek.length,
+            separatorBuilder:
+                (context, index) =>
+                    const Divider(height: 1, color: AppColors.border),
+            itemBuilder: (context, index) {
+              String key = groupedByPolsek.keys.elementAt(index);
+              return RecapPolsekSection(
+                polsekName: key,
+                itemsInPolsek: groupedByPolsek[key]!,
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
-  // --- HELPER UNTUK TAMPILAN NOMOR DI ATAS SATUAN ---
-  Widget _buildStackedCell(String value, String unit, int flex) {
-    return Expanded(
-      flex: flex,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildHeaderPolres(String name) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800, // Extra Bold
-              color: Color(0xFF1A237E), // Indigo Primary
-              height: 1.0,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          const Icon(
+            Icons.location_city_rounded,
+            color: AppColors.primary,
+            size: 28,
           ),
+          const SizedBox(width: 12),
           Text(
-            unit,
+            name.toUpperCase(),
             style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF94A3B8), // Slate 400
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
             ),
           ),
         ],
@@ -232,9 +132,10 @@ class RecapPolresSection extends StatelessWidget {
   }
 }
 
-// 2. LEVEL POLSEK
-
-class RecapPolsekSection extends StatelessWidget {
+// =========================================================
+// 2. SEKSI POLSEK (BISA DIKLIK / DROPDOWN)
+// =========================================================
+class RecapPolsekSection extends StatefulWidget {
   final String polsekName;
   final List<RecapModel> itemsInPolsek;
 
@@ -245,251 +146,220 @@ class RecapPolsekSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: const Color(
-          0xFFE8EAF6,
-        ), // Indigo 50 (Lebih soft dari C5CAE9 agar teks terbaca)
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFFC5CAE9),
-        ), // Border lebih tua dikit
-      ),
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        shape: const Border(), // Hapus border default
-        iconColor: const Color(0xFF1A237E),
-        collapsedIconColor: Colors.grey.shade700,
-        tilePadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-
-        // CUSTOM TITLE: COLUMN (Nama -> Garis -> Data)
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. NAMA POLSEK
-            Row(
-              children: [
-                const Icon(
-                  Icons.location_city,
-                  size: 18,
-                  color: Color(0xFF3949AB),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "POLSEK $polsekName".toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A237E),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // 2. GARIS PEMISAH TIPIS
-            Divider(color: Colors.indigo.shade100, thickness: 1),
-
-            const SizedBox(height: 8),
-
-            // 3. DATA TOTAL POLSEK (Layout Stacked Besar)
-            _RecapDataColumns(
-              name: "TOTAL",
-              potensi: _sum(itemsInPolsek, (m) => m.potensiLahan),
-              tanam: _sum(itemsInPolsek, (m) => m.tanamLahan),
-              panenLuas: _sum(itemsInPolsek, (m) => m.panenLuas),
-              panenTon: _sum(itemsInPolsek, (m) => m.panenTon),
-              serapan: _avg(itemsInPolsek, (m) => m.serapan),
-              isHeader: true, // Mode Bold & Warna Tua
-            ),
-          ],
-        ),
-        children:
-            itemsInPolsek.map((data) => RecapDesaRow(data: data)).toList(),
-      ),
-    );
-  }
+  State<RecapPolsekSection> createState() => _RecapPolsekSectionState();
 }
 
-// 3. LEVEL DESA
-
-class RecapDesaRow extends StatelessWidget {
-  final RecapModel data;
-
-  const RecapDesaRow({super.key, required this.data});
+class _RecapPolsekSectionState extends State<RecapPolsekSection> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 60),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          // Garis putus-putus atau solid tipis untuk pemisah desa
-          bottom: BorderSide(color: Colors.grey.shade100, width: 1.0),
+    final totalPotensi = _sum(widget.itemsInPolsek, (m) => m.potensiLahan);
+    final totalTanam = _sum(widget.itemsInPolsek, (m) => m.tanamLahan);
+    final totalPanenLuas = _sum(widget.itemsInPolsek, (m) => m.panenLuas);
+    final totalPanenTon = _sum(widget.itemsInPolsek, (m) => m.panenTon);
+    final totalSerapan = _sum(widget.itemsInPolsek, (m) => m.serapan);
+
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            color:
+                _isExpanded
+                    ? AppColors.accent.withOpacity(0.3)
+                    : Colors.transparent,
+            child: _DataRowLayout(
+              label: widget.polsekName,
+              tag: "POLSEK",
+              potensi: totalPotensi,
+              tanam: totalTanam,
+              panenLuas: totalPanenLuas,
+              panenTon: totalPanenTon,
+              serapan: totalSerapan,
+              isSubHeader: true,
+              highlight: _isExpanded,
+            ),
+          ),
         ),
-      ),
-      child: _RecapDataColumns(
-        name: data.namaWilayah,
-        potensi: data.potensiLahan,
-        tanam: data.tanamLahan,
-        panenLuas: data.panenLuas,
-        panenTon: data.panenTon,
-        serapan: data.serapan,
-        isHeader: false, // Mode Regular (Hitam/Abu)
-      ),
+        if (_isExpanded)
+          ...widget.itemsInPolsek.map(
+            (desa) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFAFAFA),
+                border: Border(
+                  top: BorderSide(color: AppColors.border, width: 0.5),
+                ),
+              ),
+              child: _DataRowLayout(
+                label: desa.namaWilayah,
+                tag: "DESA",
+                potensi: desa.potensiLahan,
+                tanam: desa.tanamLahan,
+                panenLuas: desa.panenLuas,
+                panenTon: desa.panenTon,
+                serapan: desa.serapan,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
 
-class _RecapDataColumns extends StatelessWidget {
-  final String name;
-  final double potensi;
-  final double tanam;
-  final double panenLuas;
-  final double panenTon;
-  final double serapan;
-  final bool isHeader;
+// =========================================================
+// 3. LAYOUT BARIS DATA (SENSITIF TERHADAP LEVEL)
+// =========================================================
+class _DataRowLayout extends StatelessWidget {
+  final String label;
+  final String tag;
+  final double potensi, tanam, panenLuas, panenTon, serapan;
+  final bool isHeader, isSubHeader, highlight;
 
-  const _RecapDataColumns({
-    required this.name,
+  const _DataRowLayout({
+    required this.label,
+    required this.tag,
     required this.potensi,
     required this.tanam,
     required this.panenLuas,
     required this.panenTon,
     required this.serapan,
-    required this.isHeader,
+    this.isHeader = false,
+    this.isSubHeader = false,
+    this.highlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Style Nama Wilayah
-    final nameStyle = TextStyle(
-      fontSize: 12, // Tetap compact agar muat
-      fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500,
-      color: isHeader ? Colors.indigo.shade900 : Colors.black87,
-    );
-
-    final numberColor =
-        isHeader ? const Color(0xFF1A237E) : const Color(0xFF1E293B);
+    final Color mainColor =
+        highlight || isHeader ? AppColors.primary : AppColors.textDark;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // KOLOM WILAYAH & KETERANGAN
         Expanded(
-          flex: 3,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child:
-                isHeader && name == "TOTAL"
-                    ? const Text(
-                      "SUB-TOTAL", // Label kecil pengganti nama polsek di baris data
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    )
-                    : Text(
-                      name,
-                      style: nameStyle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-          ),
-        ),
-
-        // KOLOM 2: POTENSI (Flex 2)
-        _buildStackedCell(potensi.toInt().toString(), "HA", 2, numberColor),
-
-        // KOLOM 3: TANAM (Flex 2)
-        _buildStackedCell(tanam.toInt().toString(), "HA", 2, numberColor),
-
-        // KOLOM 4: PANEN (Flex 3)
-        Expanded(
-          flex: 3,
+          flex: 4,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildMicroRow(panenLuas.toStringAsFixed(0), "HA", numberColor),
               Container(
-                margin: const EdgeInsets.symmetric(vertical: 2),
-                height: 1,
-                width: 24,
-                color: Colors.grey.shade300,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color:
+                      isHeader
+                          ? Colors.orange
+                          : (isSubHeader ? Colors.blue : Colors.grey),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  tag,
+                  style: const TextStyle(
+                    fontSize: 8,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              _buildMicroRow(panenTon.toStringAsFixed(0), "TON", numberColor),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isHeader ? 12 : 11,
+                  fontWeight:
+                      isHeader || isSubHeader
+                          ? FontWeight.w900
+                          : FontWeight.w600,
+                  color: mainColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
 
-        // KOLOM 5: SERAPAN (Flex 2)
-        _buildStackedCell("${serapan.toInt()}", "%", 2, numberColor),
+        // KOLOM DATA (POTENSI & TANAM)
+        _DataCell(
+          value: potensi,
+          unit: "HA",
+          flex: 2,
+          isBold: isHeader || isSubHeader,
+        ),
+        _DataCell(
+          value: tanam,
+          unit: "HA",
+          flex: 2,
+          isBold: isHeader || isSubHeader,
+        ),
+
+        // KOLOM PANEN (LUAS & TON)
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              _TextVal(
+                value: panenLuas,
+                unit: "HA",
+                isBold: isHeader || isSubHeader,
+              ),
+              const SizedBox(height: 2),
+              _TextVal(
+                value: panenTon,
+                unit: "TN",
+                isBold: isHeader || isSubHeader,
+              ),
+            ],
+          ),
+        ),
+
+        // KOLOM SERAPAN
+        _DataCell(
+          value: serapan,
+          unit: "TN",
+          flex: 2,
+          isBold: isHeader || isSubHeader,
+        ),
       ],
     );
   }
+}
 
-  Widget _buildStackedCell(String value, String unit, int flex, Color color) {
-    final double fontSize = isHeader ? 14 : 13;
+// Widget Sel Angka
+class _DataCell extends StatelessWidget {
+  final double value;
+  final String unit;
+  final int flex;
+  final bool isBold;
 
+  const _DataCell({
+    required this.value,
+    required this.unit,
+    required this.flex,
+    required this.isBold,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       flex: flex,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            value,
+            value.toInt().toString(),
             style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w800, // Extra Bold agar jelas
-              color: color,
-              height: 1.0,
+              fontSize: isBold ? 13 : 12,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.w700,
+              color: isBold ? AppColors.primary : AppColors.textDark,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 3),
           Text(
             unit,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper Panen (Baris Kecil)
-  Widget _buildMicroRow(String val, String unit, Color color) {
-    // Font size panen juga disesuaikan
-    final double fontSize = isHeader ? 12 : 11;
-
-    return RichText(
-      text: TextSpan(
-        style: const TextStyle(fontFamily: 'Roboto'),
-        children: [
-          TextSpan(
-            text: "$val ",
-            style: TextStyle(
-              color: color,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          TextSpan(
-            text: unit,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 8,
-              fontWeight: FontWeight.w600,
+            style: const TextStyle(
+              fontSize: 7,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textGrey,
             ),
           ),
         ],
@@ -498,14 +368,41 @@ class _RecapDataColumns extends StatelessWidget {
   }
 }
 
-// --- Helper Functions ---
-double _sum(List<RecapModel> items, double Function(RecapModel) selector) {
-  if (items.isEmpty) return 0.0;
-  return items.map(selector).reduce((a, b) => a + b);
-}
+// Widget Text Baris
+class _TextVal extends StatelessWidget {
+  final double value;
+  final String unit;
+  final bool isBold;
 
-double _avg(List<RecapModel> items, double Function(RecapModel) selector) {
-  if (items.isEmpty) return 0.0;
-  final total = items.map(selector).reduce((a, b) => a + b);
-  return total / items.length;
+  const _TextVal({
+    required this.value,
+    required this.unit,
+    required this.isBold,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          value.toInt().toString(),
+          style: TextStyle(
+            fontSize: isBold ? 11 : 10,
+            fontWeight: isBold ? FontWeight.w900 : FontWeight.w700,
+            color: isBold ? AppColors.primary : AppColors.textDark,
+          ),
+        ),
+        const SizedBox(width: 2),
+        Text(
+          unit,
+          style: const TextStyle(
+            fontSize: 7,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textGrey,
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -1,96 +1,136 @@
-import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
-
+import 'dart:convert';
+import 'package:flutter/foundation.dart'; // Wajib ada untuk debugPrint
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
-  
-  // 1. GET SUMMARY DATA (Header Stats)
-  Future<LandManagementSummaryModel> getSummaryStats() async {
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulasi API
+  // Pastikan IP ini benar (IP Laptop/Server Go kamu)
+  final String baseUrl = "http://192.168.100.195:8080/api/kelola-lahan";
 
-    return LandManagementSummaryModel(
-      totalPotensiLahan: 6124.35,
-      totalTanamLahan: 620.45,
-      totalPanenLahanHa: 3.20,
-      totalPanenLahanTon: 16.00,
-      totalSerapanTon: 0.00,
-    );
+  // Helper: Ambil Token
+  Future<String> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
   }
 
-  // 2. GET LIST DATA (Table Rows)
-  Future<List<LandManagementItemModel>> getLandManagementList() async {
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulasi API
+  // 1. GET FILTER OPTIONS (Untuk Dropdown di Dialog)
+  Future<Map<String, List<String>>> getFilterOptions({
+    String? polres,
+    String? polsek,
+  }) async {
+    // Bangun URL dengan query parameter
+    String url = '$baseUrl/filter-options?';
+    if (polres != null && polres.isNotEmpty) url += 'polres=$polres&';
+    if (polsek != null && polsek.isNotEmpty) url += 'polsek=$polsek';
 
-    // Data Dummy Sesuai Gambar
-    return [
-      // --- ITEM 1 ---
-      LandManagementItemModel(
-        id: '1',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA DLEMER',
-        subRegionGroup: 'DUSUN RONCEH',
-        policeName: 'BAMBANG PRIONO',
-        policePhone: '+62 878-4523-7310',
-        picName: 'ROHMATULLOH',
-        picPhone: '+62 838-5284-3164',
-        landArea: 0.74,
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800', // Orange
-      ),
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-      // --- ITEM 2 (Beda Dusun/Sub Region) ---
-      LandManagementItemModel(
-        id: '2',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA LAJING',
-        subRegionGroup: 'DUSUN BARUK',
-        policeName: 'YUNUS SETYA BUDI',
-        policePhone: '+62 823-3202-6519',
-        picName: 'RUDY AFFANDI',
-        picPhone: '+62 877-1832-6635',
-        landArea: 0.74,
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'polres': List<String>.from(data['polres'] ?? []),
+          'polsek': List<String>.from(data['polsek'] ?? []),
+          'jenis_lahan': List<String>.from(data['jenis_lahan'] ?? []),
+          'komoditas': List<String>.from(data['komoditas'] ?? []),
+        };
+      }
+      return {};
+    } catch (e) {
+      debugPrint("Error fetching filter options: $e");
+      return {};
+    }
+  }
 
-      // --- ITEM 3 ---
-      LandManagementItemModel(
-        id: '3',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA PLAKARAN',
-        subRegionGroup: 'DUSUN PLAKARAN',
-        policeName: 'RUDI HARTONO',
-        policePhone: '+62 812-1719-8527',
-        picName: 'ROHMATULLOH',
-        picPhone: '+62 838-5284-3164',
-        landArea: 0.74,
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
+  // 2. GET SUMMARY
+  Future<LandManagementSummaryModel> getSummaryStats() async {
+    final token = await _getToken();
 
-      // --- ITEM 4 (Contoh grouping sama dengan item 1 untuk tes UI grouping) ---
-      LandManagementItemModel(
-        id: '4',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA DLEMER',
-        subRegionGroup: 'DUSUN RONCEH',
-        policeName: 'LINBAMBANG PRIONO',
-        policePhone: '+62 878-4523-7310',
-        picName: 'ROHMATULLOH',
-        picPhone: '+62 838-5284-3164',
-        landArea: 0.74,
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
-      
-      // --- ITEM 5 (Contoh data lain) ---
-      LandManagementItemModel(
-        id: '5',
-        regionGroup: 'KAB. BANGKALAN KEC. BLEGA DESA KARANG GAYAM',
-        subRegionGroup: 'DUSUN RONCEH',
-        policeName: 'LINBAMBANG PRIONO',
-        policePhone: '+62 878-4523-7310',
-        picName: 'ROHMATULLOH',
-        picPhone: '+62 838-5284-3164',
-        landArea: 0.74,
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
-    ];
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/summary'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return LandManagementSummaryModel.fromJson(data);
+      } else {
+        return LandManagementSummaryModel(
+          totalPotensiLahan: 0,
+          totalTanamLahan: 0,
+          totalPanenLahanHa: 0,
+          totalPanenLahanTon: 0,
+          totalSerapanTon: 0,
+        );
+      }
+    } catch (e) {
+      return LandManagementSummaryModel(
+        totalPotensiLahan: 0,
+        totalTanamLahan: 0,
+        totalPanenLahanHa: 0,
+        totalPanenLahanTon: 0,
+        totalSerapanTon: 0,
+      );
+    }
+  }
+
+  // 3. GET LIST (Dengan Search & Filter Lengkap)
+  Future<List<LandManagementItemModel>> getLandManagementList({
+    String keyword = "",
+    Map<String, String>? filters, // Parameter Tambahan untuk Filter
+  }) async {
+    final token = await _getToken();
+
+    // Susun URL Dasar
+    String url = '$baseUrl/list?search=$keyword';
+
+    // Tambahkan Parameter Filter ke URL jika ada
+    if (filters != null) {
+      if (filters['polres'] != null && filters['polres']!.isNotEmpty) {
+        url += '&polres=${filters['polres']}';
+      }
+      if (filters['polsek'] != null && filters['polsek']!.isNotEmpty) {
+        url += '&polsek=${filters['polsek']}';
+      }
+      if (filters['jenis_lahan'] != null &&
+          filters['jenis_lahan']!.isNotEmpty) {
+        url += '&jenis_lahan=${filters['jenis_lahan']}';
+      }
+      if (filters['komoditas'] != null && filters['komoditas']!.isNotEmpty) {
+        url += '&komoditas=${filters['komoditas']}';
+      }
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        return data.map((e) => LandManagementItemModel.fromJson(e)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      debugPrint("Error repo list: $e");
+      return [];
+    }
   }
 }

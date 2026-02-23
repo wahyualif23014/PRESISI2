@@ -1,98 +1,73 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/lahan_history_model.dart';
 
 class LandHistoryRepository {
-  
-  // 1. GET SUMMARY STATS
-  Future<LandHistorySummaryModel> getSummaryStats() async {
-    await Future.delayed(const Duration(milliseconds: 500)); 
+  final String baseUrl = "http://10.16.11.26:8080/api/riwayat-lahan";
 
-    return LandHistorySummaryModel(
-      totalPotensiLahan: 6124.35,
-      totalTanamLahan: 620.45,
-      totalPanenLahanHa: 3.20,
-      totalPanenLahanTon: 16.00,
-      totalSerapanTon: 0.00,
-    );
+  Future<String> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
   }
 
-  // 2. GET HISTORY LIST
-  Future<List<LandHistoryItemModel>> getHistoryList() async {
-    await Future.delayed(const Duration(milliseconds: 800)); 
+  // AMBIL OPSI FILTER DARI DB
+  Future<Map<String, List<String>>> getFilterOptions({
+    String? polres,
+    String? polsek,
+  }) async {
+    String url = '$baseUrl/filter-options?';
+    if (polres != null) url += 'polres=$polres&';
+    if (polsek != null) url += 'polsek=$polsek';
 
-    return [
-      LandHistoryItemModel(
-        id: '1',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA DLEMER',
-        subRegionGroup: 'DUSUN RONCEH',
-        policeName: 'BAMBANG PRIONO',
-        policePhone: '+62 878-4523-7310',
-        picName: 'ROHMATULLOH',
-        picPhone: '+62 838-5284-3164',
-        landArea: 3.50,
-        landCategory: 'POKTAN BINAAN POLRI', // Teks kecil di bawah luas
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800', 
-      ),
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'polres': List<String>.from(data['polres'] ?? []),
+          'polsek': List<String>.from(data['polsek'] ?? []),
+          'jenis_lahan': List<String>.from(data['jenis_lahan'] ?? []),
+          'komoditas': List<String>.from(data['komoditas'] ?? []),
+        };
+      }
+    } catch (e) {
+      debugPrint("Error Filter Options: $e");
+    }
+    return {};
+  }
 
-      // --- GRUP 2: LAJING / BARUK ---
-      LandHistoryItemModel(
-        id: '2',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA LAJING',
-        subRegionGroup: 'DUSUN BARUK',
-        policeName: 'YUNUS SETYA BUDI',
-        policePhone: '+62 823-3202-6519',
-        picName: 'RUDY AFFANDI',
-        picPhone: '+62 877-1832-6635',
-        landArea: 1.50,
-        landCategory: 'POKTAN BINAAN POLRI',
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
+  Future<List<LandHistoryItemModel>> getHistoryList({
+    String keyword = "",
+    Map<String, String>? filters,
+  }) async {
+    final token = await _getToken();
+    String url = '$baseUrl/list?search=$keyword';
 
-      // --- GRUP 3: PLAKARAN / PLAKARAN (Item A) ---
-      LandHistoryItemModel(
-        id: '3',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA PLAKARAN',
-        subRegionGroup: 'DUSUN PLAKARAN',
-        policeName: 'RUDI HARTONO',
-        policePhone: '+62 812-1719-8527',
-        picName: 'MUSTOFA',
-        picPhone: '+62 877-4534-4688',
-        landArea: 3.50,
-        landCategory: 'POKTAN BINAAN POLRI',
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
+    if (filters != null) {
+      if (filters['polres']?.isNotEmpty ?? false)
+        url += '&polres=${filters['polres']}';
+      if (filters['polsek']?.isNotEmpty ?? false)
+        url += '&polsek=${filters['polsek']}';
+      if (filters['jenis_lahan']?.isNotEmpty ?? false)
+        url += '&jenis_lahan=${filters['jenis_lahan']}';
+      if (filters['komoditas']?.isNotEmpty ?? false)
+        url += '&komoditas=${filters['komoditas']}';
+    }
 
-      // --- GRUP 3: PLAKARAN / PLAKARAN (Item B - Duplicate data visual check) ---
-      LandHistoryItemModel(
-        id: '4',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA PLAKARAN',
-        subRegionGroup: 'DUSUN PLAKARAN',
-        policeName: 'RUDI HARTONO',
-        policePhone: '+62 812-1719-8527',
-        picName: 'MUSTOFA',
-        picPhone: '+62 877-4534-4688',
-        landArea: 3.50,
-        landCategory: 'POKTAN BINAAN POLRI',
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
-      
-      // Data dummy tambahan untuk tes scroll
-      LandHistoryItemModel(
-        id: '5',
-        regionGroup: 'KAB. BANGKALAN KEC. AROSBAYA DESA PLAKARAN',
-        subRegionGroup: 'DUSUN PLAKARAN',
-        policeName: 'RUDI HARTONO',
-        policePhone: '+62 812-1719-8527',
-        picName: 'MUSTOFA',
-        picPhone: '+62 877-4534-4688',
-        landArea: 3.50,
-        landCategory: 'POKTAN BINAAN POLRI',
-        status: 'PROSES PANEN',
-        statusColor: '#FF9800',
-      ),
-    ];
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        return data.map((e) => LandHistoryItemModel.fromJson(e)).toList();
+      }
+    } catch (e) {
+      debugPrint("Error Fetch History: $e");
+    }
+    return [];
   }
 }

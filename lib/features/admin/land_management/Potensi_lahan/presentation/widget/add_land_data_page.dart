@@ -15,7 +15,6 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
   final LandPotentialService _service = LandPotentialService();
   final _formKey = GlobalKey<FormState>();
 
-  // --- CONTROLLERS BERDASARKAN FORM ---
   final _policeNameController = TextEditingController();
   final _policePhoneController = TextEditingController();
   final _picNameController = TextEditingController();
@@ -29,17 +28,27 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
   final _longitudeController = TextEditingController(text: "0");
   final _ketLainController = TextEditingController();
 
-  // --- DROPDOWN STATES ---
   String? _selectedResor;
   String? _selectedSektor;
   String? _selectedJenisLahan;
-  String? _selectedKomoditi = "AKASIA";
+  String? _selectedKomoditi;
   String? _selectedKab;
   String? _selectedKec;
   String? _selectedDesa;
   String _selectedStatus = "BELUM TERVALIDASI";
 
   bool _isLoading = false;
+
+  final List<String> _kategoriLahan = [
+    "PERHUTANAN SOSIAL",
+    "POKTAN BINAAN POLRI",
+    "MASYARAKAT BINAAN POLRI",
+    "TUMPANG SARI",
+    "MILIK POLRI",
+    "LBS",
+    "PESANTREN",
+    "LAHAN LAINNYA",
+  ];
 
   @override
   void initState() {
@@ -58,14 +67,36 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
     _luasLahanController.text = d.luasLahan.toString();
     _jmlPetaniController.text = d.jumlahPetani.toString();
     _alamatController.text = d.alamatLahan;
+    _ketLainController.text = d.keteranganLain;
     _selectedJenisLahan = d.jenisLahan;
     _selectedKomoditi = d.komoditi;
-    _selectedResor = d.resor;
-    _selectedSektor = d.sektor;
+    _selectedResor = d.resor.replaceAll("POLRES ", "");
+    _selectedSektor = d.sektor.replaceAll("POLSEK ", "");
     _selectedKab = d.kabupaten;
     _selectedKec = d.kecamatan;
     _selectedDesa = d.desa;
     _selectedStatus = d.statusValidasi;
+  }
+
+  int _getIdJenisLahan(String? title) {
+    switch (title) {
+      case "PERHUTANAN SOSIAL":
+        return 1;
+      case "POKTAN BINAAN POLRI":
+        return 2;
+      case "MASYARAKAT BINAAN POLRI":
+        return 3;
+      case "TUMPANG SARI":
+        return 4;
+      case "MILIK POLRI":
+        return 5;
+      case "LBS":
+        return 6;
+      case "PESANTREN":
+        return 7;
+      default:
+        return 8;
+    }
   }
 
   Future<void> _handleSave() async {
@@ -74,12 +105,14 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
 
     final payload = LandPotentialModel(
       id: widget.editData?.id ?? "0",
+      idWilayah: "3510010",
       kabupaten: _selectedKab ?? "-",
       kecamatan: _selectedKec ?? "-",
       desa: _selectedDesa ?? "-",
-      resor: _selectedResor ?? "-",
-      sektor: _selectedSektor ?? "-",
-      jenisLahan: _selectedJenisLahan ?? "-",
+      resor: "POLRES ${_selectedResor ?? '-'}",
+      sektor: "POLSEK ${_selectedSektor ?? '-'}",
+      idJenisLahan: _getIdJenisLahan(_selectedJenisLahan),
+      jenisLahan: _selectedJenisLahan ?? "LAHAN LAINNYA",
       luasLahan: double.tryParse(_luasLahanController.text) ?? 0.0,
       alamatLahan: _alamatController.text,
       statusValidasi: _selectedStatus,
@@ -90,13 +123,12 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
       keterangan: _picKeteranganController.text,
       jumlahPoktan: int.tryParse(_jmlPoktanController.text) ?? 0,
       jumlahPetani: int.tryParse(_jmlPetaniController.text) ?? 0,
-      komoditi: _selectedKomoditi ?? "AKASIA",
+      idKomoditi: 1,
+      komoditi: _selectedKomoditi ?? "TANAMAN PANGAN-JAGUNG",
       keteranganLain: _ketLainController.text,
-      fotoLahan: "",
-      tglProses: DateTime.now().toString(),
-      diprosesOleh: "Admin",
-      divalidasiOleh: "-",
-      tglValidasi: "-",
+      fotoLahan: widget.editData?.fotoLahan ?? "",
+      infoProses: widget.editData?.infoProses ?? "Admin (${DateTime.now()})",
+      infoValidasi: widget.editData?.infoValidasi ?? "-",
     );
 
     bool success =
@@ -119,192 +151,221 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F9),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          widget.editData != null
-              ? "EDIT FORM DATA LAHAN"
-              : "FORM TAMBAH DATA LAHAN",
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-            letterSpacing: 1,
-          ),
+          widget.editData != null ? "EDIT DATA LAHAN" : "TAMBAH DATA LAHAN",
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        backgroundColor: const Color(0xFF0097B2),
+        elevation: 0,
+        backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
-        centerTitle: true,
       ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Form(
                   key: _formKey,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // SECTION 1: UNIT KERJA
-                      _buildSectionCard("UNIT KERJA", [
-                        _buildDropdown(
-                          "KEPOLISIAN RESOR",
-                          [
-                            "PILIH KEPOLISIAN RESOR",
-                            "POLRES BANYUWANGI",
-                            "POLRES JEMBER",
-                          ],
-                          (v) => setState(() => _selectedResor = v),
-                          _selectedResor,
-                        ),
-                        _buildDropdown(
-                          "KEPOLISIAN SEKTOR",
-                          [
-                            "PILIH KEPOLISIAN SEKTOR",
-                            "POLSEK KABAT",
-                            "POLSEK ROGOJAMPI",
-                          ],
-                          (v) => setState(() => _selectedSektor = v),
-                          _selectedSektor,
-                        ),
-                      ]),
+                      _buildLabel("Kepolisian Resor"),
+                      _buildDropdown(
+                        "Pilih Kepolisian Resor",
+                        ["BANYUWANGI", "JEMBER"],
+                        (v) => setState(() => _selectedResor = v),
+                        _selectedResor,
+                      ),
 
-                      // SECTION 2: JENIS LAHAN
-                      _buildSectionCard("JENIS LAHAN", [
-                        _buildDropdown(
-                          "PILIH JENIS LAHAN",
-                          ["SAWAH", "LADANG", "PERKEBUNAN"],
-                          (v) => setState(() => _selectedJenisLahan = v),
-                          _selectedJenisLahan,
-                        ),
-                      ]),
+                      _buildLabel("Kepolisian Sektor"),
+                      _buildDropdown(
+                        "Pilih Kepolisian Sektor",
+                        ["KABAT", "ROGOJAMPI"],
+                        (v) => setState(() => _selectedSektor = v),
+                        _selectedSektor,
+                      ),
 
-                      // SECTION 3: PERSONEL & PJ
-                      _buildSectionCard("PERSONEL & PENANGGUNG JAWAB", [
-                        _buildFieldRow(
-                          "POLISI PENGGERAK",
-                          _policeNameController,
-                          "KONTAK",
-                          _policePhoneController,
-                          isPhone: true,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildFieldRow(
-                          "PENANGGUNG JAWAB",
-                          _picNameController,
-                          "KONTAK",
-                          _picPhoneController,
-                          isPhone: true,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildField(
-                          "KETERANGAN PENANGGUNG JAWAB",
-                          _picKeteranganController,
-                          Icons.edit_note,
-                        ),
-                      ]),
+                      _buildLabel("Jenis Lahan"),
+                      _buildDropdown(
+                        "Pilih Jenis Lahan",
+                        _kategoriLahan,
+                        (v) => setState(() => _selectedJenisLahan = v),
+                        _selectedJenisLahan,
+                      ),
 
-                      // SECTION 4: DATA LAHAN
-                      _buildSectionCard("DATA LAHAN", [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildField(
-                                "JML. POKTAN",
-                                _jmlPoktanController,
-                                Icons.groups,
-                                isNumber: true,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildField(
-                                "LUAS LAHAN (HA)",
-                                _luasLahanController,
-                                Icons.area_chart,
-                                isNumber: true,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildField(
-                                "JML. PETANI",
-                                _jmlPetaniController,
-                                Icons.person,
-                                isNumber: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _buildDropdown(
-                          "KOMODITI",
-                          ["AKASIA", "JATI", "JAGUNG", "PADI"],
-                          (v) => setState(() => _selectedKomoditi = v),
-                          _selectedKomoditi,
-                        ),
-                      ]),
+                      const Divider(height: 40),
 
-                      // SECTION 5: ALAMAT & MAPS
-                      _buildSectionCard("ALAMAT LAHAN", [
-                        _buildField(
-                          "MASUKKAN ALAMAT LAHAN",
-                          _alamatController,
-                          Icons.location_on,
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDropdown(
-                                "KABUPATEN/KOTA",
-                                ["BANYUWANGI", "JEMBER"],
-                                (v) => setState(() => _selectedKab = v),
-                                _selectedKab,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildDropdown(
-                                "KECAMATAN",
-                                ["KEC. KABAT", "KEC. ROGOJAMPI"],
-                                (v) => setState(() => _selectedKec = v),
-                                _selectedKec,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildDropdown(
-                                "DESA",
-                                ["DESA A", "DESA B"],
-                                (v) => setState(() => _selectedDesa = v),
-                                _selectedDesa,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _buildFieldRow(
-                          "LATITUDE",
-                          _latitudeController,
-                          "LONGITUDE",
-                          _longitudeController,
-                          isNumber: true,
-                        ),
-                      ]),
+                      _buildLabel("Polisi Penggerak"),
+                      _buildTextField(
+                        _policeNameController,
+                        "Masukkan Nama Anggota",
+                      ),
+                      _buildLabel("Kontak Polisi"),
+                      _buildTextField(
+                        _policePhoneController,
+                        "Masukkan No. Handphone",
+                        isPhone: true,
+                      ),
 
-                      // SECTION 6: KETERANGAN LAIN
-                      _buildSectionCard("KETERANGAN LAIN", [
-                        _buildField(
-                          "MASUKKAN KETERANGAN LAINNYA",
-                          _ketLainController,
-                          Icons.description,
-                          maxLines: 2,
-                        ),
-                      ]),
+                      _buildLabel("Penanggung Jawab"),
+                      _buildTextField(
+                        _picNameController,
+                        "Masukkan Nama Penanggung Jawab",
+                      ),
+                      _buildLabel("Kontak Penanggung Jawab"),
+                      _buildTextField(
+                        _picPhoneController,
+                        "Masukkan No. Handphone",
+                        isPhone: true,
+                      ),
 
-                      _buildFooterButtons(),
+                      _buildLabel("Keterangan Penanggung Jawab"),
+                      _buildTextField(
+                        _picKeteranganController,
+                        "Masukkan Keterangan Penanggung Jawab",
+                        maxLines: 2,
+                      ),
+
+                      const Divider(height: 40),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Jml. Poktan"),
+                                _buildTextField(
+                                  _jmlPoktanController,
+                                  "0",
+                                  isNumber: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Luas Lahan (HA)"),
+                                _buildTextField(
+                                  _luasLahanController,
+                                  "0.00",
+                                  isNumber: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Jml. Petani"),
+                                _buildTextField(
+                                  _jmlPetaniController,
+                                  "0",
+                                  isNumber: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      _buildLabel("Komoditi"),
+                      _buildDropdown(
+                        "Pilih Komoditi",
+                        ["AKASIA", "JAGUNG", "PADI", "TEBU"],
+                        (v) => setState(() => _selectedKomoditi = v),
+                        _selectedKomoditi,
+                      ),
+
+                      const Divider(height: 40),
+
+                      _buildLabel("Alamat Lahan"),
+                      _buildTextField(
+                        _alamatController,
+                        "Masukkan Alamat Lahan",
+                        maxLines: 3,
+                      ),
+
+                      _buildLabel("Kabupaten/Kota"),
+                      _buildDropdown(
+                        "Pilih Kabupaten/Kota",
+                        ["BANYUWANGI", "JEMBER"],
+                        (v) => setState(() => _selectedKab = v),
+                        _selectedKab,
+                      ),
+
+                      _buildLabel("Kecamatan"),
+                      _buildDropdown(
+                        "Pilih Kecamatan",
+                        ["KEC. KABAT", "KEC. ROGOJAMPI"],
+                        (v) => setState(() => _selectedKec = v),
+                        _selectedKec,
+                      ),
+
+                      _buildLabel("Kelurahan/Desa"),
+                      _buildDropdown(
+                        "Pilih Kelurahan/Desa",
+                        ["DESA A", "DESA B"],
+                        (v) => setState(() => _selectedDesa = v),
+                        _selectedDesa,
+                      ),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Latitude"),
+                                _buildTextField(
+                                  _latitudeController,
+                                  "0",
+                                  isNumber: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLabel("Longitude"),
+                                _buildTextField(
+                                  _longitudeController,
+                                  "0",
+                                  isNumber: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+                      _buildMapPlaceholder(),
+
+                      const SizedBox(height: 20),
+                      _buildLabel("Foto Lahan"),
+                      _buildPhotoPlaceholder(),
+
+                      _buildLabel("Keterangan Lain"),
+                      _buildTextField(
+                        _ketLainController,
+                        "Masukkan Keterangan Lainnya",
+                        maxLines: 3,
+                      ),
+
                       const SizedBox(height: 30),
+                      _buildActionButtons(),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -312,155 +373,168 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
     );
   }
 
-  Widget _buildSectionCard(String title, List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey,
-              letterSpacing: 1,
-            ),
-          ),
-          const Divider(height: 20),
-          ...children,
-        ],
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 12),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.black54,
+        ),
       ),
     );
   }
 
-  Widget _buildField(
-    String label,
+  Widget _buildTextField(
     TextEditingController controller,
-    IconData icon, {
+    String hint, {
     bool isNumber = false,
+    bool isPhone = false,
     int maxLines = 1,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(fontSize: 12),
+      keyboardType:
+          isNumber || isPhone ? TextInputType.number : TextInputType.text,
       decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 11),
-        prefixIcon: Icon(icon, size: 18, color: const Color(0xFF0097B2)),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
         filled: true,
-        fillColor: const Color(0xFFF9FBFB),
+        fillColor: Colors.grey.shade50,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
       ),
-    );
-  }
-
-  Widget _buildFieldRow(
-    String label1,
-    TextEditingController ctrl1,
-    String label2,
-    TextEditingController ctrl2, {
-    bool isNumber = false,
-    bool isPhone = false,
-  }) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: _buildField(label1, ctrl1, Icons.edit, isNumber: isNumber),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 1,
-          child: _buildField(
-            label2,
-            ctrl2,
-            Icons.contact_phone,
-            isNumber: isNumber || isPhone,
-          ),
-        ),
-      ],
     );
   }
 
   Widget _buildDropdown(
-    String label,
+    String hint,
     List<String> items,
     Function(String?) onChanged,
     String? value,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: DropdownButtonFormField<String>(
-        value: items.contains(value) ? value : null,
-        style: const TextStyle(fontSize: 11, color: Colors.black),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(fontSize: 10),
-          filled: true,
-          fillColor: const Color(0xFFF9FBFB),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+    return DropdownButtonFormField<String>(
+      value: items.contains(value) ? value : null,
+      hint: Text(hint, style: const TextStyle(fontSize: 13)),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
-        items:
-            items
-                .map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e, overflow: TextOverflow.ellipsis),
-                  ),
-                )
-                .toList(),
-        onChanged: onChanged,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      items:
+          items
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e, style: const TextStyle(fontSize: 13)),
+                ),
+              )
+              .toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildMapPlaceholder() {
+    return Container(
+      height: 200,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: const Center(child: Icon(Icons.map, size: 50, color: Colors.blue)),
+    );
+  }
+
+  Widget _buildPhotoPlaceholder() {
+    return Container(
+      height: 180,
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_not_supported_outlined,
+            size: 50,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 8),
+          Text("Belum Ada Foto", style: TextStyle(color: Colors.grey)),
+        ],
       ),
     );
   }
 
-  Widget _buildFooterButtons() {
+  Widget _buildActionButtons() {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, size: 16, color: Colors.white),
-            label: const Text(
-              "BATAL",
-              style: TextStyle(color: Colors.white, fontSize: 12),
-            ),
-            style: OutlinedButton.styleFrom(
-              backgroundColor: Colors.grey.shade800,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: 50,
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.red),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                "BATAL",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 15),
         Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _handleSave,
-            icon: const Icon(Icons.check, size: 16),
-            label: const Text("SIMPAN", style: TextStyle(fontSize: 12)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF546E7A),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _handleSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D47A1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                "SIMPAN DATA",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

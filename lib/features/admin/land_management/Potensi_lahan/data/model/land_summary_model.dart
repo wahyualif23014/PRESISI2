@@ -12,9 +12,8 @@ class LandSummaryCategory {
   factory LandSummaryCategory.fromJson(Map<String, dynamic> json) {
     return LandSummaryCategory(
       title: json['title'] ?? "-",
-      // Menggunakan .toDouble() untuk menghindari error tipe data num
       area: (json['area'] ?? 0).toDouble(),
-      count: json['count'] ?? 0,
+      count: (json['count'] ?? 0).toInt(),
     );
   }
 }
@@ -36,7 +35,7 @@ class AdminCounts {
 
   factory AdminCounts.fromJson(Map<String, dynamic> json) {
     return AdminCounts(
-      polres: (json['polres'] ?? 0).toInt(),
+      polres: (json['kab_kota'] ?? 0).toInt(),
       polsek: (json['polsek'] ?? 0).toInt(),
       kabKota: (json['kab_kota'] ?? 0).toInt(),
       kecamatan: (json['kecamatan'] ?? 0).toInt(),
@@ -59,16 +58,16 @@ class LandSummaryModel {
   });
 
   factory LandSummaryModel.fromJson(Map<String, dynamic> json) {
-    // Perbaikan: Ambil data dari 'categories' bukan 'details'
     var list = json['categories'] as List? ?? [];
     List<LandSummaryCategory> catList =
         list.map((i) => LandSummaryCategory.fromJson(i)).toList();
 
     return LandSummaryModel(
       totalArea: (json['total_area'] ?? 0).toDouble(),
-      totalLocations: json['total_locations'] ?? 0,
+      totalLocations: (json['total_locations'] ?? 0).toInt(),
       categories: catList,
-      adminCounts: AdminCounts.fromJson(json['admin_counts'] ?? {}),
+      // Mengambil data dari key 'details' yang dikirim oleh backend Go
+      adminCounts: AdminCounts.fromJson(json['details'] ?? {}),
     );
   }
 }

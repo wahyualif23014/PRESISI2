@@ -23,26 +23,6 @@ class RecapModel {
     this.namaPolsek,
   });
 
-  factory RecapModel.fromJson(Map<String, dynamic> json) {
-    RecapRowType parseType(dynamic val) {
-      if (val == 'polres' || val == 0) return RecapRowType.polres;
-      if (val == 'polsek' || val == 1) return RecapRowType.polsek;
-      return RecapRowType.desa;
-    }
-
-    return RecapModel(
-      id: json['id'] ?? '',
-      namaWilayah: json['nama_wilayah'] ?? '',
-      potensiLahan: (json['potensi_lahan'] as num?)?.toDouble() ?? 0.0,
-      tanamLahan: (json['tanam_lahan'] as num?)?.toDouble() ?? 0.0,
-      panenLuas: (json['panen_luas'] as num?)?.toDouble() ?? 0.0,
-      panenTon: (json['panen_ton'] as num?)?.toDouble() ?? 0.0,
-      serapan: (json['serapan'] as num?)?.toDouble() ?? 0.0,
-      type: parseType(json['level']),
-      namaPolsek: json['nama_polsek'], 
-    );
-  }
-
   RecapModel copyWith({String? namaPolsek}) {
     return RecapModel(
       id: id,
@@ -57,5 +37,23 @@ class RecapModel {
     );
   }
 
-  String get panenDisplay => "${panenLuas.toStringAsFixed(0)} HA / ${panenTon.toStringAsFixed(0)} TON";
+  factory RecapModel.fromJson(Map<String, dynamic> json) {
+    RecapRowType parseType(dynamic val) {
+      if (val == 'polres') return RecapRowType.polres;
+      if (val == 'polsek') return RecapRowType.polsek;
+      return RecapRowType.desa;
+    }
+
+    return RecapModel(
+      id: json['id']?.toString() ?? '',
+      namaWilayah: json['nama_wilayah'] ?? '',
+      potensiLahan: (json['potensi_lahan'] as num?)?.toDouble() ?? 0.0,
+      tanamLahan: (json['tanam_lahan'] as num?)?.toDouble() ?? 0.0,
+      panenLuas: (json['panen_luas'] as num?)?.toDouble() ?? 0.0,
+      panenTon: (json['panen_ton'] as num?)?.toDouble() ?? 0.0,
+      serapan: (json['serapan'] as num?)?.toDouble() ?? 0.0,
+      type: parseType(json['level']),
+      namaPolsek: json['nama_polsek'],
+    );
+  }
 }

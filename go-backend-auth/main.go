@@ -26,6 +26,12 @@ func init() {
 func main() {
 	r := gin.Default()
 
+	// --- 1. GLOBAL MIDDLEWARE & STATIC ASSETS ---
+
+	// Endpoint Gambar (Mengambil dari SQL)
+	r.GET("/uploads/:filename", controllers.GetImageFromDB)
+
+	// Konfigurasi CORS Lengkap
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -35,8 +41,8 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Dokumentasi Swagger & Health Check
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "SIKAP PRESISI Backend v2.0 Online"})
 	})
@@ -66,7 +72,6 @@ func main() {
 			admin.GET("/jabatan", controllers.GetJabatan)
 			admin.PUT("/jabatan/:id", controllers.UpdateJabatan)
 			admin.DELETE("/jabatan/:id", controllers.DeleteJabatan)
-
 			admin.GET("/tingkat", controllers.GetTingkat)
 
 			// Master Wilayah

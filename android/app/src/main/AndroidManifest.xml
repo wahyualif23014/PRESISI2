@@ -9,9 +9,9 @@
         android:label="sdmapp"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true">
-        
-        <activity
+        android:enableOnBackInvokedCallback="true"
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true"> <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"

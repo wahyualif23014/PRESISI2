@@ -1,73 +1,163 @@
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
 
-class LandManagementSummary extends StatelessWidget {
-  final LandManagementSummaryModel? data;
-  final bool isLoading;
+class KelolaSummaryWidget extends StatefulWidget {
+  const KelolaSummaryWidget({super.key});
 
-  const LandManagementSummary({
-    super.key,
-    required this.data,
-    this.isLoading = false,
-  });
+  @override
+  State<KelolaSummaryWidget> createState() => KelolaSummaryWidgetState();
+}
+
+class KelolaSummaryWidgetState extends State<KelolaSummaryWidget> {
+  bool _isExpanded = false;
+
+  // Inisialisasi variabel dengan nama yang konsisten
+  double potensi = 0;
+  double tanam = 0;
+  double panen = 0;
+  double hasil = 0;
+
+  // Fungsi sinkronisasi data yang dipanggil dari KelolaLahanPage
+  void calculateSummaryFromList(List<LandManagementItemModel> list) {
+    double tPot = 0;
+    double tTan = 0;
+    double tPan = 0;
+    double tHas = 0;
+
+    for (var item in list) {
+      tPot += item.landArea;
+      tTan += item.luasTanam;
+      tPan += item.luasPanen;
+      tHas += item.hasilPanen;
+    }
+
+    setState(() {
+      potensi = tPot;
+      tanam = tTan;
+      panen = tPan;
+      hasil = tHas;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
-    if (data == null) return const SizedBox();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black, width: 1.2),
+      ),
+      child: Column(
+        children: [
+          // Header Summary yang bisa diklik
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  _buildIconInfo(),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      "Ringkasan Pengelolaan Lahan",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: Colors.black54,
+                  ),
+                ],
+              ),
+            ),
+          ),
 
-    return Column(
-      children: [
-        // Baris 1
-        Row(
-          children: [
-            Expanded(child: _buildCard("Total Potensi Lahan ${data!.totalPotensiLahan} Ha")),
-            const SizedBox(width: 8),
-            Expanded(child: _buildCard("Total Tanam Lahan ${data!.totalTanamLahan} Ha")),
+          // Konten yang muncul saat di-expand
+          if (_isExpanded) ...[
+            const Divider(height: 1, thickness: 1, color: Colors.black),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Wrap(
+                runSpacing: 12,
+                children: [
+                  _buildSummaryItem(
+                    "TOTAL POTENSI",
+                    "${potensi.toStringAsFixed(2)} HA",
+                    const Color(0xFF64748B),
+                  ),
+                  _buildSummaryItem(
+                    "TOTAL TANAM",
+                    "${tanam.toStringAsFixed(2)} HA",
+                    Colors.green,
+                  ),
+                  _buildSummaryItem(
+                    "LUAS PANEN",
+                    "${panen.toStringAsFixed(2)} HA", // Memperbaiki 'pan' menjadi 'panen'
+                    Colors.orange,
+                  ),
+                  _buildSummaryItem(
+                    "TOTAL HASIL",
+                    "${hasil.toStringAsFixed(2)} TON",
+                    Colors.deepPurple,
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 8),
-        // Baris 2
-        Row(
-          children: [
-            Expanded(child: _buildCard("Total Panen Lahan ${data!.totalPanenLahanHa} Ha (${data!.totalPanenLahanTon} Ton)")),
-            const SizedBox(width: 8),
-            Expanded(child: _buildCard("Total Serapan ${data!.totalSerapanTon} Ton")),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildCard(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            offset: const Offset(0, 2),
-            blurRadius: 4,
-          ),
-        ],
+  Widget _buildIconInfo() => Container(
+    width: 32,
+    height: 32,
+    decoration: const BoxDecoration(
+      color: Color(0xFF9E9D24),
+      shape: BoxShape.circle,
+    ),
+    child: const Center(
+      child: Text(
+        "i",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontStyle: FontStyle.italic,
+          fontSize: 18,
+        ),
       ),
-      child: Row(
+    ),
+  );
+
+  Widget _buildSummaryItem(String label, String value, Color color) {
+    return SizedBox(
+      width: (MediaQuery.of(context).size.width - 80) / 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info, color: Colors.black, size: 16),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: color,
             ),
           ),
         ],

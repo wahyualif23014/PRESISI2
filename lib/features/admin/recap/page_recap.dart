@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/controllers/recap_controller.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/PrintSuccess.dart';
-import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_data_row.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_filter_dialog.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_header_section.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_table_header.dart';
+import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_pagination_wrapper.dart';
 
 class PageRecap extends StatefulWidget {
   const PageRecap({Key? key}) : super(key: key);
@@ -27,113 +28,121 @@ class _PageRecapState extends State<PageRecap> {
     super.dispose();
   }
 
-  void _showFilterDialog() {
+  // --- LOGIKA DOWNLOAD EXCEL ---
+  void _handleDownloadExcel() async {
+    // Tampilkan Loading
     showDialog(
       context: context,
-      builder: (context) => const RecapFilterDialog(),
-    ).then((result) {
-      if (result != null) {
-        // Implementasi logika filter controller di sini
-        // _controller.applyFilter(result);
-      }
-    });
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+      ),
+    );
+
+    // Proses Download
+    final path = await _controller.downloadExcel();
+    
+    if (!mounted) return;
+    Navigator.pop(context); // Tutup Loading
+
+    if (path != null) {
+      // Tampilkan Dialog Sukses
+      final String fileName = path.split('/').last;
+      PrintSuccessDialog.show(
+        context,
+        fileName: fileName,
+        onPrintTap: () => Navigator.pop(context),
+      );
+    } else {
+      // Tampilkan Error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Gagal mengunduh."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  void _handlePrint() {
-    PrintSuccessDialog.show(
-      context,
-      fileName: "Data_Recap.pdf",
-      onPrintTap: () {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Membuka File PDF...")),
-        );
-      },
+  // --- LOGIKA FILTER (POPUP DIALOG) ---
+  void _showFilterDialog() async {
+    // Menggunakan showDialog agar tampil sebagai POPUP di tengah layar
+    final result = await showDialog<Map<String, bool>>(
+      context: context,
+      // HAPUS 'const' di sini untuk memperbaiki error
+      builder: (context) => RecapFilterDialog(),
     );
+
+    // Kirim hasil filter ke controller jika user menekan 'Terapkan'
+    if (result != null) {
+      _controller.onFilter(result);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF8F9FC),
       body: Column(
         children: [
           const SizedBox(height: 16),
 
-          // 1. Header Section (Search, Filter, Print)
+          // 1. HEADER SECTION (Search, Filter, Download)
           RecapHeaderSection(
-            onSearchChanged: (val) {
-              // _controller.onSearch(val);
-            },
-            onFilterTap: _showFilterDialog,
-            onPrintTap: _handlePrint,
+            onSearchChanged: _controller.onSearch,
+            onFilterTap: _showFilterDialog, // Panggil fungsi Dialog Popup
+            onPrintTap: _handleDownloadExcel,
           ),
 
           const SizedBox(height: 16),
 
-          // 2. Table Header (Judul Kolom)
-          // const RecapTableHeader(),
+          // 2. TABLE HEADER (Judul Kolom)
+          const RecapTableHeader(),
 
-          // 3. Data Content
+          // 3. CONTENT LIST (Data)
           Expanded(
-            child: AnimatedBuilder(
-              animation: _controller,
+            child: ListenableBuilder(
+              listenable: _controller,
               builder: (context, _) {
-                switch (_controller.state) {
-                  case RecapState.loading:
-                    return const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF1B9E5E)),
-                    );
-
-                  case RecapState.error:
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                          const SizedBox(height: 12),
-                          Text(
-                            "Terjadi Kesalahan:\n${_controller.errorMessage}",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: _controller.fetchData,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1B9E5E),
-                            ),
-                            child: const Text("Coba Lagi"),
-                          )
-                        ],
-                      ),
-                    );
-
-                  case RecapState.empty:
-                    return const Center(
-                      child: Text("Data Tidak Ditemukan", style: TextStyle(color: Colors.grey)),
-                    );
-
-                  case RecapState.loaded:
-                  default:
-                    // Render List berdasarkan Grouped Map dari Controller
-                    final dataMap = _controller.groupedData;
-                    
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      itemCount: dataMap.length,
-                      itemBuilder: (context, index) {
-                        final entry = dataMap.entries.elementAt(index);
-                        
-                        // Pass data ke Widget Level 1 (Polres)
-                        return RecapPolresSection(
-                          polresName: entry.key,
-                          itemsInPolres: entry.value,
-                        );
-                      },
-                    );
+                // State Loading
+                if (_controller.state == RecapState.loading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+                  );
                 }
+                
+                // State Error
+                if (_controller.state == RecapState.error) {
+                  return Center(
+                    child: ElevatedButton(
+                      onPressed: _controller.fetchData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF673AB7),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text("Coba Lagi"),
+                    ),
+                  );
+                }
+                
+                // State Kosong
+                if (_controller.state == RecapState.empty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.folder_off, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text("Data Kosong", style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  );
+                }
+
+                // State Sukses -> Tampilkan Pagination Wrapper
+                return RecapPaginationWrapper(
+                  groupedData: _controller.groupedData,
+                );
               },
             ),
           ),

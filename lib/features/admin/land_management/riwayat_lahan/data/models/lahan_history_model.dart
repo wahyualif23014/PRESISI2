@@ -1,10 +1,10 @@
 // MODEL 1: Untuk Statistik Header (Kotak-kotak atas)
 class LandHistorySummaryModel {
-  final double totalPotensiLahan; 
-  final double totalTanamLahan;   
-  final double totalPanenLahanHa; 
+  final double totalPotensiLahan;
+  final double totalTanamLahan;
+  final double totalPanenLahanHa;
   final double totalPanenLahanTon;
-  final double totalSerapanTon;   
+  final double totalSerapanTon;
 
   LandHistorySummaryModel({
     required this.totalPotensiLahan,
@@ -29,23 +29,23 @@ class LandHistorySummaryModel {
 class LandHistoryItemModel {
   final String id;
   // Grouping Level 1 (Ungu Tua)
-  final String regionGroup; 
+  final String regionGroup;
   // Grouping Level 2 (Ungu Muda)
-  final String subRegionGroup; 
-  
+  final String subRegionGroup;
+
   // Data Personil
   final String policeName;
   final String policePhone;
   final String picName; // Penanggung Jawab
   final String picPhone;
-  
+
   // Data Lahan
   final double landArea; // Luas (HA)
   final String landCategory; // Tambahan khusus Riwayat: "POKTAN BINAAN POLRI"
-  
+
   // Status
-  final String status;   // Contoh: "PROSES PANEN"
-  final String statusColor; 
+  final String status; // Contoh: "PROSES PANEN"
+  final String statusColor;
 
   LandHistoryItemModel({
     required this.id,
@@ -58,22 +58,23 @@ class LandHistoryItemModel {
     required this.landArea,
     required this.landCategory, // Field baru
     required this.status,
-    this.statusColor = '#FF9800', 
+    this.statusColor = '#FF9800',
   });
 
+  // Sesuaikan factory dari JSON agar menggunakan key yang sama dengan Go
   factory LandHistoryItemModel.fromJson(Map<String, dynamic> json) {
     return LandHistoryItemModel(
-      id: json['id'] ?? '',
+      id: json['id']?.toString() ?? '',
       regionGroup: json['region_group'] ?? '',
       subRegionGroup: json['sub_region_group'] ?? '',
       policeName: json['police_name'] ?? '',
       policePhone: json['police_phone'] ?? '',
       picName: json['pic_name'] ?? '',
       picPhone: json['pic_phone'] ?? '',
-      landArea: (json['land_area'] as num).toDouble(),
-      landCategory: json['land_category'] ?? '', // Mapping field baru
-      status: json['status'] ?? 'PROSES PANEN',
-      statusColor: json['status_color'] ?? '#FF9800',
+      landArea: (json['land_area'] as num?)?.toDouble() ?? 0.0,
+      landCategory: json['land_category'] ?? '-',
+      status: json['status'] ?? '',
+      statusColor: json['status_color'] ?? '#9E9E9E',
     );
   }
 }

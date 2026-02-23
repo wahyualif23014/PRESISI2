@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../data/model/no_land_potential_model.dart';
-import '../../data/repos/no_land_potential_repository.dart';
+import '../../data/service/land_potential_service.dart';
 
 class NoLandPotentialWidget extends StatefulWidget {
   const NoLandPotentialWidget({super.key});
 
   @override
-  State<NoLandPotentialWidget> createState() => _NoLandPotentialWidgetState();
+  State<NoLandPotentialWidget> createState() => NoLandPotentialWidgetState();
 }
 
-class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
-  final NoLandPotentialRepository _repo = NoLandPotentialRepository();
-
+class NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
+  final LandPotentialService _service = LandPotentialService();
   NoLandPotentialModel? _data;
   bool _isLoading = true;
   bool _isExpanded = false;
@@ -19,12 +18,12 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    fetchData();
   }
 
-  Future<void> _fetchData() async {
+  Future<void> fetchData() async {
     try {
-      final data = await _repo.getNoLandData();
+      final data = await _service.fetchNoLandData();
       if (mounted) {
         setState(() {
           _data = data;
@@ -32,28 +31,17 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
         });
       }
     } catch (e) {
-      debugPrint("Error loading no land data: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Loading State
-    if (_isLoading) {
-      return Container(
+    if (_isLoading)
+      return const SizedBox(
         height: 60,
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        child: Center(child: CircularProgressIndicator()),
       );
-    }
-
-    // 2. Empty State
     if (_data == null) return const SizedBox();
 
     return Container(
@@ -65,42 +53,14 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
       ),
       child: Column(
         children: [
-          // HEADER
           InkWell(
-            onTap: () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            },
-            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // Icon "i" Hijau
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF9E9D24),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "i",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Serif',
-                          fontStyle: FontStyle.italic,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _buildIconInfo(),
                   const SizedBox(width: 12),
-
-                  // Text Judul
                   Expanded(
                     child: RichText(
                       text: TextSpan(
@@ -114,7 +74,6 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
                             text: "${_data!.totalEmptyPolres}",
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
-                              fontSize: 15,
                               color: Color(0xFF00838F),
                             ),
                           ),
@@ -125,64 +84,47 @@ class _NoLandPotentialWidgetState extends State<NoLandPotentialWidget> {
                       ),
                     ),
                   ),
-
-                  // Icon Panah
                   Icon(
                     _isExpanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: Colors.grey,
                   ),
                 ],
               ),
             ),
           ),
-
-          // BODY (RINCIAN DALAM BENTUK TEKS BARIS)
-          if (_isExpanded) ...[
-            const Divider(height: 1, thickness: 1, color: Colors.black),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[800],
-                      height: 1.5,
-                    ),
-                    children: [
-                      const TextSpan(text: "TERDIRI DARI "),
-                      _boldValue("${_data!.emptyPolsek}", " POLSEK, "),
-                      _boldValue("${_data!.emptyKabKota}", " KAB./KOTA, "),
-                      _boldValue("${_data!.emptyKecamatan}", " KECAMATAN, "),
-                      const TextSpan(text: "DAN "),
-                      _boldValue("${_data!.emptyKelDesa}", " KEL./DESA"),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+          if (_isExpanded) _buildDetails(),
         ],
       ),
     );
   }
 
-  // Helper untuk membuat teks angka berwarna dan tebal
-  TextSpan _boldValue(String val, String suffix) {
-    return TextSpan(
-      children: [
-        TextSpan(
-          text: val,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF00838F),
-          ),
+  Widget _buildIconInfo() => Container(
+    width: 32,
+    height: 32,
+    decoration: const BoxDecoration(
+      color: Color(0xFF9E9D24),
+      shape: BoxShape.circle,
+    ),
+    child: const Center(
+      child: Text(
+        "i",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
-        TextSpan(text: suffix),
-      ],
+      ),
+    ),
+  );
+
+  Widget _buildDetails() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Text(
+        "TERDIRI DARI ${_data!.emptyPolsek} POLSEK, ${_data!.emptyKabKota} KAB/KOTA, ${_data!.emptyKecamatan} KECAMATAN, DAN ${_data!.emptyKelDesa} DESA",
+        style: const TextStyle(fontSize: 12, height: 1.5),
+      ),
     );
   }
 }

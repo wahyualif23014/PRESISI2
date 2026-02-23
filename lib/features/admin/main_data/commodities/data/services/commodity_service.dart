@@ -14,7 +14,7 @@ class CategoryFetchResult {
 
 class CommodityService {
   // UPDATE: baseUrl mengarah langsung ke grup admin agar konsisten
-  static const String baseUrl = "http://10.16.9.254:8080/api/admin";
+  static const String baseUrl = "http://192.168.100.195:8080/api/admin";
 
   // PERBAIKAN: Menggunakan key 'jwt_token' agar sinkron dengan AuthProvider
   Future<String> _getToken() async {

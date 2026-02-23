@@ -1,185 +1,107 @@
 import 'package:flutter/material.dart';
-import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/presentation/widget/land_detail_dialog.dart';
+import '../../data/model/land_potential_model.dart';
+import 'land_detail_dialog.dart';
 
 class LandPotentialCard extends StatelessWidget {
   final LandPotentialModel data;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const LandPotentialCard({super.key, required this.data});
+  const LandPotentialCard({
+    super.key,
+    required this.data,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
-  // GANTI IP INI SESUAI SERVER KAMU (Pastikan folder 'uploads' bisa diakses)
-  // Jika backend kamu menyimpan full URL, variabel ini tidak dipakai.
-  final String _imageBaseUrl = "http://192.168.1.8:8080/uploads/"; 
+  // Base URL disesuaikan dengan endpoint API image di backend Go
+  static const String _imageBaseUrl =
+      "http://192.168.100.195:8080/api/potensi-lahan/image/";
 
   @override
   Widget build(BuildContext context) {
+    // Penentuan warna berdasarkan status validasi
+    final bool isValidated = data.statusValidasi == 'TERVALIDASI';
+    final Color statusColor =
+        isValidated ? const Color(0xFF1B9E5E) : Colors.orange;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8), // Sedikit jarak antar card
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10), // Sudut melengkung biar modern
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 1),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => LandDetailDialog(data: data),
-            );
-          },
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showDetail(context),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // ==========================================
-                // KOLOM 1: FOTO LAHAN (DARI DATABASE)
-                // ==========================================
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    color: Colors.grey[200],
-                    child: _buildLandImage(),
-                  ),
-                ),
+                // --- 1. FOTO LAHAN ---
+                _buildThumbnail(),
 
                 const SizedBox(width: 12),
 
-                // ==========================================
-                // KOLOM 2: INFO PERSONEL & MAPS LOKASI
-                // ==========================================
+                // --- 2. INFORMASI TENGAH (Personel & Alamat) ---
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // A. INFO PERSONEL (Polisi & PIC)
-                      Row(
-                        children: [
-                          const Icon(Icons.local_police_rounded, size: 14, color: Color(0xFF0097B2)),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              data.policeName.isNotEmpty ? data.policeName : "Polisi: -",
-                              style: const TextStyle(
-                                fontSize: 12, 
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      _buildInfoRow(
+                        Icons.local_police_rounded,
+                        data.policeName.isNotEmpty ? data.policeName : "-",
+                        const Color(0xFF673AB7),
+                        isBold: true,
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.person, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              data.picName.isNotEmpty ? data.picName : "PIC: -",
-                              style: TextStyle(fontSize: 11, color: Colors.grey[700]),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      _buildInfoRow(
+                        Icons.person_outline_rounded,
+                        "PIC: ${data.picName.isNotEmpty ? data.picName : "-"}",
+                        const Color(0xFF64748B),
                       ),
-
                       const SizedBox(height: 8),
-
-                      // B. MAPS / LOKASI (GAYA PETA)
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD), // Biru muda ala Maps
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.blue.shade100),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                data.alamatLahan,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFF1565C0), // Biru teks link
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // Badge Alamat (Gaya Maps)
+                      _buildLocationBadge(),
                     ],
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
 
-                // ==========================================
-                // KOLOM 3: STATUS & ACTION BUTTONS
-                // ==========================================
+                // --- 3. STATUS & AKSI ---
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // 1. Status Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: data.statusValidasi == 'TERVALIDASI' 
-                            ? const Color(0xFFE8F5E9) 
-                            : const Color(0xFFFFF3E0), 
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: data.statusValidasi == 'TERVALIDASI' 
-                            ? Colors.green 
-                            : Colors.orange,
-                          width: 1
-                        )
-                      ),
-                      child: Text(
-                        data.statusValidasi == 'TERVALIDASI' ? 'Valid' : 'Belum',
-                        style: TextStyle(
-                          color: data.statusValidasi == 'TERVALIDASI' 
-                            ? Colors.green[700] 
-                            : Colors.orange[800],
-                          fontSize: 10, 
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // 2. Tombol Aksi (Kecil Vertikal)
+                    _buildStatusBadge(isValidated, statusColor),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        _buildSmallActionButton(Icons.edit, Colors.blue, () {}),
-                        const SizedBox(width: 4),
-                        _buildSmallActionButton(Icons.delete, Colors.red, () {}),
+                        _buildIconButton(
+                          Icons.edit_outlined,
+                          Colors.blue,
+                          onEdit,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildIconButton(
+                          Icons.delete_outline_rounded,
+                          Colors.red,
+                          onDelete,
+                        ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ],
@@ -190,54 +112,148 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  // --- HELPER: MENAMPILKAN GAMBAR ---
-  Widget _buildLandImage() {
+  // --- WIDGET HELPER: THUMBNAIL GAMBAR ---
+  Widget _buildThumbnail() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 75,
+        height: 75,
+        color: const Color(0xFFF1F5F9),
+        child: _getImageWidget(),
+      ),
+    );
+  }
+
+  Widget _getImageWidget() {
     if (data.fotoLahan.isEmpty || data.fotoLahan == "-") {
-      return const Center(child: Icon(Icons.image_not_supported, color: Colors.grey, size: 30));
+      return const Icon(
+        Icons.image_not_supported_outlined,
+        color: Colors.grey,
+        size: 28,
+      );
     }
 
-    // Cek apakah URL lengkap atau cuma nama file
-    String imageUrl = data.fotoLahan;
-    if (!imageUrl.startsWith("http")) {
-      imageUrl = "$_imageBaseUrl$imageUrl";
-    }
+    // Mengarahkan ke endpoint image controller di backend Go
+    String fullUrl = "$_imageBaseUrl${data.fotoLahan}";
 
     return Image.network(
-      imageUrl,
+      fullUrl,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
+      errorBuilder:
+          (_, __, ___) =>
+              const Icon(Icons.broken_image_outlined, color: Colors.grey),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return const Center(
           child: SizedBox(
-            width: 20, height: 20,
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                  : null,
-              strokeWidth: 2,
-            ),
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
           ),
         );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
       },
     );
   }
 
-  // --- HELPER: TOMBOL KECIL ---
-  Widget _buildSmallActionButton(IconData icon, Color color, VoidCallback onTap) {
+  // --- WIDGET HELPER: ROW INFO ---
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    Color color, {
+    bool isBold = false,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
+              color: isBold ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- WIDGET HELPER: LOCATION BADGE ---
+  Widget _buildLocationBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F7FF),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFD0E7FF)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.location_on_rounded, size: 12, color: Colors.blue),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              data.alamatLahan,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFF1565C0),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET HELPER: STATUS BADGE ---
+  Widget _buildStatusBadge(bool isValid, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        isValid ? "VALID" : "PENDING",
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET HELPER: ICON BUTTON ---
+  Widget _buildIconButton(IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(4),
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 16, color: color),
+        child: Icon(icon, size: 18, color: color),
       ),
+    );
+  }
+
+  void _showDetail(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => LandDetailDialog(data: data),
     );
   }
 }
