@@ -5,11 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/lahan_history_model.dart';
 
 class LandHistoryRepository {
-  final String baseUrl = "http://10.16.8.244:8080/api/riwayat-lahan";
+  final String baseUrl = "http://192.168.100.195:8080/api/riwayat-lahan";
 
   Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
+    return prefs.getString('jwt_token') ?? '';
   }
 
   // AMBIL OPSI FILTER DARI DB

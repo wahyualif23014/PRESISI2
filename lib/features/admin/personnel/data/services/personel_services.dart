@@ -6,7 +6,7 @@ import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 
 class PersonelService {
-  final String baseUrl = 'http://10.16.8.244:8080'; 
+  final String baseUrl = 'http://192.168.100.195:8080'; 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('jwt_token'); 

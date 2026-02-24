@@ -9,11 +9,11 @@ import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
   // Gunakan IP server yang sesuai dengan konfigurasi backend Go kamu
-  final String baseUrl = "http://10.16.8.244:8080/api/potensi-lahan";
+  final String baseUrl = "http://192.168.100.195:8080/api/potensi-lahan";
 
   Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
+    return prefs.getString('jwt_token') ?? '';
   }
 
   Future<Map<String, String>> _getHeaders() async {
