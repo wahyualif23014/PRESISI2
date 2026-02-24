@@ -4,6 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 
+// --- PALET WARNA EARTHY & ORGANIC ---
+const Color _forestGreen = Color(0xFF2D4F1E);
+const Color _warmBeige = Color(0xFFF5E6CC);
+const Color _terracotta = Color(0xFFE27D60);
+const Color _slateGrey = Color(0xFF4A4A4A);
+const Color _bgWarm = Color(0xFFFDF8F3);
+const Color _borderWarm = Color(0xFFE8DDD0);
+const Color _textPrimary = Color(0xFF2C3E2D);
+
 class PersonelCard extends StatelessWidget {
   final UserModel personel;
   final VoidCallback? onEdit;
@@ -18,16 +27,9 @@ class PersonelCard extends StatelessWidget {
     this.onTap,
   });
 
-  // ===============================
-  // PHONE NUMBER SANITIZER
-  // ===============================
   String? _sanitizePhoneNumber(String? phone) {
     if (phone == null || phone.isEmpty) return null;
-
-    // Remove all non-digit characters except +
     String sanitized = phone.replaceAll(RegExp(r'[^\d+]'), '');
-
-    // Handle Indonesian numbers
     if (sanitized.startsWith('0')) {
       sanitized = '+62${sanitized.substring(1)}';
     } else if (sanitized.startsWith('62') && !sanitized.startsWith('+')) {
@@ -35,27 +37,17 @@ class PersonelCard extends StatelessWidget {
     } else if (!sanitized.startsWith('+')) {
       sanitized = '+$sanitized';
     }
-
-    // Validate
     if (sanitized.length < 8 || sanitized.length > 15) return null;
-
     return sanitized;
   }
 
-  // ===============================
-  // LAUNCHERS - DIRECT EXECUTION
-  // ===============================
   Future<void> _launchWhatsApp(BuildContext context, String phone) async {
     final message = Uri.encodeComponent(
       "Halo ${personel.namaLengkap}, saya ingin menghubungi terkait tugas di ${personel.tingkatDetail?.nama ?? 'Kantor'}.",
     );
-    
-    // PERBAIKAN: Hapus spasi, wa.me tidak perlu +
     final waNumber = phone.replaceAll('+', '');
     final Uri url = Uri.parse("https://wa.me/$waNumber?text=$message");
-
-    debugPrint('Launching WhatsApp: $url'); // Debug
-
+    debugPrint('Launching WhatsApp: $url');
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
@@ -72,9 +64,7 @@ class PersonelCard extends StatelessWidget {
 
   Future<void> _launchPhoneCall(BuildContext context, String phone) async {
     final Uri url = Uri.parse("tel:$phone");
-    
-    debugPrint('Launching Phone: $url'); // Debug
-
+    debugPrint('Launching Phone: $url');
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
@@ -91,9 +81,7 @@ class PersonelCard extends StatelessWidget {
 
   Future<void> _launchSMS(BuildContext context, String phone) async {
     final Uri url = Uri.parse("sms:$phone");
-    
-    debugPrint('Launching SMS: $url'); // Debug
-
+    debugPrint('Launching SMS: $url');
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
@@ -112,7 +100,7 @@ class PersonelCard extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red[600],
+        backgroundColor: _terracotta,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
@@ -124,7 +112,7 @@ class PersonelCard extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green[600],
+        backgroundColor: _forestGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
@@ -132,9 +120,6 @@ class PersonelCard extends StatelessWidget {
     );
   }
 
-  // ===============================
-  // BOTTOM SHEET
-  // ===============================
   void _showContactOptions(BuildContext context) {
     final sanitized = _sanitizePhoneNumber(personel.noTelp);
     if (sanitized == null) {
@@ -150,21 +135,21 @@ class PersonelCard extends StatelessWidget {
         name: personel.namaLengkap,
         phone: sanitized,
         onCall: () async {
-          Navigator.pop(sheetContext); // Tutup dulu
-          await Future.delayed(const Duration(milliseconds: 200)); // Tunggu animasi
+          Navigator.pop(sheetContext);
+          await Future.delayed(const Duration(milliseconds: 200));
           if (context.mounted) {
             await _launchPhoneCall(context, sanitized);
           }
         },
         onSms: () async {
-          Navigator.pop(sheetContext); // Tutup dulu
+          Navigator.pop(sheetContext);
           await Future.delayed(const Duration(milliseconds: 200));
           if (context.mounted) {
             await _launchSMS(context, sanitized);
           }
         },
         onWhatsApp: () async {
-          Navigator.pop(sheetContext); // Tutup dulu
+          Navigator.pop(sheetContext);
           await Future.delayed(const Duration(milliseconds: 200));
           if (context.mounted) {
             await _launchWhatsApp(context, sanitized);
@@ -192,10 +177,10 @@ class PersonelCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: _borderWarm, width: 1),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.05),
+            color: _forestGreen.withOpacity(0.06),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -228,7 +213,7 @@ class PersonelCard extends StatelessWidget {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
-                                    color: Color(0xFF1E293B),
+                                    color: _textPrimary,
                                     letterSpacing: 0.3,
                                     height: 1.2,
                                   ),
@@ -242,7 +227,7 @@ class PersonelCard extends StatelessWidget {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFEF3C7),
+                                    color: _warmBeige.withOpacity(0.6),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -250,7 +235,7 @@ class PersonelCard extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFFD97706),
+                                      color: _forestGreen,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -270,9 +255,9 @@ class PersonelCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: _bgWarm,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: _borderWarm),
                         ),
                         child: Column(
                           children: [
@@ -288,7 +273,7 @@ class PersonelCard extends StatelessWidget {
                                 Container(
                                   width: 1,
                                   height: 40,
-                                  color: const Color(0xFFE2E8F0),
+                                  color: _borderWarm,
                                 ),
                                 Expanded(
                                   child: _InfoItem(
@@ -302,7 +287,7 @@ class PersonelCard extends StatelessWidget {
                             if (hasPhone) ...[
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                                child: Divider(height: 1, color: _borderWarm),
                               ),
                               _InfoItem(
                                 icon: Icons.phone_outlined,
@@ -326,7 +311,7 @@ class PersonelCard extends StatelessWidget {
                               "Ketuk untuk menghubungi",
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.grey[500],
+                                color: _slateGrey.withOpacity(0.6),
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -337,13 +322,12 @@ class PersonelCard extends StatelessWidget {
                 ),
               ),
               
-              // ACTION BAR - DIRECT BUTTONS
               if (hasPhone)
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: _bgWarm,
                     border: Border(
-                      top: BorderSide(color: const Color(0xFFE2E8F0)),
+                      top: BorderSide(color: _borderWarm),
                     ),
                   ),
                   child: Row(
@@ -351,24 +335,24 @@ class PersonelCard extends StatelessWidget {
                       _ActionButton(
                         icon: Icons.phone,
                         label: "Telepon",
-                        color: Colors.blue[600]!,
+                        color: _forestGreen,
                         onTap: () => _launchPhoneCall(context, sanitizedPhone),
                       ),
                       Container(
                         width: 1,
                         height: 50,
-                        color: const Color(0xFFE2E8F0),
+                        color: _borderWarm,
                       ),
                       _ActionButton(
                         icon: Icons.message_outlined,
                         label: "SMS",
-                        color: Colors.orange[600]!,
+                        color: _terracotta,
                         onTap: () => _launchSMS(context, sanitizedPhone),
                       ),
                       Container(
                         width: 1,
                         height: 50,
-                        color: const Color(0xFFE2E8F0),
+                        color: _borderWarm,
                       ),
                       _ActionButton(
                         icon: Icons.chat,
@@ -396,14 +380,14 @@ class PersonelCard extends StatelessWidget {
       height: 56,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+          colors: [_forestGreen, Color(0xFF1E3A0F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.3),
+            color: _forestGreen.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -436,9 +420,6 @@ class PersonelCard extends StatelessWidget {
   }
 }
 
-// ===============================
-// CONTACT BOTTOM SHEET
-// ===============================
 class _ContactBottomSheet extends StatelessWidget {
   final String name;
   final String phone;
@@ -471,7 +452,7 @@ class _ContactBottomSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: _borderWarm,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -481,9 +462,9 @@ class _ContactBottomSheet extends StatelessWidget {
           Container(
             width: 80,
             height: 80,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue[400]!, Colors.blue[700]!],
+                colors: [_forestGreen, Color(0xFF1E3A0F)],
               ),
               shape: BoxShape.circle,
             ),
@@ -506,7 +487,7 @@ class _ContactBottomSheet extends StatelessWidget {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
+              color: _textPrimary,
             ),
           ),
           
@@ -519,7 +500,7 @@ class _ContactBottomSheet extends StatelessWidget {
                 phone,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey[600],
+                  color: _slateGrey.withOpacity(0.8),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -529,13 +510,13 @@ class _ContactBottomSheet extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: _bgWarm,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.copy,
                     size: 16,
-                    color: Colors.grey[600],
+                    color: _slateGrey,
                   ),
                 ),
               ),
@@ -552,7 +533,7 @@ class _ContactBottomSheet extends StatelessWidget {
                   child: _BigActionButton(
                     icon: Icons.phone,
                     label: "Telepon",
-                    color: Colors.blue[600]!,
+                    color: _forestGreen,
                     onTap: onCall,
                   ),
                 ),
@@ -561,7 +542,7 @@ class _ContactBottomSheet extends StatelessWidget {
                   child: _BigActionButton(
                     icon: Icons.message_outlined,
                     label: "SMS",
-                    color: Colors.orange[600]!,
+                    color: _terracotta,
                     onTap: onSms,
                   ),
                 ),
@@ -585,9 +566,6 @@ class _ContactBottomSheet extends StatelessWidget {
   }
 }
 
-// ===============================
-// WIDGETS
-// ===============================
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -695,13 +673,13 @@ class _InfoItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isPhone ? const Color(0xFFDBEAFE) : Colors.white,
+            color: isPhone ? _forestGreen.withOpacity(0.1) : Colors.white,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
             size: 18,
-            color: isPhone ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+            color: isPhone ? _forestGreen : _slateGrey.withOpacity(0.7),
           ),
         ),
         const SizedBox(width: 12),
@@ -714,7 +692,7 @@ class _InfoItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: Colors.grey[500],
+                  color: _slateGrey.withOpacity(0.6),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -724,7 +702,7 @@ class _InfoItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: isPhone ? const Color(0xFF2563EB) : const Color(0xFF334155),
+                  color: isPhone ? _forestGreen : _textPrimary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -748,19 +726,19 @@ class _RoleBadge extends StatelessWidget {
     
     switch (role) {
       case UserRole.admin:
-        color = const Color(0xFFEF4444);
+        color = _terracotta;
         label = "ADMIN";
         break;
       case UserRole.operator:
-        color = const Color(0xFFF59E0B);
+        color = const Color(0xFFD4A574);
         label = "OPERATOR";
         break;
       case UserRole.view:
-        color = const Color(0xFF6366F1);
+        color = _forestGreen;
         label = "VIEWER";
         break;
       default:
-        color = Colors.grey;
+        color = _slateGrey;
         label = "UNKNOWN";
     }
 
@@ -813,12 +791,12 @@ class _ActionMenu extends StatelessWidget {
       icon: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: _bgWarm,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.more_horiz,
-          color: Color(0xFF64748B),
+          color: _slateGrey.withOpacity(0.7),
           size: 20,
         ),
       ),
@@ -832,7 +810,7 @@ class _ActionMenu extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: [
-              Icon(Icons.edit_outlined, size: 20, color: Colors.blue[600]),
+              Icon(Icons.edit_outlined, size: 20, color: _forestGreen),
               const SizedBox(width: 12),
               const Text(
                 "Ubah Data",
@@ -845,12 +823,12 @@ class _ActionMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: [
-              const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              Icon(Icons.delete_outline, color: _terracotta, size: 20),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 "Hapus",
                 style: TextStyle(
-                  color: Colors.red,
+                  color: _terracotta,
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart'; // Tambahkan import provider
 import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 import 'package:KETAHANANPANGAN/router/route_names.dart';
+import 'package:KETAHANANPANGAN/shared/widgets/menu_provider.dart'; // Sesuaikan path MenuProvider Anda
 
 class CustomBottomNavBar extends StatelessWidget {
   final UserRole role;
@@ -152,7 +154,6 @@ class CustomBottomNavBar extends StatelessWidget {
     final currentIndex = _calculateSelectedIndex(location, navItems);
     final itemWidth = size.width / navItems.length;
 
-    // ✅ OPTIMASI: Gunakan RepaintBoundary untuk mengurangi repaint
     return RepaintBoundary(
       child: SizedBox(
         height: _navHeight,
@@ -160,13 +161,11 @@ class CustomBottomNavBar extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // ✅ OPTIMASI: CustomPaint dengan cache
             _NavCurveBackground(
               currentIndex: currentIndex,
               itemWidth: itemWidth,
               height: _navHeight,
             ),
-            // ✅ OPTIMASI: Row tanpa LayoutBuilder, gunakan SizedBox.expand
             SizedBox.expand(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -179,9 +178,28 @@ class CustomBottomNavBar extends StatelessWidget {
                       isSelected: isSelected,
                       onTap: () {
                         final route = navItems[index].route;
+                        final menuProvider = context.read<MenuProvider>(); // Ambil provider
+
                         if (route.isNotEmpty) {
                           HapticFeedback.lightImpact();
+                          
+                          // 1. Jalankan Navigasi
                           context.go(route);
+
+                          // 2. LOGIKA AKTIVASI POPUP (Eksplisit)
+                          if (route == RouteNames.data) {
+                            menuProvider.toggleMainDataMenu(true);
+                            menuProvider.toggleLandMenu(false); // Tutup yang lain agar tidak tumpuk
+                          } 
+                          else if (route == RouteNames.landManagement) {
+                            menuProvider.toggleLandMenu(true);
+                            menuProvider.toggleMainDataMenu(false);
+                          } 
+                          else {
+                            // Tutup semua popup jika pindah ke menu biasa (Home/Rekap/Profil)
+                            menuProvider.toggleMainDataMenu(false);
+                            menuProvider.toggleLandMenu(false);
+                          }
                         }
                       },
                     ),
@@ -229,35 +247,28 @@ class _NavBarItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      // ✅ OPTIMASI: Container dengan constraint yang jelas
       child: SizedBox.expand(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ✅ OPTIMASI: AnimatedContainer dengan transform yang smooth
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutBack,
               transform: Matrix4.translationValues(0, isSelected ? -20 : 0, 0),
               padding: EdgeInsets.all(isSelected ? 14 : 8),
-              decoration: isSelected
-                ? BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF10B981).withOpacity(0.3),
-                        blurRadius: 15.0,
-                        spreadRadius: 0.0,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  )
-                : const BoxDecoration(
-                    color: Colors.transparent,
-                    shape: BoxShape.circle,
+              decoration: BoxDecoration(
+                color: isSelected ? primaryColor : Colors.transparent,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(isSelected ? 0.3 : 0),
+                    blurRadius: 15.0,
+                    spreadRadius: 0.0,
+                    offset: Offset(0, isSelected ? 8 : 0),
                   ),
+                ],
+              ),
               child: Icon(
                 isSelected ? data.activeIcon : data.icon,
                 size: isSelected ? 28 : 24,
@@ -265,7 +276,6 @@ class _NavBarItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            // ✅ OPTIMASI: Text tanpa shadow yang bermasalah
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
@@ -273,7 +283,6 @@ class _NavBarItem extends StatelessWidget {
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 color: isSelected ? primaryColor : inactiveColor,
                 letterSpacing: 0.2,
-                // ✅ FIX: Tidak ada shadows property
               ),
               child: Text(data.label),
             ),
@@ -297,9 +306,8 @@ class _NavCurveBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ OPTIMASI: TweenAnimationBuilder dengan proper caching
     return TweenAnimationBuilder<double>(
-      key: ValueKey(currentIndex), // ✅ Membantu Flutter mengidentifikasi animasi
+      key: ValueKey(currentIndex),
       tween: Tween(end: currentIndex.toDouble()),
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOutCubic,
@@ -371,7 +379,6 @@ class _NavCurvePainter extends CustomPainter {
     path.lineTo(0, size.height);
     path.close();
 
-    // ✅ OPTIMASI: Shadow dengan nilai yang valid
     canvas.drawShadow(path, Colors.black.withOpacity(0.1), 10, false);
     canvas.drawPath(path, paint);
   }

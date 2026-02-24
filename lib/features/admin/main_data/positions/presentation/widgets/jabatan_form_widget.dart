@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
-enum JabatanFormType { add, edit, delete } // Tambahkan 'edit' jika perlu
+enum JabatanFormType { add, edit, delete }
 
 class JabatanFormWidget extends StatelessWidget {
   final JabatanFormType type;
   final TextEditingController jabatanController;
+  // Controller ini tetap ada di parameter agar tidak merusak PositionPage, 
+  // namun tidak ditampilkan di UI sesuai kebutuhan database Anda.
   final TextEditingController namaController;
   final TextEditingController nrpController;
   final TextEditingController tanggalController;
@@ -25,146 +27,173 @@ class JabatanFormWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDelete = type == JabatanFormType.delete;
-    
-    final title = isDelete ? "Hapus Data Jabatan" : (type == JabatanFormType.add ? "Tambah Data Jabatan" : "Edit Data Jabatan");
-    final submitLabel = isDelete ? "Hapus Data" : "Simpan Data";
-    final submitColor = isDelete ? Colors.redAccent : const Color(0xFF10B981); // Emerald Green
-    final iconHeader = isDelete ? Icons.delete_forever_rounded : Icons.edit_note_rounded;
+    final isEdit = type == JabatanFormType.edit;
 
-    // --- FORM CONTENT ---
+    final title = isDelete ? "Hapus Jabatan" : (isEdit ? "Edit Jabatan" : "Tambah Jabatan");
+    final submitLabel = isDelete ? "Hapus" : "Simpan";
+    final submitColor = isDelete ? const Color(0xFFE27D60) : const Color(0xFF2D4F1E);
+    
+    final iconHeader = isDelete
+        ? Icons.delete_sweep_rounded
+        : (isEdit ? Icons.edit_calendar_rounded : Icons.add_business_rounded);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24.0),
+      // Desain BottomSheet yang lebih elegan
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Header Icon & Title
-          _FormHeader(title: title, icon: iconHeader, isDestructive: isDelete),
-          
-          const SizedBox(height: 24),
-
-          // 2. Form Fields (Hidden if Delete Mode)
-          if (!isDelete) ...[
-            _FormInputField(
-              label: "Nama Jabatan",
-              controller: jabatanController,
-              hint: "Contoh: Kabag Ops",
-              icon: Icons.work_outline_rounded,
-            ),
-            _FormInputField(
-              label: "Nama Pejabat",
-              controller: namaController,
-              hint: "Nama Lengkap & Gelar",
-              icon: Icons.person_outline_rounded,
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: _FormInputField(
-                    label: "NRP",
-                    controller: nrpController,
-                    hint: "12345678",
-                    icon: Icons.badge_outlined,
-                    isNumber: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _FormInputField(
-                    label: "Tanggal Peresmian",
-                    controller: tanggalController,
-                    hint: "DD/MM/YYYY",
-                    icon: Icons.calendar_today_rounded,
-                    isReadOnly: true, // Idealnya pakai DatePicker
-                  ),
-                ),
-              ],
-            ),
-          ] else 
-            const Text(
-              "Apakah Anda yakin ingin menghapus data ini? Data yang dihapus tidak dapat dikembalikan.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-
-          const SizedBox(height: 32),
-
-          // 3. Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: _ActionButton(
-                  label: "Batal",
-                  icon: Icons.close_rounded,
-                  color: Colors.grey.shade200,
-                  textColor: Colors.grey.shade800,
-                  onTap: onCancel,
-                ),
+          const SizedBox(height: 12),
+          _DragHandle(),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 8,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 32,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _ActionButton(
-                  label: submitLabel,
-                  icon: isDelete ? Icons.delete_outline : Icons.check_circle_outline,
-                  color: submitColor,
-                  textColor: Colors.white,
-                  onTap: onSubmit,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _FormHeader(
+                    title: title,
+                    icon: iconHeader,
+                    isDestructive: isDelete,
+                  ),
+                  const SizedBox(height: 28),
+                  
+                  if (!isDelete) ...[
+                    // HANYA MENAMPILKAN NAMA JABATAN SESUAI DB
+                    _FormInputField(
+                      label: "Nama Jabatan Baru",
+                      controller: jabatanController,
+                      hint: "Contoh: KAPOLSEK, WAKAPOLDA, dll.",
+                      icon: Icons.account_tree_outlined,
+                      autoFocus: true,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "* Nama jabatan akan muncul di daftar pilihan anggota.",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ] else ...[
+                    // TAMPILAN PERINGATAN HAPUS
+                    _DeleteWarningBox(),
+                  ],
+                  
+                  const SizedBox(height: 32),
+                  
+                  // ACTION BUTTONS
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ActionButton(
+                          label: "Batal",
+                          isOutlined: true,
+                          onTap: onCancel,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _ActionButton(
+                          label: submitLabel,
+                          backgroundColor: submitColor,
+                          onTap: onSubmit,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          
-          // Safety padding for bottom sheet
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
         ],
       ),
     );
   }
 }
 
-// -----------------------------------------------------------------------------
-// SUB-WIDGETS (Private & Clean)
-// -----------------------------------------------------------------------------
+// --- SUB-WIDGETS UNTUK KONSISTENSI ---
+
+class _DeleteWarningBox extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE27D60).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE27D60).withOpacity(0.2)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.report_problem_rounded, color: Color(0xFFE27D60), size: 44),
+          SizedBox(height: 12),
+          Text(
+            "Konfirmasi Hapus",
+            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE27D60)),
+          ),
+          SizedBox(height: 4),
+          Text(
+            "Data jabatan yang dihapus tidak dapat dipulihkan. Lanjutkan?",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF4A4A4A), fontSize: 13, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 5,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(2.5),
+      ),
+    );
+  }
+}
 
 class _FormHeader extends StatelessWidget {
   final String title;
   final IconData icon;
   final bool isDestructive;
 
-  const _FormHeader({
-    required this.title,
-    required this.icon,
-    this.isDestructive = false,
-  });
+  const _FormHeader({required this.title, required this.icon, this.isDestructive = false});
 
   @override
   Widget build(BuildContext context) {
+    final themeColor = isDestructive ? const Color(0xFFE27D60) : const Color(0xFF2D4F1E);
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDestructive ? Colors.red.shade50 : Colors.blue.shade50,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 32,
-            color: isDestructive ? Colors.red : Colors.blue.shade700,
-          ),
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: themeColor.withOpacity(0.1),
+          child: Icon(icon, size: 32, color: themeColor),
         ),
         const SizedBox(height: 16),
         Text(
-          title,
+          title.toUpperCase(),
           style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1E293B), // Slate 800
-            letterSpacing: -0.5,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF2C3E2D),
+            letterSpacing: 1.0,
           ),
         ),
       ],
@@ -177,93 +206,83 @@ class _FormInputField extends StatelessWidget {
   final String hint;
   final TextEditingController controller;
   final IconData icon;
-  final bool isNumber;
-  final bool isReadOnly;
+  final bool autoFocus;
 
   const _FormInputField({
-    required this.label,
-    required this.controller,
-    this.hint = "",
+    required this.label, 
+    required this.controller, 
+    this.hint = "", 
     required this.icon,
-    this.isNumber = false,
-    this.isReadOnly = false,
+    this.autoFocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF475569), // Slate 600
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF4A4A4A)),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          autofocus: autoFocus,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, size: 20, color: const Color(0xFF2D4F1E)),
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14, fontWeight: FontWeight.normal),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF2D4F1E), width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9), // Slate 100
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.transparent),
-            ),
-            child: TextField(
-              controller: controller,
-              readOnly: isReadOnly,
-              keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-              decoration: InputDecoration(
-                prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade500),
-                hintText: hint,
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                isDense: true,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final Color color;
-  final Color textColor;
+  final Color? backgroundColor;
+  final bool isOutlined;
   final VoidCallback onTap;
 
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.textColor,
-    required this.onTap,
-  });
+  const _ActionButton({required this.label, this.backgroundColor, this.isOutlined = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
-      child: ElevatedButton.icon(
+      height: 54,
+      child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: textColor,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          backgroundColor: isOutlined ? Colors.white : (backgroundColor ?? const Color(0xFF2D4F1E)),
+          foregroundColor: isOutlined ? const Color(0xFF4A4A4A) : Colors.white,
+          elevation: isOutlined ? 0 : 4,
+          shadowColor: (backgroundColor ?? const Color(0xFF2D4F1E)).withOpacity(0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: isOutlined ? const BorderSide(color: Color(0xFFE2E8F0)) : BorderSide.none,
+          ),
         ),
-        icon: Icon(icon, size: 20),
-        label: Text(
+        child: Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
     );

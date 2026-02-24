@@ -1,0 +1,94 @@
+* [33mf9357eb[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m 23/02/2026 Lahan dan Rekapitulasi
+* [33m5bea0c6[m 23/02/2026 Lahan dan Rekapitulasi
+* [33m8a23170[m 23/02/2026 Lahan dan Rekapitulasi
+* [33m6c40806[m 20 bulan 2
+* [33m83f0773[m new hari ini tangga 18
+*   [33m4079909[m 13/02/2026 potensi lahan
+[32m|[m[33m\[m  
+[32m|[m * [33m3a20e4d[m 13 feb main go auth
+* [33m|[m [33m72b6fb0[m 13/02/2026 potensi lahan
+[33m|[m[33m/[m  
+* [33m63b5c3e[m Update JMK TOKEN
+* [33m4fae6a4[m Tambah fitur wilayah
+*   [33mf8b8a79[m Menyelesaikan konflik merge dari main
+[34m|[m[35m\[m  
+[34m|[m * [33m3a12161[m new hari ini tanggal 12
+[34m|[m * [33m5dc7019[m HARI INI FIX DOUBLE
+[34m|[m * [33ma63aef9[m HARI INI FIX DOUBLE
+* [35m|[m [33ma471731[m tgl 12/02/2026 Tambah fitur komoditi dan tingkat kesatuan
+[35m|[m[35m/[m  
+* [33me633c4d[m[33m ([m[1;32mbackup-state-sekarang[m[33m)[m feat(personel): update kode lokal terbaru
+*   [33m9867bce[m Menyelesaikan fitur filter dan search unit
+[36m|[m[1;31m\[m  
+[36m|[m * [33me990e30[m[33m ([m[1;31morigin/fitur-fajri[m[33m)[m Tambah Bagian Tingkat Kesatuan
+* [1;31m|[m [33ma029d36[m new hari ini bulan 2 tanggal 11
+* [1;31m|[m [33m3f77b52[m new hari ini bulan 2 tanggal 11
+[1;31m|[m[1;31m/[m  
+* [33m0e79bc5[m new untuk semua nya hari ini
+* [33mcdcd53f[m feching personal
+* [33m127b60f[m new untuk profile saja
+* [33m7cee71f[m backend database ya
+* [33ma059c2c[m new ini mau perubahan database
+* [33mc8b3d3b[m ini untuk units new
+* [33m1f71024[m new backend go datakesatuan
+* [33m36160ff[m new untuk hari ini data personel
+* [33me6038de[m new untuk profile yaa auth
+* [33m873d898[m sing paling baru
+* [33m627d6e6[m sing paling baru
+* [33mff26ff1[m new untuk backend local ya
+* [33m2525e8b[m new untuk flutter hari ini
+* [33mb173309[m new untuk comodities
+* [33mef98b62[m dasboard
+* [33m8f9290c[m splash screen
+* [33md4089fa[m new full
+* [33m44fe398[m for data / jabatan
+* [33mfdde50f[m NAVBARR FIX WOEEE
+* [33m192334a[m nono yaa
+* [33m2da8dc9[m try backend
+* [33m77da051[m untuk new recap data fix
+* [33mf1ef46d[m untuk recap data row jngn lupa warna putih
+* [33mad5854a[m optimalisasi beranda
+* [33m0ddcd0b[m RECAP
+* [33mde6a3db[m refactor potensi page
+* [33m757eb73[m refactor lay out and custom bar
+* [33m76d120d[m filter full
+* [33ma3823c6[m ending day 16
+* [33m21ed270[m iki full kanggo kelola lahan
+* [33m1fc1e24[m nambah filter pooko e
+* [33m0c79a6b[m optimalisazion ended
+* [33m737ae2f[m history
+* [33mf86d866[m kelola lahan
+* [33mf238ed6[m new untuk komoditi lahan
+* [33medf8c76[m new untuk komoditi lahan belum ada halaman baru
+* [33m8faa9b6[m optimalization
+* [33meefa56f[m potensi lahan fix sek
+* [33m861d8c3[m potensi lahan
+* [33m8c0f539[m personel
+* [33mdcf8911[m notification update
+* [33m6119954[m profile new
+* [33mfcd6b53[m notification
+* [33m46cc317[m ending
+* [33m11964de[m new untukrecap
+* [33m5a7080a[m new untukrecap lagi mah
+* [33m39b1e1a[m new untukrecap lagi mah
+* [33m8211eff[m page recapitulasi data
+* [33m86831b8[m last in day 12
+* [33m9fc1bb5[m fixin
+* [33m48b89bd[m new hari ini
+* [33m3403d88[m new hari ini
+* [33m437ca2a[m new untuk dasboard
+* [33m8e5b1fc[m new refactor carousel
+* [33ma750b4b[m new untuk comodity lahan
+* [33ma0abc8f[m ini untuk wilayah nya yaa baru
+* [33m7c8271a[m new untuk jabatan yaa
+* [33m792c879[m new untuk data jabatan
+* [33m42da9f8[m new untuk data kesatuan
+* [33m55ab938[m new hari ini fixed data kesatuan
+* [33mf7fac96[m new hari 11 data data kesatuan
+* [33m5f0a4de[m new hari ini
+* [33m62c2e25[m new header
+* [33m7f9a9fe[m day 9
+* [33m4755a56[m navbar fiks
+* [33mcbff4f4[m new baru fiks lahan navbar belumn beress cokkkk
+* [33m7f9ff93[m masih kurang untuk di baagian navbar untuk optimalisasi masih belum keliatan apa apa
+* [33m9a7f65f[m Initial commit

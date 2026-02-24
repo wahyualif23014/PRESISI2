@@ -1,151 +1,95 @@
 import 'package:flutter/material.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
-import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/services/jabatan_service.dart';
+import '../models/position_model.dart' show JabatanModel;
+import '../services/jabatan_service.dart';
 
 class JabatanProvider with ChangeNotifier {
   final JabatanService _service = JabatanService();
-
   List<JabatanModel> _allData = [];
   List<JabatanModel> _displayData = [];
-  String _currentQuery = "";
-
   bool _isLoading = false;
-  String? _errorMessage;
 
   List<JabatanModel> get displayData => _displayData;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-
   int get selectedCount => _displayData.where((e) => e.isSelected).length;
-  bool get isAllSelected =>
-      _displayData.isNotEmpty && _displayData.length == selectedCount;
+  bool get isAllSelected => _displayData.isNotEmpty && selectedCount == _displayData.length;
 
   Future<void> fetchJabatan() async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
-
     try {
-      final data = await _service.getJabatanList();
-      _allData = data;
-      _applyFilter();
+      _allData = await _service.getJabatanList();
+      _displayData = List.from(_allData);
     } catch (e) {
-      _errorMessage = "Gagal mengambil data. Cek koneksi internet.";
-      debugPrint("Error Fetch: $e");
+      debugPrint("Error fetching jabatan: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  void search(String query) {
-    _currentQuery = query;
-    _applyFilter();
-    notifyListeners();
-  }
-
-  void _applyFilter() {
-    if (_currentQuery.isEmpty) {
-      _displayData = List.from(_allData);
-    } else {
-      final searchLower = _currentQuery.toLowerCase();
-      _displayData = _allData.where((item) {
-        final titleMatch = item.namaJabatan.toLowerCase().contains(searchLower);
-        final namaMatch = (item.namaPejabat ?? '').toLowerCase().contains(searchLower);
-        return titleMatch || namaMatch;
-      }).toList();
-    }
-  }
-
-  void toggleSelectAll(bool? val) {
-    if (val != null) {
-      for (var item in _displayData) {
-        item.isSelected = val;
-      }
-      notifyListeners();
-    }
-  }
-
-  void toggleSingleSelection(String id) {
-    final index = _displayData.indexWhere((e) => e.id == id);
-    if (index != -1) {
-      _displayData[index].isSelected = !_displayData[index].isSelected;
-      notifyListeners();
-    }
-  }
-
-  void refresh() {
-    fetchJabatan();
-  }
-
-  Future<void> deleteSingle(String id) async {
+  // --- FUNGSI BARU: Hapus satu data spesifik (Sesuai ID int di Go) ---
+  Future<void> deleteOne(int id) async {
     _isLoading = true;
     notifyListeners();
     try {
       final success = await _service.deleteJabatan(id);
       if (success) {
-        await fetchJabatan();
-      } else {
-        _errorMessage = "Gagal menghapus data";
+        // Optimistic update: hapus dari list lokal agar UI cepat merespon
+        _allData.removeWhere((e) => e.id == id);
+        _displayData.removeWhere((e) => e.id == id);
       }
-    } catch (e) {
-      _errorMessage = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      await fetchJabatan(); // Sinkronisasi ulang dengan DB
     }
   }
 
+  // Soft delete massal untuk item yang dipilih melalui checkbox
   Future<void> deleteSelected() async {
+    final selectedItems = _displayData.where((x) => x.isSelected).toList();
+    if (selectedItems.isEmpty) return;
+
     _isLoading = true;
     notifyListeners();
     try {
-      final selected = _displayData.where((e) => e.isSelected).toList();
-      for (var item in selected) {
-        await _service.deleteJabatan(item.id);
+      for (var e in selectedItems) {
+        await _service.deleteJabatan(e.id);
       }
-      await fetchJabatan();
-    } catch (e) {
-      _errorMessage = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      await fetchJabatan();
     }
   }
-  
-  Future<void> addNewData(String namaJabatan, String? idAnggota) async {
-    _isLoading = true;
+
+  // Menambah jabatan baru
+  Future<void> addNewData(String n) async {
+    final success = await _service.createJabatan(n);
+    if (success) await fetchJabatan();
+  }
+
+  // Update data menggunakan ID int
+  Future<void> updateData(int id, String n) async {
+    final success = await _service.updateJabatan(id, n);
+    if (success) await fetchJabatan();
+  }
+
+  void search(String q) {
+    _displayData = _allData
+        .where((e) => e.namaJabatan.toLowerCase().contains(q.toLowerCase()))
+        .toList();
     notifyListeners();
-    try {
-      final success = await _service.createJabatan(namaJabatan, idAnggota);
-      if (success) {
-        await fetchJabatan();
-      } else {
-        _errorMessage = "Gagal menambah data";
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
+  }
+
+  void toggleSingleSelection(int id) {
+    final i = _displayData.indexWhere((e) => e.id == id);
+    if (i != -1) {
+      _displayData[i].isSelected = !_displayData[i].isSelected;
       notifyListeners();
     }
   }
 
-  Future<void> updateData(String id, String namaJabatan, String? idAnggota) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final success = await _service.updateJabatan(id, namaJabatan, idAnggota);
-      if (success) {
-        await fetchJabatan();
-      } else {
-        _errorMessage = "Gagal mengubah data";
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+  void toggleSelectAll(bool? v) {
+    for (var e in _displayData) {
+      e.isSelected = v ?? false;
     }
+    notifyListeners();
   }
 }

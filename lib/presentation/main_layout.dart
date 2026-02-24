@@ -4,6 +4,14 @@ import 'package:KETAHANANPANGAN/shared/widgets/CustomBottomNavBar.dart';
 import 'package:provider/provider.dart';
 import 'widgets/admin_top_bar.dart';
 
+// --- PALET WARNA EARTHY & ORGANIC ---
+const Color _forestGreen = Color(0xFF2D4F1E);
+const Color _warmBeige = Color(0xFFF5E6CC);
+const Color _terracotta = Color(0xFFE27D60);
+const Color _slateGrey = Color(0xFF4A4A4A);
+const Color _bgWarm = Color(0xFFFDF8F3);
+const Color _borderWarm = Color(0xFFE8DDD0);
+
 class MainLayout extends StatelessWidget {
   final Widget child;
 
@@ -19,26 +27,22 @@ class MainLayout extends StatelessWidget {
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
-      // ✅ FIX: extendBody dihapus untuk menghindari konflik constraint
       resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _bgWarm,
       
-      // AppBar di atas
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(_topBarHeight),
         child: AdminTopBar(height: _topBarHeight),
       ),
       
-      // ✅ FIX: Body dengan constraint yang jelas menggunakan SafeArea
       body: SafeArea(
-        bottom: false, // Biar body extend sampai bawah (tapi tidak conflict dengan navbar)
+        bottom: false,
         child: Column(
           children: [
-            // Content area dengan Expanded untuk constraint yang valid
             Expanded(
               child: Container(
-                color: const Color(0xFFF8FAFC),
-                child: child, // Child di sini dengan constraint dari Expanded
+                color: _bgWarm,
+                child: child,
               ),
             ),
           ],
@@ -49,7 +53,7 @@ class MainLayout extends StatelessWidget {
         ? null 
         : Container(
             height: _bottomNavHeight,
-            color: Colors.white, // Background putih untuk navbar
+            color: Colors.white,
             child: CustomBottomNavBar(role: role),
           ),
     );

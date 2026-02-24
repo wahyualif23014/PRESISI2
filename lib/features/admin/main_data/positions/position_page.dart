@@ -24,9 +24,10 @@ class _PositionPageState extends State<PositionPage> {
   @override
   void initState() {
     super.initState();
-    // Fetch data saat halaman pertama kali dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<JabatanProvider>().fetchJabatan();
+      if (mounted) {
+        context.read<JabatanProvider>().fetchJabatan();
+      }
     });
   }
 
@@ -36,16 +37,12 @@ class _PositionPageState extends State<PositionPage> {
     super.dispose();
   }
 
-  void _showFormModal(BuildContext context, JabatanFormType type, {JabatanModel? item}) {
+  void _showFormModal(
+    BuildContext context,
+    JabatanFormType type, {
+    JabatanModel? item,
+  }) {
     final jabatanCtrl = TextEditingController(text: item?.namaJabatan ?? '');
-    
-    // Field ini opsional di backend, tapi jika ada, kita tampilkan
-    final namaCtrl = TextEditingController(text: item?.namaPejabat ?? '');
-    final nrpCtrl = TextEditingController(text: item?.nrp ?? '');
-    final tglCtrl = TextEditingController(text: item?.tanggalPeresmian ?? '');
-
-
-    String? selectedIdAnggota = item?.idAnggota; 
 
     showDialog(
       context: context,
@@ -56,42 +53,31 @@ class _PositionPageState extends State<PositionPage> {
           child: JabatanFormWidget(
             type: type,
             jabatanController: jabatanCtrl,
-            namaController: namaCtrl,
-            nrpController: nrpCtrl,
-            tanggalController: tglCtrl,
+            namaController: TextEditingController(),
+            nrpController: TextEditingController(),
+            tanggalController: TextEditingController(),
             onCancel: () => Navigator.pop(ctx),
-            
-            // LOGIKA SUBMIT
-            onSubmit: () {
+            onSubmit: () async {
               final provider = context.read<JabatanProvider>();
 
               if (type == JabatanFormType.add) {
-                // Panggil Provider Add
-                provider.addNewData(
-                  jabatanCtrl.text, 
-                  selectedIdAnggota 
-                );
-                _showSnackBar("Proses tambah data...");
-              } else if (type == JabatanFormType.edit) {
+                await provider.addNewData(jabatanCtrl.text);
+                _showSnackBar("Jabatan berhasil ditambahkan");
+              } else if (type == JabatanFormType.edit && item != null) {
+                await provider.updateData(item.id, jabatanCtrl.text);
+                _showSnackBar("Jabatan berhasil diperbarui");
+              } else if (type == JabatanFormType.delete) {
                 if (item != null) {
-                  provider.updateData(
-                    item.id, 
-                    jabatanCtrl.text, 
-                    selectedIdAnggota
-                  );
-                  _showSnackBar("Proses update data...");
-                }
-              } else {
-                // DELETE
-                if (item != null) {
-                  provider.deleteSingle(item.id);
-                  _showSnackBar("Data dihapus");
+                  item.isSelected = true;
+                  await provider.deleteSelected();
+                  _showSnackBar("Data '${item.namaJabatan}' berhasil dihapus");
                 } else {
-                  provider.deleteSelected();
-                  _showSnackBar("Data terpilih dihapus");
+                  await provider.deleteSelected();
+                  _showSnackBar("Data terpilih berhasil dihapus");
                 }
               }
-              Navigator.pop(ctx);
+
+              if (mounted) Navigator.pop(ctx);
             },
           ),
         );
@@ -100,11 +86,13 @@ class _PositionPageState extends State<PositionPage> {
   }
 
   void _showSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF2D4F1E),
       ),
     );
   }
@@ -112,113 +100,22 @@ class _PositionPageState extends State<PositionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true,
+      backgroundColor: const Color(0xFFEAF0F9),
       body: Consumer<JabatanProvider>(
         builder: (context, provider, child) {
           return Column(
             children: [
-              // --- 1. HEADER (SEARCH & ACTION) ---
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: JabatanSearchBar(
-                            controller: _searchController,
-                            onChanged: (value) => provider.search(value),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 6,
-                          child: JabatanActionButtons(
-                            onAdd: () => _showFormModal(context, JabatanFormType.add),
-                            onDelete: () {
-                              if (provider.selectedCount > 0) {
-                                _showFormModal(context, JabatanFormType.delete);
-                              } else {
-                                _showSnackBar("Pilih data yang ingin dihapus");
-                              }
-                            },
-                            onRefresh: () {
-                              provider.fetchJabatan();
-                              _searchController.clear();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- 2. SELECTION BAR ---
-              if (provider.displayData.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: Colors.white,
-                  child: Row(
-                    children: [
-                      Transform.scale(
-                        scale: 0.9,
-                        child: Checkbox(
-                          value: provider.isAllSelected,
-                          onChanged: (val) => provider.toggleSelectAll(val),
-                          activeColor: const Color(0xFF6366F1),
-                        ),
-                      ),
-                      Text(
-                        provider.selectedCount > 0
-                            ? "${provider.selectedCount} Dipilih"
-                            : "Pilih Semua",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // --- 3. DATA GRID ---
+              _buildHeader(provider),
+              if (provider.displayData.isNotEmpty) _buildSelectionBar(provider),
               Expanded(
-                child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : provider.errorMessage != null
-                        ? Center(child: Text(provider.errorMessage!))
+                child:
+                    provider.isLoading
+                        ? const Center(child: CircularProgressIndicator())
                         : provider.displayData.isEmpty
-                            ? _buildEmptyState()
-                            : Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: GridView.builder(
-                                  padding: const EdgeInsets.only(top: 16, bottom: 80),
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 12,
-                                    mainAxisSpacing: 12,
-                                    childAspectRatio: 0.70,
-                                  ),
-                                  itemCount: provider.displayData.length,
-                                  itemBuilder: (context, index) {
-                                    final item = provider.displayData[index];
-                                    return JabatanCardItem(
-                                      item: item,
-                                      onToggleSelection: () => provider.toggleSingleSelection(item.id),
-                                      onEdit: () => _showFormModal(context, JabatanFormType.edit, item: item),
-                                      onDelete: () => _showFormModal(context, JabatanFormType.delete, item: item),
-                                    );
-                                  },
-                                ),
-                              ),
+                        ? _buildEmptyState(
+                          provider,
+                        ) // Pass provider untuk refresh saat kosong
+                        : _buildDataGrid(provider),
               ),
             ],
           );
@@ -227,18 +124,146 @@ class _PositionPageState extends State<PositionPage> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildHeader(JabatanProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: Row(
         children: [
-          const Icon(Icons.folder_off_rounded, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            "Data jabatan tidak ditemukan",
-            style: TextStyle(color: Colors.grey.shade500),
+          Expanded(
+            flex: 4,
+            child: JabatanSearchBar(
+              controller: _searchController,
+              onChanged: (value) => provider.search(value),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 6,
+            child: JabatanActionButtons(
+              onAdd: () => _showFormModal(context, JabatanFormType.add),
+              onDelete: () {
+                if (provider.selectedCount > 0) {
+                  _showFormModal(context, JabatanFormType.delete);
+                } else {
+                  _showSnackBar("Pilih data yang ingin dihapus");
+                }
+              },
+              onRefresh: () {
+                provider.fetchJabatan();
+                _searchController.clear();
+                _showSnackBar("Data diperbarui");
+              },
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionBar(JabatanProvider provider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Transform.scale(
+            scale: 0.9,
+            child: Checkbox(
+              value: provider.isAllSelected,
+              onChanged: (val) => provider.toggleSelectAll(val),
+              activeColor: const Color(0xFF2D4F1E),
+            ),
+          ),
+          Text(
+            provider.selectedCount > 0
+                ? "${provider.selectedCount} Item Dipilih"
+                : "Pilih Semua",
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- IMPLEMENTASI PULL TO REFRESH ---
+  Widget _buildDataGrid(JabatanProvider provider) {
+    return RefreshIndicator(
+      onRefresh: () => provider.fetchJabatan(),
+      color: const Color(0xFF2D4F1E),
+      backgroundColor: Colors.white,
+      child: GridView.builder(
+        // AlwaysScrollableScrollPhysics agar pull-to-refresh tetap aktif meski data sedikit
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(
+          top: 16,
+          left: 16,
+          right: 16,
+          bottom: 80,
+        ),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.82,
+        ),
+        itemCount: provider.displayData.length,
+        itemBuilder: (context, index) {
+          final item = provider.displayData[index];
+          return JabatanCardItem(
+            item: item,
+            onToggleSelection: () => provider.toggleSingleSelection(item.id),
+            onEdit:
+                () => _showFormModal(context, JabatanFormType.edit, item: item),
+            onDelete:
+                () =>
+                    _showFormModal(context, JabatanFormType.delete, item: item),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(JabatanProvider provider) {
+    return RefreshIndicator(
+      onRefresh: () => provider.fetchJabatan(),
+      color: const Color(0xFF2D4F1E),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 64,
+                color: Colors.grey.shade300,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Belum ada data jabatan",
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Tarik ke bawah untuk memuat ulang",
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

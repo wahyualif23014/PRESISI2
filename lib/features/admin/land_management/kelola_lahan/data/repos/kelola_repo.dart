@@ -6,7 +6,7 @@ import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
   // Pastikan IP ini benar (IP Laptop/Server Go kamu)
-  final String baseUrl = "http://192.168.100.195:8080/api/kelola-lahan";
+  final String baseUrl = "http://10.16.8.244:8080/api/kelola-lahan";
 
   // Helper: Ambil Token
   Future<String> _getToken() async {

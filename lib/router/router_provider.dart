@@ -71,14 +71,12 @@ class AppRouter {
     ),
 
     routes: [
-      // --- SPLASH ---
+      // --- SPLASH & LOGIN ---
       GoRoute(
         path: RouteNames.splash,
         name: RouteNames.splash,
         builder: (context, state) => const CustomSplashScreen(),
       ),
-
-      // --- LOGIN ---
       GoRoute(
         path: RouteNames.login,
         name: RouteNames.login,
@@ -98,7 +96,6 @@ class AppRouter {
             name: RouteNames.dashboard,
             pageBuilder: (context, state) {
               final role = authProvider.userRole;
-              
               switch (role) {
                 case UserRole.admin:
                   return NoTransitionPage(child: admin.DashboardPage());
@@ -112,14 +109,14 @@ class AppRouter {
             },
           ),
 
-          // PERSONEL (Admin only)
+          // PERSONEL
           GoRoute(
             path: RouteNames.personnel,
             name: RouteNames.personnel,
             pageBuilder: (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
 
-          // DATA UTAMA (Admin only)
+          // DATA UTAMA (Shell Popup untuk Admin)
           ShellRoute(
             builder: (context, state, child) => MainDataShellPage(child: child),
             routes: [
@@ -131,7 +128,8 @@ class AppRouter {
             ],
           ),
 
-          // ✅ STEP 2.1: LAND MANAGEMENT - ADMIN (Dengan Shell + Popup)
+          // MANAJEMEN LAHAN (Satu rute untuk semua Role)
+          // Popup otomatis terfilter di dalam LandShellPage berdasarkan UserRole.admin
           ShellRoute(
             builder: (context, state, child) => LandShellPage(child: child),
             routes: [
@@ -141,38 +139,20 @@ class AppRouter {
               ),
               GoRoute(
                 path: RouteNames.landOverview,
-                name: 'land-overview',
+                name: RouteNames.landOverview, // Gunakan konstanta agar konsisten
                 pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage()),
               ),
               GoRoute(
                 path: RouteNames.landPlots,
-                name: 'land-plots',
+                name: RouteNames.landPlots,
                 pageBuilder: (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
               ),
               GoRoute(
                 path: RouteNames.landCrops,
-                name: 'land-crops',
+                name: RouteNames.landCrops,
                 pageBuilder: (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage()),
               ),
             ],
-          ),
-
-          // ✅ STEP 2.2: LAND MANAGEMENT - OPERATOR (Tanpa Shell, Langsung ke Page)
-          // Operator bypass LandShellPage, jadi tidak ada popup
-          GoRoute(
-            path: RouteNames.landOverview,
-            name: 'operator-land-overview',
-            pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage()),
-          ),
-          GoRoute(
-            path: RouteNames.landPlots,
-            name: 'operator-land-plots',
-            pageBuilder: (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
-          ),
-          GoRoute(
-            path: RouteNames.landCrops,
-            name: 'operator-land-crops',
-            pageBuilder: (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage()),
           ),
 
           // REKAP

@@ -1,7 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/router/route_names.dart';
+import 'package:KETAHANANPANGAN/shared/widgets/menu_provider.dart';
 import 'widgets/main_data_sub_bottom_nav.dart';
 
 class MainDataShellPage extends StatefulWidget {
@@ -17,27 +21,25 @@ class MainDataShellPage extends StatefulWidget {
 }
 
 class _MainDataShellPageState extends State<MainDataShellPage> {
-  bool _isMenuManuallyClosed = false;
-  String _lastLocation = '';
-
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    final isDataRoute = location.startsWith(RouteNames.data);
+    
+    // ✅ Pantau State dari Provider
+    final menuProvider = context.watch<MenuProvider>();
+    final authProvider = context.watch<AuthProvider>();
+    
+    final isAdmin = authProvider.userRole == UserRole.admin;
+    final isDataSection = location.startsWith(RouteNames.data);
 
-    if (location != _lastLocation) {
-      if (location == RouteNames.data) {
-        _isMenuManuallyClosed = false;
-      }
-      _lastLocation = location;
-    }
-
-    final showMenu = isDataRoute && !_isMenuManuallyClosed;
+    // ✅ Menu muncul jika Admin, di section data, dan status Provider aktif
+    final showMenu = isAdmin && isDataSection && menuProvider.isMainDataMenuOpen;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Stack(
         children: [
+          // Content Layer
           Positioned.fill(
             child: Padding(
               padding: EdgeInsets.only(
@@ -46,14 +48,12 @@ class _MainDataShellPageState extends State<MainDataShellPage> {
               child: widget.child,
             ),
           ),
+          
+          // Blur & Overlay Layer
           if (showMenu)
             Positioned.fill(
               child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isMenuManuallyClosed = true;
-                  });
-                },
+                onTap: () => context.read<MenuProvider>().toggleMainDataMenu(false),
                 child: TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 3.0),
                   duration: const Duration(milliseconds: 300),
@@ -68,6 +68,8 @@ class _MainDataShellPageState extends State<MainDataShellPage> {
                 ),
               ),
             ),
+            
+          // Popup Menu Layer
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
@@ -75,11 +77,7 @@ class _MainDataShellPageState extends State<MainDataShellPage> {
             right: 0,
             bottom: showMenu ? 24 : -500,
             child: MainDataSubBottomNav(
-              onClose: () {
-                setState(() {
-                  _isMenuManuallyClosed = true;
-                });
-              },
+              onClose: () => context.read<MenuProvider>().toggleMainDataMenu(false),
             ),
           ),
         ],

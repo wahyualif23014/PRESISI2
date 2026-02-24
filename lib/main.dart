@@ -1,3 +1,4 @@
+import 'package:KETAHANANPANGAN/shared/widgets/menu_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -34,6 +35,7 @@ Future<void> main() async {
       providers: [
         // Gunakan .value untuk authProvider karena sudah diinisialisasi di atas
         ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider(create: (_) => MenuProvider()),
         
         // Feature Providers
         ChangeNotifierProvider(create: (_) => DashboardProvider()),

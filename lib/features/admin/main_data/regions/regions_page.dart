@@ -275,7 +275,7 @@ class _RegionsPageState extends State<RegionsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFEAF0F9),
       body: Consumer<RegionProvider>(
         builder: (context, provider, child) {
           final totalKab = provider.uniqueKabupatenList.length;

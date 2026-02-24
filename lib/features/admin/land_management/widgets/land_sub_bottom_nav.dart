@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../router/route_names.dart';
 
+// --- PALET WARNA EARTHY & ORGANIC ---
+const Color _forestGreen = Color(0xFF2D4F1E);
+const Color _warmBeige = Color(0xFFF5E6CC);
+const Color _slateGrey = Color(0xFF4A4A4A);
+const Color _textPrimary = Color(0xFF2C3E2D);
+const Color _borderWarm = Color(0xFFE8DDD0);
+
 class LandSubBottomNav extends StatelessWidget {
   final VoidCallback onClose;
 
@@ -10,8 +17,10 @@ class LandSubBottomNav extends StatelessWidget {
   void _handleNavigation(BuildContext context, String route) {
     final GoRouter router = GoRouter.of(context);
     
-    onClose();
-
+    // 1. Jalankan onClose untuk memicu MenuProvider (toggle false)
+    onClose(); 
+    
+    // 2. Delay transisi halaman
     Future.delayed(const Duration(milliseconds: 150), () {
       router.go(route);
     });
@@ -19,8 +28,6 @@ class LandSubBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF7C6FDE);
-
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -30,7 +37,7 @@ class LandSubBottomNav extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: _forestGreen.withOpacity(0.12),
               blurRadius: 24,
               offset: const Offset(0, 8),
               spreadRadius: -4,
@@ -40,10 +47,11 @@ class LandSubBottomNav extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // HEADER
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.08),
+                color: _forestGreen.withOpacity(0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
@@ -51,14 +59,14 @@ class LandSubBottomNav extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: primaryColor,
+                      gradient: const LinearGradient(
+                        colors: [_forestGreen, Color(0xFF1E3A0F)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.spa_rounded, 
-                      size: 20, 
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.spa_rounded, size: 20, color: Colors.white),
                   ),
                   const SizedBox(width: 14),
                   const Text(
@@ -66,13 +74,13 @@ class LandSubBottomNav extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E293B),
+                      color: _textPrimary,
                     ),
                   ),
                 ],
               ),
             ),
-
+            // MENU ITEMS
             _LandPopupItem(
               icon: Icons.dashboard_rounded,
               label: 'Data Potensi Lahan',
@@ -111,30 +119,25 @@ class _LandPopupItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF7C6FDE);
-
     return InkWell(
       onTap: onTap,
+      borderRadius: isLast 
+          ? const BorderRadius.vertical(bottom: Radius.circular(20)) 
+          : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          border: isLast 
-              ? null 
-              : Border(bottom: BorderSide(color: Colors.grey.shade100, width: 1)),
+          border: isLast ? null : Border(bottom: BorderSide(color: _borderWarm, width: 1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: _warmBeige.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon, 
-                size: 22, 
-                color: primaryColor,
-              ),
+              child: Icon(icon, size: 22, color: _forestGreen),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -143,15 +146,11 @@ class _LandPopupItem extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14, 
                   fontWeight: FontWeight.w600, 
-                  color: Color(0xFF1E293B),
+                  color: _textPrimary,
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded, 
-              size: 22, 
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.chevron_right_rounded, size: 22, color: _slateGrey.withOpacity(0.4)),
           ],
         ),
       ),

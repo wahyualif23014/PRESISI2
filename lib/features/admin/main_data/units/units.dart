@@ -38,7 +38,7 @@ class _UnitsPageState extends State<UnitsPage> {
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: const Color(0xFFEAF0F9),
       body: RefreshIndicator(
         onRefresh: () => provider.refresh(),
         color: const Color(0xFF1E40AF),
@@ -320,9 +320,9 @@ class _UnitsPageState extends State<UnitsPage> {
     if (polsek.kapolsek.isNotEmpty && polsek.kapolsek != '-') {
       parts.add('Ka: ${polsek.kapolsek}');
     }
-    if (polsek.noTelp.isNotEmpty && polsek.noTelp != '-') {
-      parts.add(polsek.noTelp);
-    }
+    // if (polsek.noTelp.isNotEmpty && polsek.noTelp != '-') {
+    //   parts.add(polsek.noTelp);
+    // }
     return parts.join(' / ');
   }
 

@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../router/route_names.dart'; // Sesuaikan path
+import '../../../../router/route_names.dart';
+
+// --- PALET WARNA EARTHY & ORGANIC ---
+const Color _forestGreen = Color(0xFF2D4F1E);
+const Color _warmBeige = Color(0xFFF5E6CC);
+const Color _slateGrey = Color(0xFF4A4A4A);
+const Color _textPrimary = Color(0xFF2C3E2D);
+const Color _borderWarm = Color(0xFFE8DDD0);
 
 class MainDataSubBottomNav extends StatelessWidget {
   final VoidCallback onClose;
@@ -10,33 +17,17 @@ class MainDataSubBottomNav extends StatelessWidget {
   void _handleNavigation(BuildContext context, String route) {
     final GoRouter router = GoRouter.of(context);
     
-    // 1. Jalankan callback onClose (ini akan memicu setState di MainDataShellPage)
-    //    Efeknya: Menu turun ke bawah, Blur hilang.
+    // 1. Jalankan onClose untuk memicu MenuProvider (toggle false)
     onClose(); 
-
-    // 2. Beri jeda sebentar (150-200ms) agar animasi tutup terlihat mata user
+    
+    // 2. Beri sedikit delay agar animasi penutupan popup berjalan mulus sebelum pindah page
     Future.delayed(const Duration(milliseconds: 150), () {
-      // 3. Baru pindah halaman
       router.go(route);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // ... (Sisa code UI Container dan PopupItem Anda tetap sama)
-    // Pastikan di bagian onTap item memanggil _handleNavigation
-    // Contoh:
-    /*
-      _PopupItem(
-        icon: Icons.map_rounded,
-        label: 'Wilayah',
-        onTap: () => _handleNavigation(context, RouteNames.dataRegions),
-      ),
-    */
-    
-    // Copy sisa code UI Anda di sini...
-    const primaryColor = Color(0xFF7C6FDE);
-
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -46,7 +37,7 @@ class MainDataSubBottomNav extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: _forestGreen.withOpacity(0.12),
               blurRadius: 24,
               offset: const Offset(0, 8),
               spreadRadius: -4,
@@ -60,7 +51,7 @@ class MainDataSubBottomNav extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.08),
+                color: _forestGreen.withOpacity(0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
@@ -68,7 +59,11 @@ class MainDataSubBottomNav extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: primaryColor,
+                      gradient: const LinearGradient(
+                        colors: [_forestGreen, Color(0xFF1E3A0F)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.storage_rounded, size: 20, color: Colors.white),
@@ -79,7 +74,7 @@ class MainDataSubBottomNav extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E293B),
+                      color: _textPrimary,
                     ),
                   ),
                 ],
@@ -114,7 +109,6 @@ class MainDataSubBottomNav extends StatelessWidget {
   }
 }
 
-// Widget _PopupItem
 class _PopupItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -132,29 +126,36 @@ class _PopupItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: isLast 
+          ? const BorderRadius.vertical(bottom: Radius.circular(20)) 
+          : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          border: isLast ? null : Border(bottom: BorderSide(color: Colors.grey.shade100, width: 1)),
+          border: isLast ? null : Border(bottom: BorderSide(color: _borderWarm, width: 1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF7C6FDE).withOpacity(0.1),
+                color: _warmBeige.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 22, color: const Color(0xFF7C6FDE)),
+              child: Icon(icon, size: 22, color: _forestGreen),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                style: const TextStyle(
+                  fontSize: 14, 
+                  fontWeight: FontWeight.w600, 
+                  color: _textPrimary,
+                ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 22, color: Colors.grey.shade400),
+            Icon(Icons.chevron_right_rounded, size: 22, color: _slateGrey.withOpacity(0.4)),
           ],
         ),
       ),

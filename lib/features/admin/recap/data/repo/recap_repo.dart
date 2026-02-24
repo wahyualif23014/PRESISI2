@@ -6,8 +6,7 @@ import 'package:http/http.dart' as http;
 import '../model/recap_model.dart'; // Sesuaikan import
 
 class RecapRepo {
-  // Ganti IP sesuai konfigurasi jaringan
-  final String baseUrl = "http://192.168.100.195:8080/api/rekapitulasi";
+  final String baseUrl = "http://10.16.8.244:8080/api/rekapitulasi";
 
   Future<List<RecapModel>> getRecapData() async {
     try {

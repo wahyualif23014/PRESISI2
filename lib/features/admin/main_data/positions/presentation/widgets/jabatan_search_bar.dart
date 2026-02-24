@@ -15,7 +15,7 @@ class JabatanSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48, // Standar tinggi disamakan dengan komponen lain (sebelumnya 45)
+      height: 48, 
       decoration: BoxDecoration(
         color: Colors.white, // Background Putih
         borderRadius: BorderRadius.circular(12), // Radius konsisten 12

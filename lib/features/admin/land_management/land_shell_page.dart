@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/router/route_names.dart';
+import 'package:KETAHANANPANGAN/shared/widgets/menu_provider.dart';
 import 'widgets/land_sub_bottom_nav.dart';
 
 class LandShellPage extends StatefulWidget {
@@ -20,31 +21,19 @@ class LandShellPage extends StatefulWidget {
 }
 
 class _LandShellPageState extends State<LandShellPage> {
-  bool _isMenuManuallyClosed = false;
-  String _lastLocation = '';
-
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     
-    // ✅ STEP 1.1: AMBIL ROLE DARI PROVIDER
+    // ✅ Pantau State dari Provider
+    final menuProvider = context.watch<MenuProvider>();
     final authProvider = context.watch<AuthProvider>();
-    final role = authProvider.userRole;
-    final isAdmin = role == UserRole.admin;
     
-    final isLandRoot = location == RouteNames.landManagement || 
-                       location == RouteNames.landOverview;
+    final isAdmin = authProvider.userRole == UserRole.admin;
+    final isInLandSection = RouteNames.isLandRoute(location);
 
-    if (location != _lastLocation) {
-      if (isLandRoot) {
-        _isMenuManuallyClosed = false;
-      }
-      _lastLocation = location;
-    }
-
-    // ✅ STEP 1.2: POPUP HANYA MUNCUL UNTUK ADMIN
-    // Operator tidak akan pernah lihat popup
-    final showMenu = isAdmin && isLandRoot && !_isMenuManuallyClosed;
+    // ✅ Menu muncul jika Admin, di section lahan, dan status Provider aktif
+    final showMenu = isAdmin && isInLandSection && menuProvider.isLandMenuOpen;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -56,22 +45,15 @@ class _LandShellPageState extends State<LandShellPage> {
           if (showMenu)
             Positioned.fill(
               child: GestureDetector(
-                onTap: () {
-                  setState(() => _isMenuManuallyClosed = true);
-                },
+                onTap: () => context.read<MenuProvider>().toggleLandMenu(false),
                 child: TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
                   duration: const Duration(milliseconds: 300),
                   builder: (context, value, _) {
-                    final safeOpacity = value.clamp(0.0, 1.0);
-                    
                     return BackdropFilter(
-                      filter: ImageFilter.blur(
-                        sigmaX: 3.0 * safeOpacity,
-                        sigmaY: 3.0 * safeOpacity,
-                      ),
+                      filter: ImageFilter.blur(sigmaX: 3.0 * value, sigmaY: 3.0 * value),
                       child: Container(
-                        color: Colors.black.withOpacity(0.2 * safeOpacity),
+                        color: Colors.black.withOpacity(0.2 * value),
                       ),
                     );
                   },
@@ -79,39 +61,30 @@ class _LandShellPageState extends State<LandShellPage> {
               ),
             ),
           
-          // Layer 2: Popup Card (hanya untuk admin)
           if (showMenu)
-            _buildPopupCard(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPopupCard() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 40, // Di atas navbar
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutBack,
-        builder: (context, value, child) {
-          final safeValue = value.clamp(0.0, 1.0);
-          
-          return Opacity(
-            opacity: safeValue,
-            child: Transform.translate(
-              offset: Offset(0, 50 * (1 - safeValue)),
-              child: child,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 40,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, 50 * (1 - value)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: LandSubBottomNav(
+                  onClose: () => context.read<MenuProvider>().toggleLandMenu(false),
+                ),
+              ),
             ),
-          );
-        },
-        child: LandSubBottomNav(
-          onClose: () {
-            setState(() => _isMenuManuallyClosed = true);
-          },
-        ),
+        ],
       ),
     );
   }
