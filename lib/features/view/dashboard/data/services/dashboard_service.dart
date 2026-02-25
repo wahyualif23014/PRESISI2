@@ -1,7 +1,6 @@
-// lib/features/view/dashboard/data/services/viewer_dashboard_service.dart
+// lib/features/view/dashboard/data/services/dashboard_service.dart
 
-import 'package:KETAHANANPANGAN/features/view/dashboard/data/models/viewer_dashboard_model.dart';
-
+import '../models/viewer_dashboard_model.dart';
 
 class ViewerDashboardService {
   Future<ViewerDashboardModel> getViewerStats() async {

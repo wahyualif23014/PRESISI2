@@ -15,6 +15,8 @@ import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_pr
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
+import 'package:KETAHANANPANGAN/features/operator/dashboard/providers/dashboard_provider.dart';
+import 'package:KETAHANANPANGAN/features/view/dashboard/providers/dashboard_provider.dart';
 
 Future<void> main() async {
   // 1. Pastikan binding engine Flutter sudah siap
@@ -36,7 +38,7 @@ Future<void> main() async {
         // Gunakan .value untuk authProvider karena sudah diinisialisasi di atas
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
-        
+
         // Feature Providers
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => PersonelProvider()),
@@ -45,6 +47,10 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => JabatanProvider()),
         ChangeNotifierProvider(create: (_) => CommodityProvider()),
         // Tambahkan Provider lain di sini jika sudah siap (misal: LandProvider)
+
+        // bagian operator
+        ChangeNotifierProvider(create: (_) => OperatorDashboardProvider()),
+        ChangeNotifierProvider(create: (_) => ViewerDashboardProvider()),
       ],
       child: MyApp(appRouter: appRouter),
     ),
@@ -60,26 +66,23 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Ketahanan Pangan Presisi',
       debugShowCheckedModeBanner: false,
-      
+
       // Menggunakan GoRouter untuk navigasi terpusat
       routerConfig: appRouter.router,
-      
+
       // Konfigurasi Lokalisasi (Bahasa)
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('id', 'ID'), 
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       locale: const Locale('id', 'ID'),
-      
+
       // Tema Aplikasi
       theme: _appTheme,
       themeMode: ThemeMode.light,
-      
+
       // Error Handling Global (Safe View)
       builder: (context, child) {
         ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -122,13 +125,22 @@ class _SafeErrorView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.bug_report_outlined, size: 64, color: Colors.redAccent),
+              const Icon(
+                Icons.bug_report_outlined,
+                size: 64,
+                color: Colors.redAccent,
+              ),
               const SizedBox(height: 16),
-              const Text('Terjadi Kesalahan UI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Terjadi Kesalahan UI',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
-              Text(errorMessage ?? 'Unknown error occurred', 
-                   textAlign: TextAlign.center, 
-                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                errorMessage ?? 'Unknown error occurred',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ],
           ),
         ),

@@ -1,13 +1,17 @@
-// lib/features/operator/dashboard/providers/operator_dashboard_provider.dart
-
-import 'package:KETAHANANPANGAN/features/operator/dashboard/data/services/dashboard_service.dart';
 import 'package:flutter/material.dart';
-import '../data/model/operator_dashboard_model.dart';
+import 'package:KETAHANANPANGAN/features/operator/dashboard/data/services/dashboard_service.dart';
+import 'package:KETAHANANPANGAN/features/operator/dashboard/data/model/operator_dashboard_model.dart';
 
-class OperatorDashboardProvider extends ChangeNotifier {
-  final _service = OperatorDashboardService();
-  
-  OperatorDashboardModel _data = OperatorDashboardModel.empty();
+class OperatorDashboardProvider with ChangeNotifier {
+  // Pastikan nama class di file service adalah DashboardService
+  final _service = DashboardService();
+
+  OperatorDashboardModel _data = OperatorDashboardModel(
+    totalLahan: 0,
+    tugasPending: 0,
+    daftarLahan: [],
+  );
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -21,7 +25,7 @@ class OperatorDashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _data = await _service.getOperatorData();
+      _data = await _service.getOperatorDashboardData();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {

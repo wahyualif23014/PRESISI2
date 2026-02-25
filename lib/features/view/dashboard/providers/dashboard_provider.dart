@@ -1,13 +1,12 @@
-// lib/features/view/dashboard/providers/viewer_dashboard_provider.dart
+// lib/features/view/dashboard/providers/dashboard_provider.dart
 
-import 'package:KETAHANANPANGAN/features/view/dashboard/data/models/viewer_dashboard_model.dart';
-import 'package:KETAHANANPANGAN/features/view/dashboard/data/services/dashboard_service.dart';
 import 'package:flutter/material.dart';
-
+import '../data/models/viewer_dashboard_model.dart';
+import '../data/services/dashboard_service.dart';
 
 class ViewerDashboardProvider extends ChangeNotifier {
   final _service = ViewerDashboardService();
-  
+
   ViewerDashboardModel _data = ViewerDashboardModel.empty();
   bool _isLoading = false;
   String? _errorMessage;

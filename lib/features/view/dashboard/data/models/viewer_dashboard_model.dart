@@ -1,4 +1,4 @@
-// lib/features/view/dashboard/data/model/viewer_dashboard_model.dart
+// lib/features/view/dashboard/data/models/viewer_dashboard_model.dart
 
 class ViewerDashboardModel {
   final double totalProduksi;

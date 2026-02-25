@@ -1,4 +1,4 @@
-import 'package:KETAHANANPANGAN/features/operator/dashboard/presentation/dashboard_page.dart' show OperatorDashboardPage;
+import 'package:KETAHANANPANGAN/features/operator/dashboard/presentation/operator_dashboard_page.dart' show OperatorDashboardPage;
 import 'package:KETAHANANPANGAN/features/view/dashboard/presentation/dashboard_page.dart' show ViewerDashboardPage;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
