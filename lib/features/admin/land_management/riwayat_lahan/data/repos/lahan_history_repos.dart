@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/lahan_history_model.dart';
 
 class LandHistoryRepository {
-  final String baseUrl = "http://192.168.100.195:8080/api/riwayat-lahan";
+  final String baseUrl = "http://192.168.100.196:8080/api/riwayat-lahan";
+  final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token') ?? '';
+    // FIX: Gunakan SecureStorage dan key 'jwt_token' agar konsisten
+    String? token = await _storage.read(key: 'jwt_token');
+    return token ?? '';
   }
 
   // AMBIL OPSI FILTER DARI DB
@@ -18,11 +20,20 @@ class LandHistoryRepository {
     String? polsek,
   }) async {
     String url = '$baseUrl/filter-options?';
-    if (polres != null) url += 'polres=$polres&';
-    if (polsek != null) url += 'polsek=$polsek';
+    if (polres != null && polres.isNotEmpty) url += 'polres=${Uri.encodeComponent(polres)}&';
+    if (polsek != null && polsek.isNotEmpty) url += 'polsek=${Uri.encodeComponent(polsek)}';
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse(url),
+        // FIX: Tambahkan Header Authorization karena route ini protected di Backend
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
@@ -43,23 +54,32 @@ class LandHistoryRepository {
     Map<String, String>? filters,
   }) async {
     final token = await _getToken();
-    String url = '$baseUrl/list?search=$keyword';
+    
+    // FIX: Hapus '/list', langsung ke endpoint root grup riwayat
+    String url = '$baseUrl?search=${Uri.encodeComponent(keyword)}';
 
     if (filters != null) {
-      if (filters['polres']?.isNotEmpty ?? false)
-        url += '&polres=${filters['polres']}';
-      if (filters['polsek']?.isNotEmpty ?? false)
-        url += '&polsek=${filters['polsek']}';
-      if (filters['jenis_lahan']?.isNotEmpty ?? false)
-        url += '&jenis_lahan=${filters['jenis_lahan']}';
-      if (filters['komoditas']?.isNotEmpty ?? false)
-        url += '&komoditas=${filters['komoditas']}';
+      if (filters['polres']?.isNotEmpty ?? false) {
+        url += '&polres=${Uri.encodeComponent(filters['polres']!)}';
+      }
+      if (filters['polsek']?.isNotEmpty ?? false) {
+        url += '&polsek=${Uri.encodeComponent(filters['polsek']!)}';
+      }
+      if (filters['jenis_lahan']?.isNotEmpty ?? false) {
+        url += '&jenis_lahan=${Uri.encodeComponent(filters['jenis_lahan']!)}';
+      }
+      if (filters['komoditas']?.isNotEmpty ?? false) {
+        url += '&komoditas=${Uri.encodeComponent(filters['komoditas']!)}';
+      }
     }
 
     try {
       final response = await http.get(
         Uri.parse(url),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);

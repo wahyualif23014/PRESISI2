@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Ganti SharedPrefs jadi ini
 
 class AdminService {
-  final String baseUrl = 'http://192.168.100.195:8080'; 
+  final String baseUrl = 'http://192.168.100.196:8080'; 
+  final _storage = const FlutterSecureStorage();
 
-  // Helper Private untuk mengambil Header + Token secara konsisten
+  // Helper Private: Ambil Token dari SecureStorage (Bukan SharedPreferences lagi)
   Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    // KONSISTENSI: Gunakan key 'jwt_token' sesuai AuthService
+    final token = await _storage.read(key: 'jwt_token');
     
     if (token == null) throw Exception('Sesi berakhir. Silakan login ulang.');
 
@@ -18,10 +19,9 @@ class AdminService {
     };
   }
 
-  // 1. GET: Ambil Semua Data User (Admin Only)
+  // 1. GET: Ambil Semua Data User
   Future<List<dynamic>> getUsers() async {
     final headers = await _getHeaders();
-    // Gunakan /api/admin sesuai rute di main.go
     final response = await http.get(
       Uri.parse('$baseUrl/api/admin/users'), 
       headers: headers,
@@ -35,7 +35,7 @@ class AdminService {
     }
   }
 
-  // 2. POST: Daftarkan Personel Baru (IAM)
+  // 2. POST: Daftarkan Personel Baru
   Future<void> createUser(Map<String, dynamic> userData) async {
     final headers = await _getHeaders();
     final response = await http.post(
@@ -64,7 +64,7 @@ class AdminService {
     }
   }
 
-  // 4. DELETE: Hapus Personel (Soft Delete di Backend)
+  // 4. DELETE: Hapus Personel
   Future<void> deleteUser(int id) async {
     final headers = await _getHeaders();
     final response = await http.delete(

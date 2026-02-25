@@ -1,28 +1,25 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // Wajib ada untuk debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
-  // Pastikan IP ini benar (IP Laptop/Server Go kamu)
-  final String baseUrl = "http://192.168.100.195:8080/api/kelola-lahan";
+  final String baseUrl = "http://192.168.100.196:8080/api/kelola-lahan";
+  final _storage = const FlutterSecureStorage();
 
-  // Helper: Ambil Token
   Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token') ?? '';
+    String? token = await _storage.read(key: 'jwt_token');
+    return token ?? '';
   }
 
-  // 1. GET FILTER OPTIONS (Untuk Dropdown di Dialog)
   Future<Map<String, List<String>>> getFilterOptions({
     String? polres,
     String? polsek,
   }) async {
-    // Bangun URL dengan query parameter
     String url = '$baseUrl/filter-options?';
-    if (polres != null && polres.isNotEmpty) url += 'polres=$polres&';
-    if (polsek != null && polsek.isNotEmpty) url += 'polsek=$polsek';
+    if (polres != null && polres.isNotEmpty) url += 'polres=${Uri.encodeComponent(polres)}&';
+    if (polsek != null && polsek.isNotEmpty) url += 'polsek=${Uri.encodeComponent(polsek)}';
 
     try {
       final token = await _getToken();
@@ -50,7 +47,6 @@ class LandManagementRepository {
     }
   }
 
-  // 2. GET SUMMARY
   Future<LandManagementSummaryModel> getSummaryStats() async {
     final token = await _getToken();
 
@@ -86,30 +82,27 @@ class LandManagementRepository {
     }
   }
 
-  // 3. GET LIST (Dengan Search & Filter Lengkap)
   Future<List<LandManagementItemModel>> getLandManagementList({
     String keyword = "",
-    Map<String, String>? filters, // Parameter Tambahan untuk Filter
+    Map<String, String>? filters,
   }) async {
     final token = await _getToken();
 
-    // Susun URL Dasar
-    String url = '$baseUrl/list?search=$keyword';
+    String url = '$baseUrl?search=${Uri.encodeComponent(keyword)}';
 
-    // Tambahkan Parameter Filter ke URL jika ada
     if (filters != null) {
       if (filters['polres'] != null && filters['polres']!.isNotEmpty) {
-        url += '&polres=${filters['polres']}';
+        url += '&polres=${Uri.encodeComponent(filters['polres']!)}';
       }
       if (filters['polsek'] != null && filters['polsek']!.isNotEmpty) {
-        url += '&polsek=${filters['polsek']}';
+        url += '&polsek=${Uri.encodeComponent(filters['polsek']!)}';
       }
       if (filters['jenis_lahan'] != null &&
           filters['jenis_lahan']!.isNotEmpty) {
-        url += '&jenis_lahan=${filters['jenis_lahan']}';
+        url += '&jenis_lahan=${Uri.encodeComponent(filters['jenis_lahan']!)}';
       }
       if (filters['komoditas'] != null && filters['komoditas']!.isNotEmpty) {
-        url += '&komoditas=${filters['komoditas']}';
+        url += '&komoditas=${Uri.encodeComponent(filters['komoditas']!)}';
       }
     }
 

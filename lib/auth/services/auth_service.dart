@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Wajib Import Ini
 
 class AuthService {
-  final String baseUrl = 'http://192.168.100.195:8080';
+  final String baseUrl = 'http://192.168.100.196:8080';
+  
+  // Instance Storage (Brankas Token)
+  final _storage = const FlutterSecureStorage();
 
+  // --- FUNGSI LOGIN (SUDAH DIPERBAIKI) ---
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
@@ -19,6 +24,12 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        // [PENTING] SIMPAN TOKEN KE BRANKAS HP
+        // Pastikan backend mengirim key json bernama 'token'
+        if (data['token'] != null) {
+          await _storage.write(key: 'jwt_token', value: data['token']);
+        }
+        
         return {
           'success': true,
           'data': data,
@@ -42,6 +53,12 @@ class AuthService {
     }
   }
 
+  // --- FUNGSI LOGOUT (WAJIB ADA UNTUK BERSIH-BERSIH) ---
+  Future<void> logout() async {
+    await _storage.delete(key: 'jwt_token');
+  }
+
+  // --- FUNGSI REGISTER (TETAP SAMA) ---
   Future<Map<String, dynamic>> register({
     required String namaLengkap,
     required String idTugas,
@@ -66,7 +83,7 @@ class AuthService {
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return {
           'success': true,
           'message': data['message'] ?? 'Registration successful',

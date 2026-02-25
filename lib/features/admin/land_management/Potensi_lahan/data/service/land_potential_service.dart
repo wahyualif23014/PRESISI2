@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../model/land_potential_model.dart';
 import '../model/land_summary_model.dart';
@@ -9,11 +9,13 @@ import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
   // Gunakan IP server yang sesuai dengan konfigurasi backend Go kamu
-  final String baseUrl = "http://192.168.100.195:8080/api/potensi-lahan";
+  final String baseUrl = "http://192.168.100.196:8080/api/potensi-lahan";
+  final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token') ?? '';
+    // FIX: Gunakan SecureStorage dan key 'jwt_token' agar konsisten
+    String? token = await _storage.read(key: 'jwt_token');
+    return token ?? '';
   }
 
   Future<Map<String, String>> _getHeaders() async {
@@ -71,7 +73,8 @@ class LandPotentialService {
   // 2. Ambil Opsi Filter (Cascading Polres/Polsek)
   Future<Map<String, List<String>>> fetchFilterOptions({String? polres}) async {
     try {
-      String url = "$baseUrl/filters";
+      // FIX: URL diganti menjadi /filter-options sesuai backend
+      String url = "$baseUrl/filter-options";
       if (polres != null && polres.isNotEmpty) {
         url += "?polres=${Uri.encodeComponent(polres)}";
       }
