@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'data/model/land_potential_model.dart';
 import 'data/service/land_potential_service.dart';
-import 'presentation/widget/add_land_data_page.dart';
+import 'presentation/widget/add_land_page.dart.dart';
 import 'presentation/widget/land_filter_dialog.dart';
 import 'presentation/widget/land_potential_group.dart';
 import 'presentation/widget/land_potential_toolbar.dart';
@@ -95,15 +95,20 @@ class _OverviewPageState extends State<OverviewPage> {
       color: Colors.white,
       child: Column(
         children: [
-          LandPotentialToolbar(
-            onSearchChanged: _onSearch,
-            onFilterTap: _onFilterTap,
-            onAddTap:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (c) => const AddLandDataPage()),
-                ).then((_) => _fetchData()),
-          ),
+              LandPotentialToolbar(
+              onSearchChanged: _onSearch,
+              onFilterTap: _onFilterTap,
+              // REFAKTOR: Menggunakan rootNavigator dan fullscreenDialog
+              onAddTap: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (c) => const AddLandPage(),
+                  fullscreenDialog: true, // Halaman penuh dari bawah ke atas
+                ),
+              ).then((_) {
+                _fetchData();
+                _refreshSummaries();
+              }),
+            ),
           Expanded(
             child: ListView(
               children: [
@@ -123,7 +128,7 @@ class _OverviewPageState extends State<OverviewPage> {
                           (item) => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (c) => AddLandDataPage(editData: item),
+                              builder: (c) => AddLandPage(editData: item),
                             ),
                           ).then((_) => _fetchData()),
                       onDelete: (item) => _confirmDelete(item),

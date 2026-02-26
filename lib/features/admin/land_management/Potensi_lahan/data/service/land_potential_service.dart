@@ -1,32 +1,75 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mime/mime.dart';
 
 import '../model/land_potential_model.dart';
 import '../model/land_summary_model.dart';
 import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
-  // Gunakan IP server yang sesuai dengan konfigurasi backend Go kamu
   final String baseUrl = "http://192.168.100.196:8080/api/potensi-lahan";
+  final String authUrl = "http://192.168.100.196:8080/api/view/profile";
   final _storage = const FlutterSecureStorage();
 
+  static final LandPotentialService _instance = LandPotentialService._internal();
+  factory LandPotentialService() => _instance;
+  LandPotentialService._internal();
+
   Future<String> _getToken() async {
-    // FIX: Gunakan SecureStorage dan key 'jwt_token' agar konsisten
-    String? token = await _storage.read(key: 'jwt_token');
-    return token ?? '';
+    try {
+      String? token = await _storage.read(key: 'jwt_token');
+      return token ?? '';
+    } catch (e) {
+      debugPrint("Error reading token: $e");
+      return '';
+    }
   }
 
-  Future<Map<String, String>> _getHeaders() async {
+  Future<Map<String, String>> _getHeaders({bool isMultipart = false}) async {
     final token = await _getToken();
     return {
-      'Content-Type': 'application/json',
+      if (!isMultipart) 'Content-Type': 'application/json',
       if (token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
 
-  // 1. Ambil List Data dengan Filter Aktif
+  dynamic _handleResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return json.decode(response.body);
+    } else {
+      debugPrint("HTTP Error Body: ${response.body}");
+      throw HttpException(
+        'HTTP ${response.statusCode}: ${response.reasonPhrase}',
+        uri: response.request?.url,
+      );
+    }
+  }
+
+  // ==================== AUTH & PROFILE ====================
+
+  // Method baru untuk mengambil identitas user penambah data
+  Future<Map<String, dynamic>?> fetchMyProfile() async {
+    try {
+      final response = await http.get(Uri.parse(authUrl), headers: await _getHeaders());
+      final data = _handleResponse(response);
+
+      if (data['status'] == 'success' && data['data'] != null) {
+        return data['data']; // Berisi id_tingkat, id_wilayah, nama, dll.
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Error Fetch Profile: $e");
+      return null;
+    }
+  }
+
+  // ==================== CRUD OPERATIONS ====================
+
   Future<List<LandPotentialModel>> fetchLandData({
     String search = '',
     String status = '',
@@ -37,73 +80,67 @@ class LandPotentialService {
     int limit = 50,
   }) async {
     try {
-      Map<String, String> qParams = {
+      final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
+        if (search.isNotEmpty) 'search': search,
+        if (status.isNotEmpty) 'status': status,
+        if (polres != null && polres.isNotEmpty) 'polres': polres,
+        if (polsek != null && polsek.isNotEmpty) 'polsek': polsek,
+        if (jenisLahan != null && jenisLahan.isNotEmpty) 'jenis_lahan': jenisLahan,
       };
 
-      if (search.isNotEmpty) qParams['search'] = search;
-      if (status.isNotEmpty) qParams['status'] = status;
-      if (polres != null && polres.isNotEmpty) qParams['polres'] = polres;
-      if (polsek != null && polsek.isNotEmpty) qParams['polsek'] = polsek;
-      if (jenisLahan != null && jenisLahan.isNotEmpty) {
-        qParams['jenis_lahan'] = jenisLahan;
-      }
-
-      final uri = Uri.parse(baseUrl).replace(queryParameters: qParams);
-      final headers = await _getHeaders();
-
-      final response = await http.get(uri, headers: headers);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          return (data['data'] as List)
-              .map((x) => LandPotentialModel.fromJson(x))
-              .toList();
-        }
+      final uri = Uri.parse(baseUrl).replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: await _getHeaders());
+      final data = _handleResponse(response);
+      
+      if (data['status'] == 'success' && data['data'] != null) {
+        return (data['data'] as List)
+            .map((x) => LandPotentialModel.fromJson(x))
+            .toList();
       }
       return [];
     } catch (e) {
-      debugPrint("Error Fetch Data: ${e.toString()}");
+      debugPrint("Error Fetch Data: $e");
       return [];
     }
   }
 
-  // 2. Ambil Opsi Filter (Cascading Polres/Polsek)
   Future<Map<String, List<String>>> fetchFilterOptions({String? polres}) async {
     try {
-      // FIX: URL diganti menjadi /filter-options sesuai backend
-      String url = "$baseUrl/filter-options";
-      if (polres != null && polres.isNotEmpty) {
-        url += "?polres=${Uri.encodeComponent(polres)}";
-      }
+      final queryParams = <String, String>{
+        if (polres != null && polres.isNotEmpty) 'polres': polres,
+      };
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: await _getHeaders(),
-      );
+      final uri = Uri.parse('$baseUrl/filter-options')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+      
+      final response = await http.get(uri, headers: await _getHeaders());
+      final data = _handleResponse(response);
 
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        if (body['status'] == 'success') {
-          final data = body['data'];
-          return {
-            "polres": List<String>.from(data['polres'] ?? []),
-            "polsek": List<String>.from(data['polsek'] ?? []),
-            "jenis_lahan": List<String>.from(data['jenis_lahan'] ?? []),
-            "komoditas": List<String>.from(data['komoditas'] ?? []),
-          };
-        }
+      if (data['status'] == 'success' && data['data'] != null) {
+        final responseData = data['data'];
+        return {
+          "polres": List<String>.from(responseData['polres'] ?? []),
+          "polsek": List<String>.from(responseData['polsek'] ?? []),
+          "jenis_lahan": List<String>.from(responseData['jenis_lahan'] ?? []),
+          "komoditas": List<String>.from(responseData['komoditas'] ?? []),
+        };
       }
-      return {"polres": [], "polsek": [], "jenis_lahan": [], "komoditas": []};
+      return _emptyFilterOptions();
     } catch (e) {
-      debugPrint("Error Filter Options: ${e.toString()}");
-      return {"polres": [], "polsek": [], "jenis_lahan": [], "komoditas": []};
+      debugPrint("Error Filter Options: $e");
+      return _emptyFilterOptions();
     }
   }
 
-  // 3. Tambah Data Baru
+  Map<String, List<String>> _emptyFilterOptions() => {
+        "polres": [],
+        "polsek": [],
+        "jenis_lahan": [],
+        "komoditas": [],
+      };
+
   Future<bool> postLandData(LandPotentialModel data) async {
     try {
       final response = await http.post(
@@ -113,12 +150,11 @@ class LandPotentialService {
       );
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
-      debugPrint("Error Post: ${e.toString()}");
+      debugPrint("Error Post Land Data: $e");
       return false;
     }
   }
 
-  // 4. Update Data Lahan Berdasarkan ID
   Future<bool> updateLandData(String id, LandPotentialModel data) async {
     try {
       final response = await http.put(
@@ -128,12 +164,11 @@ class LandPotentialService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Error Update: ${e.toString()}");
+      debugPrint("Error Update Land Data: $e");
       return false;
     }
   }
 
-  // 5. Hapus Data Lahan Berdasarkan ID
   Future<bool> deleteLandData(String id) async {
     try {
       final response = await http.delete(
@@ -142,66 +177,178 @@ class LandPotentialService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Error Delete: ${e.toString()}");
+      debugPrint("Error Delete Land Data: $e");
       return false;
     }
   }
 
-  // 6. Ambil Data Summary Lengkap (Menggabungkan Data Luas dan Data Wilayah Kosong)
+  // ==================== SUMMARY & ANALYTICS ====================
+
   Future<LandSummaryModel?> fetchSummaryData() async {
     try {
       final headers = await _getHeaders();
-
-      // Mengambil data dari dua endpoint secara paralel untuk efisiensi
       final results = await Future.wait([
         http.get(Uri.parse("$baseUrl/summary"), headers: headers),
         http.get(Uri.parse("$baseUrl/no-potential"), headers: headers),
-      ]);
+      ], eagerError: false);
 
       final summaryRes = results[0];
       final noPotentialRes = results[1];
 
       if (summaryRes.statusCode == 200) {
-        final summaryBody = json.decode(summaryRes.body);
-        Map<String, dynamic> combinedData = Map<String, dynamic>.from(
-          summaryBody['data'],
-        );
+        final summaryData = json.decode(summaryRes.body);
+        if (summaryData['status'] == 'success') {
+          Map<String, dynamic> combinedData = Map<String, dynamic>.from(summaryData['data']);
 
-        // Jika data wilayah kosong berhasil diambil, masukkan ke dalam objek data utama
-        if (noPotentialRes.statusCode == 200) {
-          final noPotentialBody = json.decode(noPotentialRes.body);
-          if (noPotentialBody['status'] == 'success') {
-            // PENTING: Masukkan ke key 'details' sesuai struktur model di atas
-            combinedData['details'] = noPotentialBody['data']['details'];
+          if (noPotentialRes.statusCode == 200) {
+            try {
+              final noPotentialData = json.decode(noPotentialRes.body);
+              if (noPotentialData['status'] == 'success' && noPotentialData['data'] != null) {
+                combinedData['details'] = noPotentialData['data']['details'];
+              }
+            } catch (e) {
+              debugPrint("Error parsing no-potential data: $e");
+            }
           }
+          return LandSummaryModel.fromJson(combinedData);
         }
-
-        return LandSummaryModel.fromJson(combinedData);
       }
       return null;
     } catch (e) {
-      debugPrint("Error Fetch Combined Summary: ${e.toString()}");
+      debugPrint("Error Fetch Summary Data: $e");
       return null;
     }
   }
 
-  // 7. Ambil Data Wilayah yang Belum Memiliki Potensi Saja
   Future<NoLandPotentialModel?> fetchNoLandData() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/no-potential"),
-        headers: await _getHeaders(),
-      );
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        if (body['status'] == 'success') {
-          return NoLandPotentialModel.fromJson(body['data']);
-        }
+      final response = await http.get(Uri.parse("$baseUrl/no-potential"), headers: await _getHeaders());
+      final data = _handleResponse(response);
+      
+      if (data['status'] == 'success' && data['data'] != null) {
+        return NoLandPotentialModel.fromJson(data['data']);
       }
       return null;
     } catch (e) {
-      debugPrint("Error Fetch No Land Data: ${e.toString()}");
+      debugPrint("Error Fetch No Land Data: $e");
       return null;
     }
   }
+
+  // ==================== IMAGE HANDLING ====================
+
+  Future<String> uploadImage(File imageFile, {String? customFilename}) async {
+    try {
+      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+      final filename = customFilename ?? 'land_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload-image'));
+      final token = await _getToken();
+      if (token.isNotEmpty) request.headers['Authorization'] = 'Bearer $token';
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'image', 
+        imageFile.path,
+        filename: filename,
+        contentType: MediaType.parse(mimeType),
+      ));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success' && data['data'] != null) {
+          return data['data']['url'] ?? data['data']['image_url'] ?? data['url'] ?? '';
+        } else {
+          throw Exception(data['message'] ?? 'Upload failed');
+        }
+      } else {
+        throw HttpException('Upload failed with status ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint("Error Upload Image: $e");
+      throw Exception('Gagal mengupload gambar: $e');
+    }
+  }
+
+  Future<List<String>> uploadMultipleImages(List<File> imageFiles) async {
+    final List<String> uploadedUrls = [];
+    for (var file in imageFiles) {
+      try {
+        final url = await uploadImage(file);
+        if (url.isNotEmpty) uploadedUrls.add(url);
+      } catch (e) {
+        debugPrint("Error uploading single image: $e");
+      }
+    }
+    return uploadedUrls;
+  }
+
+  Future<Uint8List?> fetchImageBytes(String imageUrl) async {
+    try {
+      final fullUrl = imageUrl.startsWith('http') ? imageUrl : '$baseUrl/$imageUrl';
+      final response = await http.get(Uri.parse(fullUrl), headers: await _getHeaders());
+      if (response.statusCode == 200) return response.bodyBytes;
+      return null;
+    } catch (e) {
+      debugPrint("Error Fetch Image Bytes: $e");
+      return null;
+    }
+  }
+
+  Future<bool> deleteImage(String imageUrl) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/delete-image'),
+        headers: await _getHeaders(),
+        body: json.encode({'url': imageUrl}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error Delete Image: $e");
+      return false;
+    }
+  }
+
+  // ==================== BATCH OPERATIONS ====================
+
+  Future<bool> bulkDelete(List<String> ids) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/bulk-delete'),
+        headers: await _getHeaders(),
+        body: json.encode({'ids': ids}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error Bulk Delete: $e");
+      return false;
+    }
+  }
+
+  Future<bool> bulkUpdateStatus(List<String> ids, String newStatus) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/bulk-update-status'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'ids': ids,
+          'status': newStatus,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error Bulk Update Status: $e");
+      return false;
+    }
+  }
+}
+
+class HttpException implements Exception {
+  final String message;
+  final Uri? uri;
+  HttpException(this.message, {this.uri});
+  @override
+  String toString() => 'HttpException: $message${uri != null ? ' ($uri)' : ''}';
 }

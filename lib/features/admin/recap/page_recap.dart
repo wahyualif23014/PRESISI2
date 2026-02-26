@@ -28,52 +28,50 @@ class _PageRecapState extends State<PageRecap> {
     super.dispose();
   }
 
-  // --- LOGIKA DOWNLOAD EXCEL ---
   void _handleDownloadExcel() async {
-    // Tampilkan Loading
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
       builder: (context) => const Center(
         child: CircularProgressIndicator(color: Color(0xFF673AB7)),
       ),
     );
 
-    // Proses Download
-    final path = await _controller.downloadExcel();
-    
-    if (!mounted) return;
-    Navigator.pop(context); // Tutup Loading
+    try {
+      final path = await _controller.downloadExcel();
 
-    if (path != null) {
-      // Tampilkan Dialog Sukses
-      final String fileName = path.split('/').last;
-      PrintSuccessDialog.show(
-        context,
-        fileName: fileName,
-        onPrintTap: () => Navigator.pop(context),
-      );
-    } else {
-      // Tampilkan Error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Gagal mengunduh."),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (path != null) {
+        final String fileName = path.split('/').last;
+        PrintSuccessDialog.show(
+          context,
+          fileName: fileName,
+          onPrintTap: () => Navigator.pop(context),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Gagal mengunduh."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
     }
   }
 
-  // --- LOGIKA FILTER (POPUP DIALOG) ---
   void _showFilterDialog() async {
-    // Menggunakan showDialog agar tampil sebagai POPUP di tengah layar
     final result = await showDialog<Map<String, bool>>(
       context: context,
-      // HAPUS 'const' di sini untuk memperbaiki error
-      builder: (context) => RecapFilterDialog(),
+      builder: (context) => const RecapFilterDialog(),
     );
 
-    // Kirim hasil filter ke controller jika user menekan 'Terapkan'
     if (result != null) {
       _controller.onFilter(result);
     }
@@ -86,32 +84,23 @@ class _PageRecapState extends State<PageRecap> {
       body: Column(
         children: [
           const SizedBox(height: 16),
-
-          // 1. HEADER SECTION (Search, Filter, Download)
           RecapHeaderSection(
             onSearchChanged: _controller.onSearch,
-            onFilterTap: _showFilterDialog, // Panggil fungsi Dialog Popup
+            onFilterTap: _showFilterDialog,
             onPrintTap: _handleDownloadExcel,
           ),
-
           const SizedBox(height: 16),
-
-          // 2. TABLE HEADER (Judul Kolom)
           const RecapTableHeader(),
-
-          // 3. CONTENT LIST (Data)
           Expanded(
             child: ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
-                // State Loading
                 if (_controller.state == RecapState.loading) {
                   return const Center(
                     child: CircularProgressIndicator(color: Color(0xFF673AB7)),
                   );
                 }
-                
-                // State Error
+
                 if (_controller.state == RecapState.error) {
                   return Center(
                     child: ElevatedButton(
@@ -124,8 +113,7 @@ class _PageRecapState extends State<PageRecap> {
                     ),
                   );
                 }
-                
-                // State Kosong
+
                 if (_controller.state == RecapState.empty) {
                   return const Center(
                     child: Column(
@@ -133,13 +121,13 @@ class _PageRecapState extends State<PageRecap> {
                       children: [
                         Icon(Icons.folder_off, size: 48, color: Colors.grey),
                         SizedBox(height: 8),
-                        Text("Data Kosong", style: TextStyle(color: Colors.grey)),
+                        Text("Data Kosong",
+                            style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
                 }
 
-                // State Sukses -> Tampilkan Pagination Wrapper
                 return RecapPaginationWrapper(
                   groupedData: _controller.groupedData,
                 );

@@ -51,4 +51,16 @@ class AppColors {
   static const Color white       = Colors.white;
   static const Color black       = Colors.black;
   static const Color transparent = Colors.transparent;
+    static const Color forestGreen = Color(0xFF2D4F1E);
+  static const Color warmBeige = Color(0xFFF5E6CC);
+  static const Color terracotta = Color(0xFFE07A5F);
+  static const Color slateGrey = Color(0xFF4A4A4A);
+  static const Color cream = Color(0xFFFDFCF8);
+
+
+  // Opacity variants
+  static Color forestGreenWithOpacity(double opacity) => 
+      forestGreen.withOpacity(opacity);
+  static Color slateGreyWithOpacity(double opacity) => 
+      slateGrey.withOpacity(opacity);
 }

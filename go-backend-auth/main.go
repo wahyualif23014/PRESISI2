@@ -72,17 +72,26 @@ func main() {
 			admin.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
 		}
 
-		// B. POTENSI LAHAN (Sesuai Log: /api/potensi-lahan)
+		// B. POTENSI LAHAN
 		potensi := api.Group("/potensi-lahan")
 		{
+			// Read Access (Public for Authenticated Users)
 			potensi.GET("", controllers.GetPotensiLahan)
 			potensi.GET("/summary", controllers.GetSummaryLahan)
 			potensi.GET("/no-potential", controllers.GetNoPotentialLahan)
 			potensi.GET("/filters", controllers.GetFilterOptions)
+			potensi.GET("/filter-options", controllers.GetFilterOptions)
+
+			// Write Access (Create, Update, Delete) - Restricted to Admin & Operator
 			potensi.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.CreatePotensiLahan)
+			potensi.POST("/CreatePotensiLahan", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.CreatePotensiLahan)
+			
+			// Tambahan Route Update & Delete Konsisten dengan Controller
+			potensi.PUT("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.UpdatePotensiLahan)
+			potensi.DELETE("/:id", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.DeletePotensiLahan)
 		}
 
-		// C. KELOLA LAHAN (Sesuai Log: /api/kelola-lahan)
+		// C. KELOLA LAHAN
 		kelola := api.Group("/kelola-lahan")
 		{
 			kelola.GET("/list", controllers.GetKelolaList)
@@ -90,7 +99,7 @@ func main() {
 			kelola.GET("/filters", controllers.GetKelolaFilterOptions)
 		}
 
-		// D. RIWAYAT LAHAN (Sesuai Log: /api/riwayat-lahan)
+		// D. RIWAYAT LAHAN
 		riwayat := api.Group("/riwayat-lahan")
 		{
 			riwayat.GET("/list", controllers.GetRiwayatList)
@@ -98,14 +107,14 @@ func main() {
 			riwayat.GET("/filters", controllers.GetRiwayatFilterOptions)
 		}
 
-		// E. REKAPITULASI (Sesuai Log: /api/rekapitulasi)
+		// E. REKAPITULASI
 		rekap := api.Group("/rekapitulasi")
 		{
 			rekap.GET("", controllers.GetRecapData)
 			rekap.GET("/export", controllers.ExportRecapExcel)
 		}
 
-		// F. SHARED VIEW
+		// F. SHARED VIEW (Tidak Perlu Tambahan Roles Sesuai Request)
 		view := api.Group("/view")
 		{
 			view.GET("/profile", controllers.GetProfile)

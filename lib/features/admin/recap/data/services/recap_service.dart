@@ -3,30 +3,23 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Wajib Import Ini
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../model/recap_model.dart'; 
 
 class RecapRepo {
   final String baseUrl = "http://192.168.100.196:8080/api/rekapitulasi";
-  
-  // Instance Storage untuk mengambil Token
   final _storage = const FlutterSecureStorage();
 
-  // Helper: Ambil Token
   Future<String> _getToken() async {
-    // Gunakan key 'jwt_token' agar konsisten dengan Login
     String? token = await _storage.read(key: 'jwt_token');
     return token ?? '';
   }
 
-  // 1. GET DATA REKAPITULASI (UI)
   Future<List<RecapModel>> getRecapData() async {
     try {
       final token = await _getToken();
-      
       final response = await http.get(
         Uri.parse(baseUrl),
-        // FIX: Tambahkan Header Authorization
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -34,15 +27,9 @@ class RecapRepo {
       );
 
       if (response.statusCode == 200) {
-        // Handle response JSON wrapper (sesuai format backend: { "status": "success", "data": [...] })
         final Map<String, dynamic> body = jsonDecode(response.body);
-        
-        // Cek apakah data ada di dalam key 'data'
         final List<dynamic> data = body['data'] ?? []; 
-        
-        return data
-            .map((json) => RecapModel.fromJson(json as Map<String, dynamic>))
-            .toList();
+        return data.map((json) => RecapModel.fromJson(json as Map<String, dynamic>)).toList();
       } else if (response.statusCode == 401) {
          throw Exception("Sesi habis (401). Silakan Login ulang.");
       } else {
@@ -53,23 +40,16 @@ class RecapRepo {
     }
   }
 
-  // 2. DOWNLOAD EXCEL
   Future<String?> downloadExcel() async {
     try {
-      final token = await _getToken(); // Ambil token dulu
-      
+      final token = await _getToken();
       final dio = Dio();
 
-      dio.options.connectTimeout = const Duration(seconds: 15);
-      dio.options.receiveTimeout = const Duration(seconds: 15);
-      
-      // FIX: Tambahkan Header Token ke Dio agar bisa download file dari route protected
+      dio.options.connectTimeout = const Duration(seconds: 30);
+      dio.options.receiveTimeout = const Duration(seconds: 30);
       dio.options.headers['Authorization'] = 'Bearer $token';
 
-      dio.options.headers = {'Authorization': 'Bearer $token'};
-
       Directory? directory;
-
       if (Platform.isAndroid) {
         directory = Directory('/storage/emulated/0/Download');
         if (!await directory.exists()) {
@@ -79,25 +59,18 @@ class RecapRepo {
         directory = await getApplicationDocumentsDirectory();
       }
 
-      final String fileName =
-          "Rekap_Presisi_${DateTime.now().millisecondsSinceEpoch}.xlsx";
-      
-      // Pastikan directory tidak null
-      String savePath;
-      if (directory != null) {
-         savePath = "${directory.path}/$fileName";
-      } else {
-         return null; 
-      }
+      if (directory == null) return null;
 
-      // Download dari endpoint /export
-      final response = await dio.download("$baseUrl/export", savePath);
+      final String fileName = "Rekap_Presisi_${DateTime.now().millisecondsSinceEpoch}.xlsx";
+      final String savePath = "${directory.path}/$fileName";
 
-      if (response.statusCode == 200) {
-        return savePath;
-      }
+      final response = await dio.download(
+        "$baseUrl/export", 
+        savePath,
+        deleteOnError: true,
+      );
 
-      return null;
+      return response.statusCode == 200 ? savePath : null;
     } catch (e) {
       return null;
     }

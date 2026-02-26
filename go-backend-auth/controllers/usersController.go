@@ -64,10 +64,9 @@ func CreateUser(c *gin.Context) {
 func GetUsers(c *gin.Context) {
 	var users []models.User
 
-	// Implementasi Preload untuk mengambil detail Jabatan & Tingkat
 	err := initializers.DB.
 		Preload("Jabatan").
-		Preload("TingkatDetail"). 
+		Preload("TingkatDetail").
 		Where("deletestatus = ?", models.StatusActive).
 		Find(&users).Error
 
@@ -112,11 +111,21 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	updates := make(map[string]interface{})
-	if input.NamaLengkap != "" { updates["nama"] = input.NamaLengkap }
-	if input.NoTelp != ""      { updates["hp"] = input.NoTelp }
-	if input.IDTugas != ""      { updates["idtugas"] = input.IDTugas }
-	if input.IDJabatan != nil   { updates["idjabatan"] = *input.IDJabatan }
-	if input.Role != ""         { updates["statusadmin"] = input.Role }
+	if input.NamaLengkap != "" {
+		updates["nama"] = input.NamaLengkap
+	}
+	if input.NoTelp != "" {
+		updates["hp"] = input.NoTelp
+	}
+	if input.IDTugas != "" {
+		updates["idtugas"] = input.IDTugas
+	}
+	if input.IDJabatan != nil {
+		updates["idjabatan"] = *input.IDJabatan
+	}
+	if input.Role != "" {
+		updates["statusadmin"] = input.Role
+	}
 
 	initializers.DB.Model(&user).Updates(updates)
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "data": user})
@@ -135,7 +144,37 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
+// FIX: Implementasi GetProfile untuk mengatasi ID Null di Flutter
 func GetProfile(c *gin.Context) {
-	user, _ := c.Get("user")
-	c.JSON(http.StatusOK, gin.H{"data": user})
+	userValue, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
+		return
+	}
+	user := userValue.(models.User)
+
+	// Cari ID Wilayah berdasarkan ID Tingkat (IDTugas) user
+	var idWilayah string
+	initializers.DB.Table("tingkatwilayah").
+		Select("idwilayah").
+		Where("idtingkat = ?", user.IDTugas).
+		Limit(1).
+		Scan(&idWilayah)
+
+	// Jika wilayah tidak ditemukan, beri default atau handle error
+	if idWilayah == "" {
+		idWilayah = "0" // Default fallback
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"id_anggota":   user.ID,
+			"nama_lengkap": user.NamaLengkap,
+			"nrp":          user.Username,
+			"id_tingkat":   user.IDTugas, // PK String dari Satker
+			"id_wilayah":   idWilayah,     // Hasil lookup dari tabel tingkatwilayah
+			"role":         user.Role,
+		},
+	})
 }

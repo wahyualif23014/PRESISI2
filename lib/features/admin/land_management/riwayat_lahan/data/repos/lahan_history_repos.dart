@@ -27,7 +27,6 @@ class LandHistoryRepository {
       final token = await _getToken();
       final response = await http.get(
         Uri.parse(url),
-        // FIX: Tambahkan Header Authorization karena route ini protected di Backend
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
