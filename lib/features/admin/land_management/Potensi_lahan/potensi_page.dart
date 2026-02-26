@@ -56,36 +56,49 @@ class _OverviewPageState extends State<OverviewPage> {
     if (keyword.isNotEmpty) _currentSearch = keyword;
 
     try {
+      // Ambil nilai dari filter dan pastikan tidak null
+      String? polresVal = _activeFilters?['polres'];
+      String? polsekVal = _activeFilters?['polsek'];
+
       final List<LandPotentialModel> data = await _service.fetchLandData(
         search: keyword.isNotEmpty ? keyword : _currentSearch,
-        polres: _activeFilters?['polres'],
-        polsek: _activeFilters?['polsek'],
+        polres: polresVal, // Data ini dikirim ke API
+        polsek: polsekVal,
         page: _currentPage,
         limit: _limitPerPage,
       );
 
       Map<String, List<LandPotentialModel>> grouped = {};
-      for (var item in data) {
-        String fullRegion =
-            "KAB. ${item.kabupaten} KEC. ${item.kecamatan} DESA ${item.desa}";
-        if (!grouped.containsKey(fullRegion)) grouped[fullRegion] = [];
-        grouped[fullRegion]!.add(item);
-      }
 
-      if (mounted) {
+      if (data.isEmpty) {
         setState(() {
-          _groupedData = grouped;
+          _groupedData = {};
           _isLoading = false;
         });
-        // REFAKTOR: Panggil update summary setiap kali data list berubah
-        _refreshSummaries();
+      } else {
+        for (var item in data) {
+          // Gunakan format string yang lebih rapi untuk header grup
+          String fullRegion =
+              "POLRES ${item.kabupaten} - POLSEK ${item.kecamatan}";
+          if (!grouped.containsKey(fullRegion)) grouped[fullRegion] = [];
+          grouped[fullRegion]!.add(item);
+        }
+
+        if (mounted) {
+          setState(() {
+            _groupedData = grouped;
+            _isLoading = false;
+          });
+          _refreshSummaries();
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isError = true;
           _isLoading = false;
         });
+      }
     }
   }
 
@@ -107,13 +120,50 @@ class _OverviewPageState extends State<OverviewPage> {
           Expanded(
             child: ListView(
               children: [
-                // REFAKTOR: Pasang Key pada widget summary
                 LandSummaryWidget(key: _summaryKey),
                 NoLandPotentialWidget(key: _noLandKey),
 
                 _buildHeaderPembatas("DAFTAR POTENSI LAHAN"),
+
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  const Padding(
+                    padding: EdgeInsets.all(50),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0097B2),
+                      ),
+                    ),
+                  )
+                else if (_groupedData.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      children: [
+                        const Text("🔍", style: TextStyle(fontSize: 50)),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Data tidak ditemukan",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const Text(
+                          "Coba ubah filter atau kata kunci pencarian kamu",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            _activeFilters = null;
+                            _currentSearch = "";
+                            _fetchData();
+                          },
+                          child: const Text("Reset Filter"),
+                        ),
+                      ],
+                    ),
+                  )
                 else
                   ..._groupedData.entries.map(
                     (entry) => KabupatenExpansionTile(

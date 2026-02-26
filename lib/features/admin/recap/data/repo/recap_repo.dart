@@ -7,7 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Wajib Im
 import '../model/recap_model.dart'; 
 
 class RecapRepo {
-  final String baseUrl = "http://192.168.100.196:8080/api/rekapitulasi";
+  final String baseUrl = "http://192.168.100.195:8080/api/rekapitulasi";
   
   // Instance Storage untuk mengambil Token
   final _storage = const FlutterSecureStorage();

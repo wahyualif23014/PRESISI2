@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Wajib Import Ini
 
 class AuthService {
-  final String baseUrl = 'http://192.168.100.196:8080';
+  final String baseUrl = 'http://192.168.100.195:8080';
   
   // Instance Storage (Brankas Token)
   final _storage = const FlutterSecureStorage();

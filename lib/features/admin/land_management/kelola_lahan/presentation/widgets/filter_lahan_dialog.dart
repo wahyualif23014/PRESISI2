@@ -37,47 +37,68 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
     _loadInitialData();
   }
 
-  // Load awal (Hanya Polres yang full, sisanya kosong/menyesuaikan)
+  // Load awal: Memuat Polres, Jenis Lahan, dan Komoditas dari database
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
-    final data = await _repo.getFilterOptions();
-    if (mounted) {
-      setState(() {
-        _listPolres = data['polres'] ?? [];
-        _isLoading = false;
-      });
+    try {
+      final result = await _repo.getFilterOptions();
+
+      // PERBAIKAN: Casting Map untuk mengambil key 'data' dari Backend
+      final Map<String, dynamic> response = result as Map<String, dynamic>;
+      final Map<String, dynamic> data = response['data'] ?? response;
+
+      if (mounted) {
+        setState(() {
+          _listPolres = List<String>.from(data['polres'] ?? []);
+          _listJenisLahan = List<String>.from(data['jenis_lahan'] ?? []);
+          _listKomoditas = List<String>.from(data['komoditas'] ?? []);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error Load Initial: $e");
+    } finally {
+      // Pastikan loading berhenti agar dropdown bisa diklik
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Load cascading (saat Polres dipilih, load Polsek)
+  // Load cascading: Saat Polres dipilih, muat Polsek spesifik
   Future<void> _onPolresChanged(String? val) async {
     setState(() {
       _selectedPolres = val;
-      _selectedPolsek = null; // Reset anak-anaknya
-      _selectedJenisLahan = null;
-      _selectedKomoditas = null;
-      _listPolsek = []; // Kosongkan dulu
+      _selectedPolsek = null;
+      _listPolsek = [];
       _isLoading = true;
     });
 
     if (val != null) {
-      final data = await _repo.getFilterOptions(polres: val);
-      if (mounted) {
-        setState(() {
-          _listPolsek = data['polsek'] ?? [];
-          // Jenis lahan & komoditas juga bisa berubah sesuai wilayah
-          _listJenisLahan = data['jenis_lahan'] ?? [];
-          _listKomoditas = data['komoditas'] ?? [];
-          _isLoading = false;
-        });
+      try {
+        final result = await _repo.getFilterOptions(polres: val);
+        final Map<String, dynamic> response = result as Map<String, dynamic>;
+        final Map<String, dynamic> data = response['data'] ?? response;
+
+        if (mounted) {
+          setState(() {
+            _listPolsek = List<String>.from(data['polsek'] ?? []);
+            _listJenisLahan = List<String>.from(
+              data['jenis_lahan'] ?? _listJenisLahan,
+            );
+            _listKomoditas = List<String>.from(
+              data['komoditas'] ?? _listKomoditas,
+            );
+          });
+        }
+      } catch (e) {
+        debugPrint("Error Load Polsek: $e");
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     } else {
-      // Jika di-unselect, reset ke awal
       _loadInitialData();
     }
   }
 
-  // Load cascading (saat Polsek dipilih)
+  // Load cascading: Saat Polsek dipilih
   Future<void> _onPolsekChanged(String? val) async {
     setState(() {
       _selectedPolsek = val;
@@ -85,16 +106,28 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
     });
 
     if (val != null) {
-      final data = await _repo.getFilterOptions(
-        polres: _selectedPolres,
-        polsek: val,
-      );
-      if (mounted) {
-        setState(() {
-          _listJenisLahan = data['jenis_lahan'] ?? [];
-          _listKomoditas = data['komoditas'] ?? [];
-          _isLoading = false;
-        });
+      try {
+        final result = await _repo.getFilterOptions(
+          polres: _selectedPolres,
+          polsek: val,
+        );
+        final Map<String, dynamic> response = result as Map<String, dynamic>;
+        final Map<String, dynamic> data = response['data'] ?? response;
+
+        if (mounted) {
+          setState(() {
+            _listJenisLahan = List<String>.from(
+              data['jenis_lahan'] ?? _listJenisLahan,
+            );
+            _listKomoditas = List<String>.from(
+              data['komoditas'] ?? _listKomoditas,
+            );
+          });
+        }
+      } catch (e) {
+        debugPrint("Error Load Data Polsek: $e");
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     } else {
       setState(() => _isLoading = false);
@@ -108,7 +141,6 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
-        // Agar aman di layar kecil
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -131,7 +163,10 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                     const SizedBox(
                       height: 16,
                       width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF0097B2),
+                      ),
                     ),
                 ],
               ),
@@ -140,10 +175,13 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
               // 1. KEPOLISIAN RESOR (POLRES)
               _buildDropdown(
                 label: "Kepolisian Resor",
-                hint: "Pilih Polres",
+                hint:
+                    _listPolres.isEmpty && _isLoading
+                        ? "Memuat..."
+                        : "Pilih Polres",
                 value: _selectedPolres,
-                items: _listPolres,
-                onChanged: _onPolresChanged,
+                items: _listPolres.toSet().toList(),
+                onChanged: _isLoading ? null : _onPolresChanged,
                 icon: Icons.local_police,
               ),
               const SizedBox(height: 16),
@@ -156,11 +194,11 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                         ? "Pilih Polres Terlebih Dahulu"
                         : "Pilih Polsek",
                 value: _selectedPolsek,
-                items: _listPolsek,
+                items: _listPolsek.toSet().toList(),
                 onChanged:
-                    _selectedPolres == null
+                    _selectedPolres == null || _isLoading
                         ? null
-                        : _onPolsekChanged, // Disable jika Polres belum dipilih
+                        : _onPolsekChanged,
                 icon: Icons.shield,
               ),
               const SizedBox(height: 16),
@@ -170,8 +208,11 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                 label: "Jenis Lahan",
                 hint: "Pilih Jenis Lahan",
                 value: _selectedJenisLahan,
-                items: _listJenisLahan,
-                onChanged: (val) => setState(() => _selectedJenisLahan = val),
+                items: _listJenisLahan.toSet().toList(),
+                onChanged:
+                    _isLoading
+                        ? null
+                        : (val) => setState(() => _selectedJenisLahan = val),
                 icon: Icons.landscape,
               ),
               const SizedBox(height: 16),
@@ -181,11 +222,13 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                 label: "Komoditi Lahan",
                 hint: "Pilih Komoditas",
                 value: _selectedKomoditas,
-                items: _listKomoditas,
-                onChanged: (val) => setState(() => _selectedKomoditas = val),
+                items: _listKomoditas.toSet().toList(),
+                onChanged:
+                    _isLoading
+                        ? null
+                        : (val) => setState(() => _selectedKomoditas = val),
                 icon: Icons.grass,
               ),
-
               const SizedBox(height: 32),
 
               // ACTION BUTTONS
@@ -214,7 +257,6 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Kirim Data Map Filter
                         widget.onApply({
                           'polres': _selectedPolres ?? '',
                           'polsek': _selectedPolsek ?? '',
@@ -224,7 +266,7 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0097B2), // Cyan
+                        backgroundColor: const Color(0xFF0097B2),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -256,6 +298,8 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
     required Function(String?)? onChanged,
     required IconData icon,
   }) {
+    final bool isActuallyEnabled = items.isNotEmpty && onChanged != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -272,36 +316,37 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color:
-                onChanged == null ? Colors.grey.shade100 : Colors.grey.shade50,
+                isActuallyEnabled ? Colors.grey.shade50 : Colors.grey.shade200,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: value,
+              value: items.contains(value) ? value : null,
               hint: Row(
                 children: [
                   Icon(icon, size: 18, color: Colors.grey),
                   const SizedBox(width: 8),
                   Text(
-                    hint,
+                    _isLoading && items.isEmpty ? "Mengambil data..." : hint,
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                   ),
                 ],
               ),
               isExpanded: true,
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+              icon:
+                  _isLoading && items.isEmpty
+                      ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.arrow_drop_down, color: Colors.grey),
               items:
                   items.map((String item) {
                     return DropdownMenuItem<String>(
                       value: item,
-                      child: Text(
-                        item,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      child: Text(item, style: const TextStyle(fontSize: 13)),
                     );
                   }).toList(),
               onChanged: onChanged,

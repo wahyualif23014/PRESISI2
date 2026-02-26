@@ -111,29 +111,105 @@ func GetPotensiLahan(c *gin.Context) {
 }
 
 func GetFilterOptions(c *gin.Context) {
-	var listPolres []string
-	var listPolsek []string
+	var rawPolres []string
+	var rawPolsek []string
 
+	polresParam := c.Query("polres")
+
+	// 1. Ambil data asli dari DB
 	initializers.DB.Table("lahan").
 		Select("DISTINCT w_kab.nama").
 		Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah, 1, 5)").
 		Where("w_kab.nama IS NOT NULL").
-		Pluck("w_kab.nama", &listPolres)
+		Order("w_kab.nama ASC").
+		Pluck("w_kab.nama", &rawPolres)
 
-	initializers.DB.Table("lahan").
+	var listPolres []string
+	for _, v := range rawPolres {
+		// Ubah ke UPPERCASE agar ReplaceAll pasti kena
+		name := strings.ToUpper(v)
+
+		// Hapus kata KABUPATEN dan KOTA
+		name = strings.ReplaceAll(name, "KABUPATEN", "")
+		name = strings.ReplaceAll(name, "KOTA", "")
+
+		// Bersihkan spasi di awal dan akhir yang tersisa
+		name = strings.TrimSpace(name)
+
+		// Tambahkan awalan POLRES
+		listPolres = append(listPolres, fmt.Sprintf("POLRES %s", name))
+	}
+
+	// 2. Query Polsek
+	queryPolsek := initializers.DB.Table("lahan").
 		Select("DISTINCT w_kec.nama").
 		Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = SUBSTR(lahan.idwilayah, 1, 8)").
-		Where("w_kec.nama IS NOT NULL").
-		Pluck("w_kec.nama", &listPolsek)
+		Where("w_kec.nama IS NOT NULL")
 
-	c.JSON(http.StatusOK, gin.H{
+	if polresParam != "" {
+		// Ambil nama daerah saja dari parameter (Hapus "POLRES ")
+		dbParam := strings.ToUpper(polresParam)
+		dbParam = strings.ReplaceAll(dbParam, "POLRES", "")
+		dbParam = strings.TrimSpace(dbParam)
+
+		// Cari yang mengandung nama daerah tersebut di database
+		queryPolsek = queryPolsek.
+			Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah, 1, 5)").
+			Where("UPPER(w_kab.nama) LIKE ?", "%"+dbParam+"%")
+	}
+
+	queryPolsek.Order("w_kec.nama ASC").Pluck("w_kec.nama", &rawPolsek)
+
+	var listPolsek []string
+	for _, v := range rawPolsek {
+		namePolsek := strings.ToUpper(v)
+		listPolsek = append(listPolsek, fmt.Sprintf("POLSEK %s", namePolsek))
+	}
+
+	// 3. Mapping Jenis Lahan
+	var listJenis []string
+	rows, err := initializers.DB.Table("lahan").
+		Select("idjenislahan").
+		Group("idjenislahan").
+		Order("idjenislahan ASC").
+		Rows()
+
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id int
+			rows.Scan(&id)
+			title := "LAHAN LAINNYA"
+			switch id {
+			case 1:
+				title = "PERHUTANAN SOSIAL"
+			case 2:
+				title = "POKTAN BINAAN POLRI"
+			case 3:
+				title = "MASYARAKAT BINAAN POLRI"
+			case 4:
+				title = "TUMPANG SARI"
+			case 5:
+				title = "MILIK POLRI"
+			case 6:
+				title = "LBS"
+			case 7:
+				title = "PESANTREN"
+			}
+			listJenis = append(listJenis, title)
+		}
+	}
+
+	c.JSON(200, gin.H{
 		"status": "success",
 		"data": gin.H{
-			"polres": listPolres,
-			"polsek": listPolsek,
+			"polres":      listPolres,
+			"polsek":      listPolsek,
+			"jenis_lahan": listJenis,
 		},
 	})
 }
+
 
 func CreatePotensiLahan(c *gin.Context) {
 	var input models.PotensiLahan

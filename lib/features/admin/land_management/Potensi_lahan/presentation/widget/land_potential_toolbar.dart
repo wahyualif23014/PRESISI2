@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-class LandPotentialToolbar extends StatelessWidget {
-  // Callback untuk mengirim sinyal ke halaman induk (OverviewPage)
+class LandPotentialToolbar extends StatefulWidget {
   final Function(String) onSearchChanged;
   final VoidCallback onFilterTap;
   final VoidCallback onAddTap;
@@ -14,13 +13,27 @@ class LandPotentialToolbar extends StatelessWidget {
   });
 
   @override
+  State<LandPotentialToolbar> createState() => _LandPotentialToolbarState();
+}
+
+class _LandPotentialToolbarState extends State<LandPotentialToolbar> {
+  // Controller untuk mengontrol teks dan menghapusnya
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
           // ==============================
-          // 1. SEARCH BAR (UI Baru)
+          // 1. SEARCH BAR
           // ==============================
           Expanded(
             child: Container(
@@ -33,22 +46,48 @@ class LandPotentialToolbar extends StatelessWidget {
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
                     blurRadius: 4,
-                    offset: const Offset(0, 4), // Efek bayangan ke bawah
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: TextField(
-                onChanged: onSearchChanged, // <-- Sinyal Search dikirim di sini
+                controller: _searchController,
+                onChanged: (value) {
+                  // Memicu perubahan UI untuk tombol X
+                  setState(() {});
+                  widget.onSearchChanged(value);
+                },
                 textAlignVertical: TextAlignVertical.center,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: "Cari Data Lahan",
-                  hintStyle: TextStyle(
+                  hintStyle: const TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.w600,
                   ),
-                  prefixIcon: Icon(Icons.search, color: Colors.black87, size: 28),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.black87,
+                    size: 28,
+                  ),
+                  // Tombol X untuk menghapus teks (Muncul jika teks tidak kosong)
+                  suffixIcon:
+                      _searchController.text.isNotEmpty
+                          ? IconButton(
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.black54,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              widget.onSearchChanged("");
+                              setState(
+                                () {},
+                              ); // Menghilangkan tombol X setelah hapus
+                            },
+                          )
+                          : null,
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 9),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 9),
                 ),
               ),
             ),
@@ -57,23 +96,23 @@ class LandPotentialToolbar extends StatelessWidget {
           const SizedBox(width: 12),
 
           // ==============================
-          // 2. TOMBOL FILTER (UI Baru)
+          // 2. TOMBOL FILTER
           // ==============================
           _buildActionButton(
             icon: Icons.filter_alt,
-            color: const Color(0xFF0097B2), // Biru Cyan
-            onTap: onFilterTap, // <-- Sinyal Filter dikirim di sini
+            color: const Color(0xFF0097B2),
+            onTap: widget.onFilterTap,
           ),
 
           const SizedBox(width: 12),
 
           // ==============================
-          // 3. TOMBOL TAMBAH (UI Baru)
+          // 3. TOMBOL TAMBAH
           // ==============================
           _buildActionButton(
             icon: Icons.add,
-            color: const Color(0xFF00C853), // Hijau
-            onTap: onAddTap, // <-- Sinyal Tambah dikirim di sini
+            color: const Color(0xFF00C853),
+            onTap: widget.onAddTap,
           ),
         ],
       ),
@@ -106,13 +145,7 @@ class LandPotentialToolbar extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          child: Center(
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
+          child: Center(child: Icon(icon, color: Colors.white, size: 28)),
         ),
       ),
     );

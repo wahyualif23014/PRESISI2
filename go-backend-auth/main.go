@@ -78,14 +78,14 @@ func main() {
 			potensi.GET("", controllers.GetPotensiLahan)
 			potensi.GET("/summary", controllers.GetSummaryLahan)
 			potensi.GET("/no-potential", controllers.GetNoPotentialLahan)
-			potensi.GET("/filters", controllers.GetFilterOptions)
+			potensi.GET("/filter-options", controllers.GetFilterOptions)
 			potensi.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.CreatePotensiLahan)
 		}
 
 		// C. KELOLA LAHAN (Sesuai Log: /api/kelola-lahan)
 		kelola := api.Group("/kelola-lahan")
 		{
-			kelola.GET("/list", controllers.GetKelolaList)
+			kelola.GET("/", controllers.GetKelolaList)
 			kelola.GET("/summary", controllers.GetKelolaSummary)
 			kelola.GET("/filters", controllers.GetKelolaFilterOptions)
 		}
@@ -93,9 +93,9 @@ func main() {
 		// D. RIWAYAT LAHAN (Sesuai Log: /api/riwayat-lahan)
 		riwayat := api.Group("/riwayat-lahan")
 		{
-			riwayat.GET("/list", controllers.GetRiwayatList)
+			riwayat.GET("/", controllers.GetRiwayatList)
 			riwayat.GET("/summary", controllers.GetRiwayatSummary)
-			riwayat.GET("/filters", controllers.GetRiwayatFilterOptions)
+			riwayat.GET("/filter-options", controllers.GetRiwayatFilterOptions)
 		}
 
 		// E. REKAPITULASI (Sesuai Log: /api/rekapitulasi)

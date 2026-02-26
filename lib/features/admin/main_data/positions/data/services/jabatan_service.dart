@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/position_model.dart' show JabatanModel; // Pastikan import ini aktif
 
 class JabatanService {
-  static const String baseUrl = "http://192.168.100.196:8080/api/admin/jabatan"; 
+  static const String baseUrl = "http://192.168.100.195:8080/api/admin/jabatan"; 
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();

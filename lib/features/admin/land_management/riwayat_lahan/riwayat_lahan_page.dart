@@ -39,43 +39,33 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
     super.dispose();
   }
 
+  // riwayat_lahan_page.dart
+
   Future<void> _fetchData({
     String keyword = "",
     Map<String, String>? filters,
   }) async {
+    // Jika ada filter baru dari dialog, simpan ke state global page
     if (filters != null) _activeFilters = filters;
 
-    if (keyword.isEmpty && _activeFilters == null) {
-      setState(() => _isLoading = true);
-    }
+    setState(() => _isLoading = true);
 
     try {
+      // Selalu kirim keyword pencarian DAN filter aktif saat ini
       final list = await _repo.getHistoryList(
-        keyword: keyword,
+        keyword: keyword.isEmpty ? _searchController.text : keyword,
         filters: _activeFilters,
       );
 
       if (!mounted) return;
 
-      double totalPotensi = 0;
-      for (var item in list) {
-        totalPotensi += item.landArea;
-      }
-
       setState(() {
         _listData = list;
         _groupedData = _groupDataByRegion(list);
-        _summaryData = LandHistorySummaryModel(
-          totalPotensiLahan: totalPotensi,
-          totalTanamLahan: 0,
-          totalPanenLahanHa: 0,
-          totalPanenLahanTon: 0,
-          totalSerapanTon: 0,
-        );
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("Error loading history: $e");
+      debugPrint("Error: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -95,7 +85,6 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
       context: context,
       builder: (context) {
         return FilterriwayatDialog(
-          // SEKARANG MENERIMA MAP, TIDAK PERLU KONVERSI MANUAL LAGI
           onApply: (filtersFromDialog) {
             _fetchData(
               keyword: _searchController.text,
@@ -125,7 +114,7 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
               onChanged: (val) {
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _fetchData(keyword: val, filters: _activeFilters);
+                  _fetchData(keyword: val);
                 });
               },
               onFilterTap: _showFilterDialog,

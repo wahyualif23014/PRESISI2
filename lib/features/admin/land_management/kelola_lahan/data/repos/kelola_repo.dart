@@ -5,7 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
-  final String baseUrl = "http://192.168.100.196:8080/api/kelola-lahan";
+  // Ganti endpoint filter-options ke filters agar sesuai rute grup di main.go
+  final String baseUrl = "http://192.168.100.195:8080/api/kelola-lahan";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
@@ -13,13 +14,19 @@ class LandManagementRepository {
     return token ?? '';
   }
 
-  Future<Map<String, List<String>>> getFilterOptions({
+  // ========================================================
+  // PERBAIKAN: Ambil data dari key 'data' sesuai format Backend
+  // ========================================================
+  Future<Map<String, dynamic>> getFilterOptions({
     String? polres,
     String? polsek,
   }) async {
-    String url = '$baseUrl/filter-options?';
-    if (polres != null && polres.isNotEmpty) url += 'polres=${Uri.encodeComponent(polres)}&';
-    if (polsek != null && polsek.isNotEmpty) url += 'polsek=${Uri.encodeComponent(polsek)}';
+    // Sesuai route backend: /api/kelola-lahan/filters
+    String url = '$baseUrl/filters?';
+    if (polres != null && polres.isNotEmpty)
+      url += 'polres=${Uri.encodeComponent(polres)}&';
+    if (polsek != null && polsek.isNotEmpty)
+      url += 'polsek=${Uri.encodeComponent(polsek)}';
 
     try {
       final token = await _getToken();
@@ -32,7 +39,11 @@ class LandManagementRepository {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final jsonResponse = jsonDecode(response.body);
+
+        // Ambil objek 'data' dari response sukses backend
+        final data = jsonResponse['data'] ?? {};
+
         return {
           'polres': List<String>.from(data['polres'] ?? []),
           'polsek': List<String>.from(data['polsek'] ?? []),
@@ -88,6 +99,7 @@ class LandManagementRepository {
   }) async {
     final token = await _getToken();
 
+    // Sesuai route backend: /api/kelola-lahan (tanpa /list jika rute kosong di Go)
     String url = '$baseUrl?search=${Uri.encodeComponent(keyword)}';
 
     if (filters != null) {

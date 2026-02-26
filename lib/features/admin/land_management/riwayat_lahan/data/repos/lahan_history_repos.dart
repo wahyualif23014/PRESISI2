@@ -5,82 +5,100 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/lahan_history_model.dart';
 
 class LandHistoryRepository {
-  final String baseUrl = "http://192.168.100.196:8080/api/riwayat-lahan";
+  final String baseUrl = "http://192.168.100.195:8080/api/riwayat-lahan";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
-    // FIX: Gunakan SecureStorage dan key 'jwt_token' agar konsisten
-    String? token = await _storage.read(key: 'jwt_token');
-    return token ?? '';
+    return await _storage.read(key: 'jwt_token') ?? '';
   }
 
-  // AMBIL OPSI FILTER DARI DB
-  Future<Map<String, List<String>>> getFilterOptions({
-    String? polres,
-    String? polsek,
-  }) async {
-    String url = '$baseUrl/filter-options?';
-    if (polres != null && polres.isNotEmpty) url += 'polres=${Uri.encodeComponent(polres)}&';
-    if (polsek != null && polsek.isNotEmpty) url += 'polsek=${Uri.encodeComponent(polsek)}';
-
+  // ==============================
+  // GET FILTER OPTIONS (FIXED PROPERLY)
+  // ==============================
+  Future<Map<String, List<String>>> getFilterOptions({String? polres}) async {
     try {
       final token = await _getToken();
+
+      final uri = Uri.parse('$baseUrl/filter-options').replace(
+        queryParameters: {
+          if (polres != null && polres.isNotEmpty) "polres": polres,
+        },
+      );
+
+      debugPrint("Request URI: $uri");
+
       final response = await http.get(
-        Uri.parse(url),
-        // FIX: Tambahkan Header Authorization karena route ini protected di Backend
+        uri,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
 
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final body = jsonDecode(response.body);
+        final data = body['data'] ?? {};
+
+        List<String> parseList(dynamic value) {
+          if (value == null) return [];
+          if (value is List) {
+            return value.map((e) => e.toString()).toList();
+          }
+          return [];
+        }
+
         return {
-          'polres': List<String>.from(data['polres'] ?? []),
-          'polsek': List<String>.from(data['polsek'] ?? []),
-          'jenis_lahan': List<String>.from(data['jenis_lahan'] ?? []),
-          'komoditas': List<String>.from(data['komoditas'] ?? []),
+          'polres': parseList(data['polres']),
+          'polsek': parseList(data['polsek']),
+          'jenis_lahan': parseList(data['jenis_lahan']),
+          'komoditi': parseList(data['komoditi']),
         };
       }
     } catch (e) {
       debugPrint("Error Filter Options: $e");
     }
-    return {};
+
+    return {'polres': [], 'polsek': [], 'jenis_lahan': [], 'komoditi': []};
   }
+
+  // ==============================
+  // GET HISTORY LIST
+  // ==============================
+  // lahan_history_repos.dart
 
   Future<List<LandHistoryItemModel>> getHistoryList({
     String keyword = "",
     Map<String, String>? filters,
   }) async {
-    final token = await _getToken();
-    
-    // FIX: Hapus '/list', langsung ke endpoint root grup riwayat
-    String url = '$baseUrl?search=${Uri.encodeComponent(keyword)}';
-
-    if (filters != null) {
-      if (filters['polres']?.isNotEmpty ?? false) {
-        url += '&polres=${Uri.encodeComponent(filters['polres']!)}';
-      }
-      if (filters['polsek']?.isNotEmpty ?? false) {
-        url += '&polsek=${Uri.encodeComponent(filters['polsek']!)}';
-      }
-      if (filters['jenis_lahan']?.isNotEmpty ?? false) {
-        url += '&jenis_lahan=${Uri.encodeComponent(filters['jenis_lahan']!)}';
-      }
-      if (filters['komoditas']?.isNotEmpty ?? false) {
-        url += '&komoditas=${Uri.encodeComponent(filters['komoditas']!)}';
-      }
-    }
-
     try {
+      final token = await _getToken();
+
+      // Buat map untuk query parameters
+      Map<String, String> queryParams = {};
+
+      if (keyword.isNotEmpty) queryParams["search"] = keyword;
+
+      // Masukkan semua filter dari dialog ke parameter URL
+      if (filters != null) {
+        filters.forEach((key, value) {
+          if (value.isNotEmpty) queryParams[key] = value;
+        });
+      }
+
+      final uri = Uri.parse(baseUrl).replace(queryParameters: queryParams);
+      debugPrint("Fetching with URL: $uri");
+
       final response = await http.get(
-        Uri.parse(url),
+        uri,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
+
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         return data.map((e) => LandHistoryItemModel.fromJson(e)).toList();
