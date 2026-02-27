@@ -25,7 +25,6 @@ class RecapController extends ChangeNotifier {
 
   // --- METHODS ---
 
-  // Refaktor: Menerima Map filters untuk dikirim ke Repository
   Future<void> fetchData({Map<String, String>? filters}) async {
     _state = RecapState.loading;
     _errorMessage = null;
@@ -50,8 +49,13 @@ class RecapController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Fungsi khusus untuk menangani filter dari Dialog baru
+  // Fungsi khusus untuk menangani filter dari Dialog
   void onFilterComplex(Map<String, String> newFilters) {
+    // REFAKTOR: Jika newFilters kosong (hasil Reset), bersihkan query pencarian teks juga
+    if (newFilters.isEmpty) {
+      _searchQuery = "";
+    }
+
     _activeFilters = newFilters;
     fetchData(filters: _activeFilters);
   }
@@ -63,7 +67,6 @@ class RecapController extends ChangeNotifier {
   }
 
   // --- LOGIKA PEMROSESAN DATA ---
-  // Tetap dipertahankan untuk mengelompokkan data berdasarkan Polres untuk UI
   void _processData() {
     Map<String, List<RecapModel>> result = {};
     String currentPolres = "";
@@ -84,10 +87,10 @@ class RecapController extends ChangeNotifier {
         currentPolsek = item.namaWilayah;
       }
 
-      // Logic Pencarian Lokal (UI filtering)
+      // PERBAIKAN: Logic Pencarian Lokal hanya berdasarkan nama Kabupaten (Polres)
       bool matchesSearch =
           _searchQuery.isEmpty ||
-          item.namaWilayah.toLowerCase().contains(_searchQuery);
+          currentPolres.toLowerCase().contains(_searchQuery);
 
       if (matchesSearch && currentPolres.isNotEmpty) {
         if (item.type != RecapRowType.polres) {
@@ -106,7 +109,6 @@ class RecapController extends ChangeNotifier {
     _groupedData = result;
   }
 
-  // Refaktor: Mengirim filter aktif ke fungsi download
   Future<String?> downloadExcel() async {
     return await _repo.downloadExcel(filters: _activeFilters);
   }

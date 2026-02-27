@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class RecapHeaderSection extends StatefulWidget {
@@ -18,27 +19,31 @@ class RecapHeaderSection extends StatefulWidget {
 
 class _RecapHeaderSectionState extends State<RecapHeaderSection> {
   final TextEditingController _searchController = TextEditingController();
-  bool _showClearButton = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _showClearButton = _searchController.text.isNotEmpty;
-      });
-    });
-  }
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Menangani perubahan input dengan fitur Debounce (tunda 500ms)
+  /// Ini memperbaiki bug performa saat pengguna mengetik cepat
+  void _onInputChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      widget.onSearchChanged(query);
+    });
+    // Memastikan tombol X muncul/hilang seketika tanpa menunggu timer
+    setState(() {});
   }
 
   void _clearSearch() {
     _searchController.clear();
     widget.onSearchChanged('');
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    setState(() {});
     FocusScope.of(context).unfocus();
   }
 
@@ -65,7 +70,7 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
               ),
               child: TextField(
                 controller: _searchController,
-                onChanged: widget.onSearchChanged,
+                onChanged: _onInputChanged,
                 textAlignVertical: TextAlignVertical.center,
                 decoration: InputDecoration(
                   hintText: "Cari Wilayah, Polsek...",
@@ -79,7 +84,7 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
                     color: Color(0xFF673AB7),
                   ),
                   suffixIcon:
-                      _showClearButton
+                      _searchController.text.isNotEmpty
                           ? IconButton(
                             icon: const Icon(
                               Icons.close_rounded,
@@ -100,7 +105,7 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
 
           // FILTER BUTTON
           _buildActionButton(
-            icon: Icons.filter_list_alt, // Icon lebih modern
+            icon: Icons.filter_list_alt,
             color: const Color(0xFF0097B2),
             onTap: widget.onFilterTap,
           ),

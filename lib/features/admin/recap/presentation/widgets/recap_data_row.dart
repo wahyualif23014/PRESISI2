@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/model/recap_model.dart';
 
-// --- KONFIGURASI WARNA ---
+// =========================================================
+// WARNA (TIDAK DIUBAH)
+// =========================================================
 class AppColors {
   static const Color primary = Color(0xFF673AB7);
   static const Color accent = Color(0xFFF3E5F5);
@@ -11,14 +13,19 @@ class AppColors {
   static const Color surface = Colors.white;
 }
 
-// --- FUNGSI PEMBANTU ---
-double _sum(List<RecapModel> items, double Function(RecapModel) selector) {
+// =========================================================
+// HELPER SUM
+// =========================================================
+double _sum(
+  List<RecapModel> items,
+  double Function(RecapModel) selector,
+) {
   if (items.isEmpty) return 0.0;
-  return items.map(selector).fold(0.0, (a, b) => a + b);
+  return items.fold(0.0, (a, b) => a + selector(b));
 }
 
 // =========================================================
-// 1. SEKSI POLRES (KONTINER UTAMA)
+// 1. POLRES SECTION
 // =========================================================
 class RecapPolresSection extends StatelessWidget {
   final String polresName;
@@ -32,22 +39,29 @@ class RecapPolresSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Grouping Polsek & Hapus data yang tidak memiliki nama polsek
-    final Map<String, List<RecapModel>> groupedByPolsek = {};
-    for (var item in itemsInPolres) {
-      final key = item.namaPolsek ?? '';
-      if (key.isEmpty) continue;
+    // DESA = id lebih dari 8 karakter
+    final desaOnly =
+        itemsInPolres.where((e) => e.id.length > 8).toList();
 
-      if (!groupedByPolsek.containsKey(key)) groupedByPolsek[key] = [];
-      groupedByPolsek[key]!.add(item);
+    // GROUP BY KODE POLSEK (8 digit pertama)
+    final Map<String, List<RecapModel>> grouped = {};
+
+    for (var item in desaOnly) {
+      if (item.id.length < 8) continue;
+      final key = item.id.substring(0, 8);
+
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(item);
     }
 
-    // Kalkulasi Total Polres
-    final totalPotensi = _sum(itemsInPolres, (m) => m.potensiLahan);
-    final totalTanam = _sum(itemsInPolres, (m) => m.tanamLahan);
-    final totalPanenLuas = _sum(itemsInPolres, (m) => m.panenLuas);
-    final totalPanenTon = _sum(itemsInPolres, (m) => m.panenTon);
-    final totalSerapan = _sum(itemsInPolres, (m) => m.serapan);
+    final sortedKeys = grouped.keys.toList()..sort();
+
+    // TOTAL POLRES
+    final totalPotensi = _sum(desaOnly, (m) => m.potensiLahan);
+    final totalTanam = _sum(desaOnly, (m) => m.tanamLahan);
+    final totalPanenLuas = _sum(desaOnly, (m) => m.panenLuas);
+    final totalPanenTon = _sum(desaOnly, (m) => m.panenTon);
+    final totalSerapan = _sum(desaOnly, (m) => m.serapan);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
@@ -65,13 +79,14 @@ class RecapPolresSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header Judul Polres
           _buildHeaderPolres(polresName),
 
-          // Baris Total Polres
           Container(
             color: AppColors.accent.withOpacity(0.4),
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            padding: const EdgeInsets.symmetric(
+              vertical: 14,
+              horizontal: 16,
+            ),
             child: _DataRowLayout(
               label: polresName,
               tag: "POLRES",
@@ -86,19 +101,23 @@ class RecapPolresSection extends StatelessWidget {
 
           const Divider(height: 1, color: AppColors.border),
 
-          // Daftar Polsek di bawahnya
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: groupedByPolsek.length,
-            separatorBuilder:
-                (context, index) =>
-                    const Divider(height: 1, color: AppColors.border),
+            itemCount: sortedKeys.length,
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, color: AppColors.border),
             itemBuilder: (context, index) {
-              String key = groupedByPolsek.keys.elementAt(index);
+              final key = sortedKeys[index];
+              final items = grouped[key]!;
+
+              // Sort desa biar stabil
+              items.sort((a, b) => a.id.compareTo(b.id));
+
               return RecapPolsekSection(
-                polsekName: key,
-                itemsInPolsek: groupedByPolsek[key]!,
+                key: ValueKey(key),
+                polsekName: items.first.namaPolsek ?? "-",
+                itemsInPolsek: items,
               );
             },
           ),
@@ -133,7 +152,7 @@ class RecapPolresSection extends StatelessWidget {
 }
 
 // =========================================================
-// 2. SEKSI POLSEK (BISA DIKLIK / DROPDOWN)
+// 2. POLSEK SECTION
 // =========================================================
 class RecapPolsekSection extends StatefulWidget {
   final String polsekName;
@@ -146,30 +165,35 @@ class RecapPolsekSection extends StatefulWidget {
   });
 
   @override
-  State<RecapPolsekSection> createState() => _RecapPolsekSectionState();
+  State<RecapPolsekSection> createState() =>
+      _RecapPolsekSectionState();
 }
 
-class _RecapPolsekSectionState extends State<RecapPolsekSection> {
+class _RecapPolsekSectionState
+    extends State<RecapPolsekSection> {
   bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    final totalPotensi = _sum(widget.itemsInPolsek, (m) => m.potensiLahan);
-    final totalTanam = _sum(widget.itemsInPolsek, (m) => m.tanamLahan);
-    final totalPanenLuas = _sum(widget.itemsInPolsek, (m) => m.panenLuas);
-    final totalPanenTon = _sum(widget.itemsInPolsek, (m) => m.panenTon);
-    final totalSerapan = _sum(widget.itemsInPolsek, (m) => m.serapan);
+    final desaOnly =
+        widget.itemsInPolsek.where((e) => e.id.length > 8).toList();
+
+    final totalPotensi = _sum(desaOnly, (m) => m.potensiLahan);
+    final totalTanam = _sum(desaOnly, (m) => m.tanamLahan);
+    final totalPanenLuas = _sum(desaOnly, (m) => m.panenLuas);
+    final totalPanenTon = _sum(desaOnly, (m) => m.panenTon);
+    final totalSerapan = _sum(desaOnly, (m) => m.serapan);
 
     return Column(
       children: [
         InkWell(
           onTap: () => setState(() => _isExpanded = !_isExpanded),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            color:
-                _isExpanded
-                    ? AppColors.accent.withOpacity(0.3)
-                    : Colors.transparent,
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 16),
+            color: _isExpanded
+                ? AppColors.accent.withOpacity(0.3)
+                : Colors.transparent,
             child: _DataRowLayout(
               label: widget.polsekName,
               tag: "POLSEK",
@@ -184,13 +208,18 @@ class _RecapPolsekSectionState extends State<RecapPolsekSection> {
           ),
         ),
         if (_isExpanded)
-          ...widget.itemsInPolsek.map(
+          ...desaOnly.map(
             (desa) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              key: ValueKey(desa.id),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 color: Color(0xFFFAFAFA),
                 border: Border(
-                  top: BorderSide(color: AppColors.border, width: 0.5),
+                  top: BorderSide(
+                    color: AppColors.border,
+                    width: 0.5,
+                  ),
                 ),
               ),
               child: _DataRowLayout(
@@ -210,7 +239,7 @@ class _RecapPolsekSectionState extends State<RecapPolsekSection> {
 }
 
 // =========================================================
-// 3. LAYOUT BARIS DATA (SENSITIF TERHADAP LEVEL)
+// 3. DATA ROW (UI TIDAK DIUBAH)
 // =========================================================
 class _DataRowLayout extends StatelessWidget {
   final String label;
@@ -234,23 +263,26 @@ class _DataRowLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color mainColor =
-        highlight || isHeader ? AppColors.primary : AppColors.textDark;
+        highlight || isHeader
+            ? AppColors.primary
+            : AppColors.textDark;
 
     return Row(
       children: [
-        // KOLOM WILAYAH & KETERANGAN
         Expanded(
           flex: 4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                  color:
-                      isHeader
-                          ? Colors.orange
-                          : (isSubHeader ? Colors.blue : Colors.grey),
+                  color: isHeader
+                      ? Colors.orange
+                      : (isSubHeader
+                          ? Colors.blue
+                          : Colors.grey),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -265,68 +297,55 @@ class _DataRowLayout extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: isHeader ? 12 : 11,
-                  fontWeight:
-                      isHeader || isSubHeader
-                          ? FontWeight.w900
-                          : FontWeight.w600,
-                  color: mainColor,
-                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isHeader ? 12 : 11,
+                  fontWeight: isHeader || isSubHeader
+                      ? FontWeight.w900
+                      : FontWeight.w600,
+                  color: mainColor,
+                ),
               ),
             ],
           ),
         ),
-
-        // KOLOM DATA (POTENSI & TANAM)
         _DataCell(
-          value: potensi,
-          unit: "HA",
-          flex: 2,
-          isBold: isHeader || isSubHeader,
-        ),
+            value: potensi,
+            unit: "HA",
+            flex: 2,
+            isBold: isHeader || isSubHeader),
         _DataCell(
-          value: tanam,
-          unit: "HA",
-          flex: 2,
-          isBold: isHeader || isSubHeader,
-        ),
-
-        // KOLOM PANEN (LUAS & TON)
+            value: tanam,
+            unit: "HA",
+            flex: 2,
+            isBold: isHeader || isSubHeader),
         Expanded(
           flex: 3,
           child: Column(
             children: [
               _TextVal(
-                value: panenLuas,
-                unit: "HA",
-                isBold: isHeader || isSubHeader,
-              ),
+                  value: panenLuas,
+                  unit: "HA",
+                  isBold: isHeader || isSubHeader),
               const SizedBox(height: 2),
               _TextVal(
-                value: panenTon,
-                unit: "TN",
-                isBold: isHeader || isSubHeader,
-              ),
+                  value: panenTon,
+                  unit: "TN",
+                  isBold: isHeader || isSubHeader),
             ],
           ),
         ),
-
-        // KOLOM SERAPAN
         _DataCell(
-          value: serapan,
-          unit: "TN",
-          flex: 2,
-          isBold: isHeader || isSubHeader,
-        ),
+            value: serapan,
+            unit: "TN",
+            flex: 2,
+            isBold: isHeader || isSubHeader),
       ],
     );
   }
 }
 
-// Widget Sel Angka
 class _DataCell extends StatelessWidget {
   final double value;
   final String unit;
@@ -350,8 +369,11 @@ class _DataCell extends StatelessWidget {
             value.toInt().toString(),
             style: TextStyle(
               fontSize: isBold ? 13 : 12,
-              fontWeight: isBold ? FontWeight.w900 : FontWeight.w700,
-              color: isBold ? AppColors.primary : AppColors.textDark,
+              fontWeight:
+                  isBold ? FontWeight.w900 : FontWeight.w700,
+              color: isBold
+                  ? AppColors.primary
+                  : AppColors.textDark,
             ),
           ),
           Text(
@@ -368,7 +390,6 @@ class _DataCell extends StatelessWidget {
   }
 }
 
-// Widget Text Baris
 class _TextVal extends StatelessWidget {
   final double value;
   final String unit;
@@ -389,8 +410,11 @@ class _TextVal extends StatelessWidget {
           value.toInt().toString(),
           style: TextStyle(
             fontSize: isBold ? 11 : 10,
-            fontWeight: isBold ? FontWeight.w900 : FontWeight.w700,
-            color: isBold ? AppColors.primary : AppColors.textDark,
+            fontWeight:
+                isBold ? FontWeight.w900 : FontWeight.w700,
+            color: isBold
+                ? AppColors.primary
+                : AppColors.textDark,
           ),
         ),
         const SizedBox(width: 2),

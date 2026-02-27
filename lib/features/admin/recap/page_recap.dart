@@ -66,15 +66,25 @@ class _PageRecapState extends State<PageRecap> {
 
   /// Menangani popup dialog filter kompleks
   void _showFilterDialog() async {
-    // Sinkronisasi tipe data: result sekarang Map<String, String> sesuai permintaan filter kompleks
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => RecapFilterDialog(),
+      builder: (context) => const RecapFilterDialog(),
     );
 
     if (result != null && mounted) {
-      // Menggunakan fungsi onFilterComplex di controller untuk memicu fetch data backend
+      // Jika result adalah Map kosong {}, controller akan mereset filter dan fetch ulang semua data
       _controller.onFilterComplex(result);
+
+      // Menampilkan pesan umpan balik ke pengguna
+      if (result.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Filter telah direset ke data awal"),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF673AB7),
+          ),
+        );
+      }
     }
   }
 
