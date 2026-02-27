@@ -19,6 +19,7 @@ class _PageRecapState extends State<PageRecap> {
   @override
   void initState() {
     super.initState();
+    // Memuat data awal saat halaman pertama kali dibuka
     _controller.fetchData();
   }
 
@@ -28,55 +29,60 @@ class _PageRecapState extends State<PageRecap> {
     super.dispose();
   }
 
-  // --- LOGIKA DOWNLOAD EXCEL ---
+  /// Menangani proses unduh file Excel dengan indikator loading
   void _handleDownloadExcel() async {
-    // Tampilkan Loading
+    // Menampilkan dialog loading
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF673AB7)),
-      ),
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+          ),
     );
 
-    // Proses Download
-    final path = await _controller.downloadExcel();
-    
-    if (!mounted) return;
-    Navigator.pop(context); // Tutup Loading
+    try {
+      final path = await _controller.downloadExcel();
 
-    if (path != null) {
-      // Tampilkan Dialog Sukses
-      final String fileName = path.split('/').last;
-      PrintSuccessDialog.show(
-        context,
-        fileName: fileName,
-        onPrintTap: () => Navigator.pop(context),
-      );
-    } else {
-      // Tampilkan Error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Gagal mengunduh."),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (!mounted) return;
+      Navigator.pop(context); // Menutup dialog loading
+
+      if (path != null) {
+        final String fileName = path.split('/').last;
+        PrintSuccessDialog.show(
+          context,
+          fileName: fileName,
+          onPrintTap: () => Navigator.pop(context),
+        );
+      } else {
+        _showErrorSnackBar("Gagal mengunduh file.");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      _showErrorSnackBar("Terjadi kesalahan saat mengunduh.");
     }
   }
 
-  // --- LOGIKA FILTER (POPUP DIALOG) ---
+  /// Menangani popup dialog filter kompleks
   void _showFilterDialog() async {
-    // Menggunakan showDialog agar tampil sebagai POPUP di tengah layar
-    final result = await showDialog<Map<String, bool>>(
+    // Sinkronisasi tipe data: result sekarang Map<String, String> sesuai permintaan filter kompleks
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      // HAPUS 'const' di sini untuk memperbaiki error
       builder: (context) => RecapFilterDialog(),
     );
 
-    // Kirim hasil filter ke controller jika user menekan 'Terapkan'
-    if (result != null) {
-      _controller.onFilter(result);
+    if (result != null && mounted) {
+      // Menggunakan fungsi onFilterComplex di controller untuk memicu fetch data backend
+      _controller.onFilterComplex(result);
     }
+  }
+
+  /// Helper untuk menampilkan pesan error
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -87,64 +93,85 @@ class _PageRecapState extends State<PageRecap> {
         children: [
           const SizedBox(height: 16),
 
-          // 1. HEADER SECTION (Search, Filter, Download)
+          // 1. Header Section: Input pencarian dan tombol aksi (Filter, Download)
           RecapHeaderSection(
             onSearchChanged: _controller.onSearch,
-            onFilterTap: _showFilterDialog, // Panggil fungsi Dialog Popup
+            onFilterTap: _showFilterDialog,
             onPrintTap: _handleDownloadExcel,
           ),
 
           const SizedBox(height: 16),
 
-          // 2. TABLE HEADER (Judul Kolom)
+          // 2. Table Header: Label kolom statis
           const RecapTableHeader(),
 
-          // 3. CONTENT LIST (Data)
+          // 3. Content List: Area data yang bersifat dinamis (reactive)
           Expanded(
             child: ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
-                // State Loading
-                if (_controller.state == RecapState.loading) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF673AB7)),
-                  );
-                }
-                
-                // State Error
-                if (_controller.state == RecapState.error) {
-                  return Center(
-                    child: ElevatedButton(
-                      onPressed: _controller.fetchData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF673AB7),
-                        foregroundColor: Colors.white,
+                switch (_controller.state) {
+                  case RecapState.loading:
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF673AB7),
                       ),
-                      child: const Text("Coba Lagi"),
-                    ),
-                  );
-                }
-                
-                // State Kosong
-                if (_controller.state == RecapState.empty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.folder_off, size: 48, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text("Data Kosong", style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  );
-                }
+                    );
 
-                // State Sukses -> Tampilkan Pagination Wrapper
-                return RecapPaginationWrapper(
-                  groupedData: _controller.groupedData,
-                );
+                  case RecapState.error:
+                    return _buildErrorState();
+
+                  case RecapState.empty:
+                    return _buildEmptyState();
+
+                  case RecapState.loaded:
+                  default:
+                    return RecapPaginationWrapper(
+                      groupedData: _controller.groupedData,
+                    );
+                }
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// UI saat terjadi kesalahan koneksi/error
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(_controller.errorMessage ?? "Terjadi kesalahan"),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () => _controller.fetchData(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF673AB7),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("Coba Lagi"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// UI saat data hasil filter/pencarian tidak ditemukan
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_off_outlined, size: 48, color: Colors.grey),
+          const SizedBox(height: 8),
+          Text(
+            "Data Tidak Ditemukan",
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
           ),
         ],
       ),

@@ -1,32 +1,62 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Wajib Import Ini
-import '../model/recap_model.dart'; 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../model/recap_model.dart';
 
 class RecapRepo {
   final String baseUrl = "http://192.168.100.195:8080/api/rekapitulasi";
-  
-  // Instance Storage untuk mengambil Token
+  final String filterUrl =
+      "http://192.168.100.195:8080/api/riwayat-lahan/filter-options";
   final _storage = const FlutterSecureStorage();
 
-  // Helper: Ambil Token
   Future<String> _getToken() async {
-    // Gunakan key 'jwt_token' agar konsisten dengan Login
     String? token = await _storage.read(key: 'jwt_token');
     return token ?? '';
   }
 
-  // 1. GET DATA REKAPITULASI (UI)
-  Future<List<RecapModel>> getRecapData() async {
+  // 1. AMBIL OPSI FILTER DARI BACKEND
+  Future<Map<String, List<String>>> getFilterOptions({String? polres}) async {
     try {
       final token = await _getToken();
-      
+      final uri = Uri.parse(filterUrl).replace(
+        queryParameters: {
+          if (polres != null && polres.isNotEmpty) "polres": polres,
+        },
+      );
+
       final response = await http.get(
-        Uri.parse(baseUrl),
-        // FIX: Tambahkan Header Authorization
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final data = body['data'] ?? {};
+        return {
+          'polres': List<String>.from(data['polres'] ?? []),
+          'polsek': List<String>.from(data['polsek'] ?? []),
+          'jenis_lahan': List<String>.from(data['jenis_lahan'] ?? []),
+          'komoditi': List<String>.from(data['komoditi'] ?? []),
+        };
+      }
+    } catch (e) {
+      debugPrint("Error Get Options: $e");
+    }
+    return {'polres': [], 'polsek': [], 'jenis_lahan': [], 'komoditi': []};
+  }
+
+  // 2. GET DATA DENGAN PARAMETER FILTER
+  Future<List<RecapModel>> getRecapData({Map<String, String>? filters}) async {
+    try {
+      final token = await _getToken();
+      final uri = Uri.parse(baseUrl).replace(queryParameters: filters);
+
+      final response = await http.get(
+        uri,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -34,17 +64,11 @@ class RecapRepo {
       );
 
       if (response.statusCode == 200) {
-        // Handle response JSON wrapper (sesuai format backend: { "status": "success", "data": [...] })
         final Map<String, dynamic> body = jsonDecode(response.body);
-        
-        // Cek apakah data ada di dalam key 'data'
-        final List<dynamic> data = body['data'] ?? []; 
-        
-        return data
-            .map((json) => RecapModel.fromJson(json as Map<String, dynamic>))
-            .toList();
+        final List<dynamic> data = body['data'] ?? [];
+        return data.map((json) => RecapModel.fromJson(json)).toList();
       } else if (response.statusCode == 401) {
-         throw Exception("Sesi habis (401). Silakan Login ulang.");
+        throw Exception("Sesi habis (401). Silakan Login ulang.");
       } else {
         throw Exception("HTTP ${response.statusCode}");
       }
@@ -53,51 +77,32 @@ class RecapRepo {
     }
   }
 
-  // 2. DOWNLOAD EXCEL
-  Future<String?> downloadExcel() async {
+  // 3. DOWNLOAD EXCEL DENGAN FILTER AKTIF
+  Future<String?> downloadExcel({Map<String, String>? filters}) async {
     try {
-      final token = await _getToken(); // Ambil token dulu
-      
+      final token = await _getToken();
       final dio = Dio();
-
-      dio.options.connectTimeout = const Duration(seconds: 15);
-      dio.options.receiveTimeout = const Duration(seconds: 15);
-      
-      // FIX: Tambahkan Header Token ke Dio agar bisa download file dari route protected
       dio.options.headers['Authorization'] = 'Bearer $token';
 
-      dio.options.headers = {'Authorization': 'Bearer $token'};
+      Directory? directory =
+          Platform.isAndroid
+              ? Directory('/storage/emulated/0/Download')
+              : await getApplicationDocumentsDirectory();
 
-      Directory? directory;
-
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else {
-        directory = await getApplicationDocumentsDirectory();
+      if (Platform.isAndroid && !await directory.exists()) {
+        directory = await getExternalStorageDirectory();
       }
 
-      final String fileName =
-          "Rekap_Presisi_${DateTime.now().millisecondsSinceEpoch}.xlsx";
-      
-      // Pastikan directory tidak null
-      String savePath;
-      if (directory != null) {
-         savePath = "${directory.path}/$fileName";
-      } else {
-         return null; 
-      }
+      final String savePath =
+          "${directory!.path}/Rekap_Presisi_${DateTime.now().millisecondsSinceEpoch}.xlsx";
 
-      // Download dari endpoint /export
-      final response = await dio.download("$baseUrl/export", savePath);
+      final response = await dio.download(
+        "$baseUrl/export",
+        savePath,
+        queryParameters: filters,
+      );
 
-      if (response.statusCode == 200) {
-        return savePath;
-      }
-
-      return null;
+      return response.statusCode == 200 ? savePath : null;
     } catch (e) {
       return null;
     }

@@ -14,26 +14,34 @@ class RecapController extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  List<RecapModel> _allData = []; // Data Mentah
-  Map<String, List<RecapModel>> _groupedData = {}; // Data Hasil Filter
+  List<RecapModel> _allData = []; // Data mentah dari API
+  Map<String, List<RecapModel>> _groupedData = {}; // Data untuk UI
   Map<String, List<RecapModel>> get groupedData => _groupedData;
 
   // --- FILTER STATE ---
   String _searchQuery = "";
-  Map<String, bool> _activeFilters = {
-    'polres': true,
-    'polsek': true,
-    'desa': true,
-  };
+  // Map ini menyimpan parameter untuk dikirim ke API
+  Map<String, String> _activeFilters = {};
 
   // --- METHODS ---
 
-  Future<void> fetchData() async {
+  // Refaktor: Menerima Map filters untuk dikirim ke Repository
+  Future<void> fetchData({Map<String, String>? filters}) async {
     _state = RecapState.loading;
+    _errorMessage = null;
+
+    // Simpan filter jika ada (digunakan untuk download excel nanti)
+    if (filters != null) {
+      _activeFilters = filters;
+    }
+
     notifyListeners();
+
     try {
-      _allData = await _repo.getRecapData();
+      // Mengirim filter ke repository untuk query di sisi database
+      _allData = await _repo.getRecapData(filters: _activeFilters);
       _processData();
+
       _state = _allData.isEmpty ? RecapState.empty : RecapState.loaded;
     } catch (e) {
       _errorMessage = e.toString();
@@ -42,55 +50,31 @@ class RecapController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Fungsi khusus untuk menangani filter dari Dialog baru
+  void onFilterComplex(Map<String, String> newFilters) {
+    _activeFilters = newFilters;
+    fetchData(filters: _activeFilters);
+  }
+
   void onSearch(String query) {
     _searchQuery = query.toLowerCase();
     _processData();
     notifyListeners();
   }
 
-  void onFilter(Map<String, bool> newFilters) {
-    _activeFilters = newFilters;
-    _processData();
-    notifyListeners();
-  }
-
-  // --- LOGIKA UTAMA (PERBAIKAN DI SINI) ---
+  // --- LOGIKA PEMROSESAN DATA ---
+  // Tetap dipertahankan untuk mengelompokkan data berdasarkan Polres untuk UI
   void _processData() {
     Map<String, List<RecapModel>> result = {};
-
     String currentPolres = "";
     String currentPolsek = "";
-
-    // Status pencarian per level
-    bool polresMatch = false;
-    bool polsekMatch = false;
-
-    // Ambil status filter
-    final bool showPolres = _activeFilters['polres'] ?? true;
-    final bool showPolsek = _activeFilters['polsek'] ?? true;
-    final bool showDesa = _activeFilters['desa'] ?? true;
-
-    // Jika semua filter mati, kosongkan data
-    if (!showPolres && !showPolsek && !showDesa) {
-      _groupedData = {};
-      return;
-    }
 
     for (var item in _allData) {
       // 1. LEVEL POLRES
       if (item.type == RecapRowType.polres) {
         currentPolres = item.namaWilayah;
+        currentPolsek = ""; // Reset polsek saat ganti polres
 
-        // Reset context
-        currentPolsek = "";
-        polsekMatch = false;
-
-        // Cek apakah Polres ini dicari
-        polresMatch =
-            _searchQuery.isEmpty ||
-            currentPolres.toLowerCase().contains(_searchQuery);
-
-        // Siapkan list
         if (!result.containsKey(currentPolres)) {
           result[currentPolres] = [];
         }
@@ -98,45 +82,32 @@ class RecapController extends ChangeNotifier {
       // 2. LEVEL POLSEK
       else if (item.type == RecapRowType.polsek) {
         currentPolsek = item.namaWilayah;
-
-        // Cek search: Cocok jika query kosong ATAU nama polsek cocok ATAU induknya (Polres) cocok
-        bool selfMatch = item.namaWilayah.toLowerCase().contains(_searchQuery);
-        polsekMatch = _searchQuery.isEmpty || selfMatch || polresMatch;
-
-        // FILTER: Masukkan ke list JIKA filter nyala DAN cocok pencarian
-        if (showPolsek && polsekMatch) {
-          if (currentPolres.isNotEmpty) {
-            result[currentPolres]?.add(item);
-          }
-        }
       }
-      // 3. LEVEL DESA
-      else if (item.type == RecapRowType.desa) {
-        bool selfMatch = item.namaWilayah.toLowerCase().contains(_searchQuery);
 
-        // Desa muncul jika: query kosong ATAU nama desa cocok ATAU Polseknya cocok ATAU Polresnya cocok
-        bool isVisible =
-            _searchQuery.isEmpty || selfMatch || polsekMatch || polresMatch;
+      // Logic Pencarian Lokal (UI filtering)
+      bool matchesSearch =
+          _searchQuery.isEmpty ||
+          item.namaWilayah.toLowerCase().contains(_searchQuery);
 
-        // FILTER: Cek showDesa
-        if (showDesa && isVisible) {
-          if (currentPolres.isNotEmpty) {
-            // Inject nama Polsek agar UI bisa mengelompokkan jika perlu
-            result[currentPolres]?.add(
-              item.copyWith(namaPolsek: currentPolsek),
-            );
-          }
+      if (matchesSearch && currentPolres.isNotEmpty) {
+        if (item.type != RecapRowType.polres) {
+          // Tambahkan item (Polsek/Desa) ke dalam grup Polresnya
+          result[currentPolres]?.add(
+            item.type == RecapRowType.desa
+                ? item.copyWith(namaPolsek: currentPolsek)
+                : item,
+          );
         }
       }
     }
 
-    // Bersihkan hasil kosong
+    // Bersihkan grup yang tidak memiliki anggota hasil search
     result.removeWhere((key, value) => value.isEmpty);
-
     _groupedData = result;
   }
 
+  // Refaktor: Mengirim filter aktif ke fungsi download
   Future<String?> downloadExcel() async {
-    return await _repo.downloadExcel();
+    return await _repo.downloadExcel(filters: _activeFilters);
   }
 }
