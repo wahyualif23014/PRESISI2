@@ -78,6 +78,7 @@ func GetPotensiLahan(c *gin.Context) {
 			lahan.keterangan, lahan.sumberdata, lahan.dokumentasi, lahan.jmlsantri, 
 			lahan.datetransaction, lahan.statuslahan, lahan.idkomoditi, 
 			lahan.editoleh, lahan.tgledit, lahan.validoleh, lahan.tglvalid,
+			lahan.statuspakai, lahan.statusaktif, lahan.tahunlahan, lahan.suratedit, lahan.deletestatus, lahan.conlahan, lahan.ketcp,
 			MAX(w_desa.nama) AS nama_desa, 
 			MAX(w_kec.nama) AS nama_kecamatan, 
 			MAX(w_kab.nama) AS nama_kabupaten,
@@ -92,7 +93,7 @@ func GetPotensiLahan(c *gin.Context) {
 		Joins("LEFT JOIN anggota p ON p.idanggota = lahan.editoleh").
 		Joins("LEFT JOIN anggota v ON v.idanggota = lahan.validoleh").
 		Joins("LEFT JOIN komoditi k ON k.idkomoditi = lahan.idkomoditi").
-		Where("lahan.statuslahan IN ('1', '2', '3', '4')")
+		Where("lahan.statuslahan IN ('1', '2', '3', '4') AND lahan.deletestatus = '1'") // Menyesuaikan filter aktif
 
 	if search != "" {
 		s := "%" + strings.ToLower(search) + "%"
@@ -175,7 +176,7 @@ func GetFilterOptions(c *gin.Context) {
 			title := "LAHAN LAINNYA"
 			switch id {
 			case 1:
-				title = "PERHUTANAN SOSIAL"
+				title = "MILIK POLRI"
 			case 2:
 				title = "POKTAN BINAAN POLRI"
 			case 3:
@@ -183,7 +184,7 @@ func GetFilterOptions(c *gin.Context) {
 			case 4:
 				title = "TUMPANG SARI"
 			case 5:
-				title = "MILIK POLRI"
+				title = "PERHUTANAN SOSIAL"
 			case 6:
 				title = "LBS"
 			case 7:
@@ -208,16 +209,11 @@ func GetFilterOptions(c *gin.Context) {
 func CreatePotensiLahan(c *gin.Context) {
 	var input models.PotensiLahan
 
-	// 1. Bind JSON dari Flutter
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "Data tidak valid: " + err.Error(),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Data tidak valid: " + err.Error()})
 		return
 	}
 
-	// 2. Ambil User dari Context
 	userValue, exists := c.Get("user")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesi login tidak ditemukan"})
@@ -225,23 +221,28 @@ func CreatePotensiLahan(c *gin.Context) {
 	}
 	user := userValue.(models.User)
 
-	// 3. Audit Trail & Mapping ENUM (Perbaikan agar MySQL tidak Error 1265)
-	input.IDAnggota = user.ID      
-	input.IDTingkat = user.IDTugas  
+	// Audit Trail & Default Values sesuai Skema DB
+	input.IDAnggota = user.ID
+	input.IDTingkat = user.IDTugas
 	input.DateTransaction = time.Now()
-	
-	// GUARD: Mencegah string kosong masuk ke ENUM database
-	input.DeleteStatus = "0"
-	if input.StatusAktif == "" {
-		input.StatusAktif = "1"
+
+	// SINKRONISASI ENUM AGAR TIDAK ERROR 1265
+	input.DeleteStatus = "1" // Default Aktif (enum '1','2')
+
+	if input.StatusPakai == "" {
+		input.StatusPakai = "1" // Default enum '1'
 	}
-	
-	// MAPPING: Ubah string Flutter ke Kode ENUM MySQL
-	if input.StatusLahan == "BELUM TERVALIDASI" || input.StatusLahan == "" {
-		input.StatusLahan = "1"
+	if input.StatusAktif == "" {
+		input.StatusAktif = "2" // Default enum '2'
+	}
+	if input.KetLahan == "" {
+		input.KetLahan = "3" // Default enum '3'
+	}
+	if input.StatusLahan == "" || input.StatusLahan == "BELUM TERVALIDASI" {
+		input.StatusLahan = "1" // Default enum '1'
 	}
 
-	// 4. Lookup ID Wilayah
+	// Lookup ID Wilayah
 	var idWilayah string
 	initializers.DB.Table("tingkatwilayah").
 		Select("idwilayah").
@@ -250,28 +251,15 @@ func CreatePotensiLahan(c *gin.Context) {
 		Scan(&idWilayah)
 
 	if idWilayah == "" {
-		fmt.Printf("DEBUG: idtingkat %s tidak ditemukan di tabel tingkatwilayah\n", user.IDTugas)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Kesatuan Anda belum terdaftar di wilayah manapun. Hubungi Admin.",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Mapping wilayah tidak ditemukan."})
 		return
 	}
 	input.IDWilayah = idWilayah
 
-	// GUARD: Field KetLahan (ENUM)
-	if input.KetLahan == "" {
-		input.KetLahan = "1"
-	}
-
-	// 5. Eksekusi Create
-	result := initializers.DB.Table("lahan").Create(&input)
-	if result.Error != nil {
-		fmt.Printf("CRITICAL DB ERROR: %v\n", result.Error.Error()) 
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Gagal simpan ke database: " + result.Error.Error(),
-		})
+	// Execute Create
+	if err := initializers.DB.Table("lahan").Create(&input).Error; err != nil {
+		fmt.Printf("CRITICAL DB ERROR: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Database Error: " + err.Error()})
 		return
 	}
 
@@ -300,12 +288,12 @@ func UpdatePotensiLahan(c *gin.Context) {
 	now := time.Now()
 	input.TglEdit = &now
 
-	// MAPPING & GUARD: Samakan dengan logic Create agar konsisten
-	if input.StatusLahan == "BELUM TERVALIDASI" {
-		input.StatusLahan = "1"
+	// ENUM Guards untuk Update agar konsisten dengan skema
+	if input.StatusPakai != "" && input.StatusPakai != "1" && input.StatusPakai != "2" {
+		input.StatusPakai = "1"
 	}
-	if input.KetLahan != "" && input.KetLahan != "1" && input.KetLahan != "2" && input.KetLahan != "3" {
-		input.KetLahan = "1" 
+	if input.StatusAktif != "" && input.StatusAktif != "1" && input.StatusAktif != "2" {
+		input.StatusAktif = "2"
 	}
 
 	if err := initializers.DB.Table("lahan").Where("idlahan = ?", id).Updates(&input).Error; err != nil {
@@ -318,21 +306,17 @@ func UpdatePotensiLahan(c *gin.Context) {
 
 func DeletePotensiLahan(c *gin.Context) {
 	id := c.Param("id")
-	// Soft Delete menggunakan ENUM '1'
-	result := initializers.DB.Table("lahan").Where("idlahan = ?", id).Update("deletestatus", "1")
+	// Soft Delete menggunakan ENUM '2' sesuai skema DB
+	result := initializers.DB.Table("lahan").Where("idlahan = ?", id).Update("deletestatus", "2")
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": result.Error.Error()})
 		return
 	}
 
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Data tidak ditemukan"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil dihapus"})
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil dihapus secara logis"})
 }
+
 
 // ==================== SUMMARY & ANALYTICS ====================
 
@@ -342,15 +326,29 @@ func GetSummaryLahan(c *gin.Context) {
 		Area  float64 `json:"area"`
 		Count int64   `json:"count"`
 	}
+
 	var totals struct {
 		TotalArea float64 `gorm:"column:total_area"`
 		TotalLoc  int64   `gorm:"column:total_loc"`
 	}
-	dbFilter := "idwilayah IS NOT NULL AND statuslahan IN ('1', '2', '3', '4') AND (deletestatus = '0' OR deletestatus IS NULL)"
-	initializers.DB.Table("lahan").Where(dbFilter).Select("COALESCE(SUM(luaslahan), 0) as total_area, COUNT(DISTINCT idlahan) as total_loc").Scan(&totals)
 
+	// SINKRONISASI FILTER: Menambahkan 'statuslahan' agar angka di dashboard
+	dbFilter := "idwilayah IS NOT NULL AND deletestatus = '2' AND statuslahan IN ('1', '2', '3', '4')"
+
+	// 1. Ambil Total Keseluruhan (Area & Lokasi)
+	initializers.DB.Table("lahan").
+		Where(dbFilter).
+		Select("COALESCE(SUM(luaslahan), 0) as total_area, COUNT(DISTINCT idlahan) as total_loc").
+		Scan(&totals)
+
+	// 2. Ambil Rincian per Kategori
 	var categories []SummaryCategory
-	rows, err := initializers.DB.Table("lahan").Where(dbFilter).Select("idjenislahan, COALESCE(SUM(luaslahan), 0) as area, COUNT(DISTINCT idlahan) as count").Group("idjenislahan").Rows()
+	rows, err := initializers.DB.Table("lahan").
+		Where(dbFilter).
+		Select("idjenislahan, COALESCE(SUM(luaslahan), 0) as area, COUNT(DISTINCT idlahan) as count").
+		Group("idjenislahan").
+		Rows()
+
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -358,38 +356,71 @@ func GetSummaryLahan(c *gin.Context) {
 			var area float64
 			var count int64
 			rows.Scan(&id, &area, &count)
-			title := "LAHAN LAINNYA"
+
+			title := "LAINNYA"
 			switch id {
-			case 1: title = "PERHUTANAN SOSIAL"
-			case 2: title = "POKTAN BINAAN POLRI"
-			case 3: title = "MASYARAKAT BINAAN POLRI"
-			case 4: title = "TUMPANG SARI"
-			case 5: title = "MILIK POLRI"
-			case 6: title = "LBS"
-			case 7: title = "PESANTREN"
+			case 1:
+				title = "POKTAN BINAAN POLRI"
+			case 2:
+				title = "PERHUTANAN SOSIAL"
+			case 3:
+				title = "LBS"
+			case 4:
+				title = "PESANTREN"
+			case 5:
+				title = "MILIK POLRI"
+			case 6:
+				title = "MASYARAKAT BINAAN POLRI"
+			case 7:
+				title = "TUMPANGSARI"
+			case 8:
+				title = "PERHUTANI/INHUTANI"
+
 			}
-			categories = append(categories, SummaryCategory{Title: title, Area: area, Count: count})
+			categories = append(categories, SummaryCategory{
+				Title: title,
+				Area:  area,
+				Count: count,
+			})
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"total_area": totals.TotalArea, "total_locations": totals.TotalLoc, "categories": categories}})
+
+	// 3. Kirim Response JSON yang Sinkron dengan LandSummaryWidget
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"total_area":      totals.TotalArea,
+			"total_locations": totals.TotalLoc,
+			"categories":      categories,
+		},
+	})
 }
 
 func GetNoPotentialLahan(c *gin.Context) {
 	var master struct{ Kab, Kec, Desa int64 }
-	initializers.DB.Table("wilayah").Select("SUM(CASE WHEN CHAR_LENGTH(kode) = 5 THEN 1 ELSE 0 END) as kab, SUM(CASE WHEN CHAR_LENGTH(kode) = 8 THEN 1 ELSE 0 END) as kec, SUM(CASE WHEN CHAR_LENGTH(kode) > 8 THEN 1 ELSE 0 END) as desa").Scan(&master)
+	initializers.DB.Table("wilayah").
+		Select("SUM(CASE WHEN CHAR_LENGTH(kode) = 5 THEN 1 ELSE 0 END) as kab, SUM(CASE WHEN CHAR_LENGTH(kode) = 8 THEN 1 ELSE 0 END) as kec, SUM(CASE WHEN CHAR_LENGTH(kode) > 8 THEN 1 ELSE 0 END) as desa").
+		Scan(&master)
+
 	var isi struct{ Kab, Kec, Desa int64 }
-	dbFilter := "idwilayah IS NOT NULL AND statuslahan IN ('1', '2', '3', '4') AND (deletestatus = '0' OR deletestatus IS NULL)"
-	initializers.DB.Table("lahan").Where(dbFilter).Select("COUNT(DISTINCT SUBSTR(idwilayah, 1, 5)) as kab, COUNT(DISTINCT SUBSTR(idwilayah, 1, 8)) as kec, COUNT(DISTINCT idwilayah) as desa").Scan(&isi)
+	dbFilter := "idwilayah IS NOT NULL AND deletestatus = '2' AND statuslahan IN ('1', '2', '3', '4')"
+
+	initializers.DB.Table("lahan").
+		Where(dbFilter).
+		Select("COUNT(DISTINCT SUBSTR(idwilayah, 1, 5)) as kab, COUNT(DISTINCT SUBSTR(idwilayah, 1, 8)) as kec, COUNT(DISTINCT idwilayah) as desa").
+		Scan(&isi)
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"data": gin.H{
-			"total_empty_polres": master.Kab - isi.Kab,
+			// Menampilkan jumlah yang sudah terisi (seperti di tampilan Web bagian bawah)
+			"total_locations": isi.Desa,
 			"details": gin.H{
-				"polsek":    master.Kec - isi.Kec,
-				"kab_kota":  master.Kab - isi.Kab,
-				"kecamatan": master.Kec - isi.Kec,
-				"kel_desa":  master.Desa - isi.Desa,
+				"polres":    isi.Kab,
+				"polsek":    isi.Kec,
+				"kab_kota":  isi.Kab,
+				"kecamatan": isi.Kec,
+				"kel_desa":  isi.Desa,
 			},
 		},
 	})

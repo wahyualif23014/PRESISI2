@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/data/model/land_potential_model.dart' show LandPotentialModel;
+import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/data/service/land_potential_service.dart' show LandPotentialService;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:image_picker/image_picker.dart';
-import '../data/model/land_potential_model.dart';
-import '../data/service/land_potential_service.dart';
 
+/// Controller untuk mengelola logika penambahan dan edit data lahan.
+/// Menggunakan ChangeNotifier untuk state management.
 class AddLandController extends ChangeNotifier {
   final LandPotentialService _service;
   final LandPotentialModel? editData;
@@ -19,9 +21,17 @@ class AddLandController extends ChangeNotifier {
     _initialize();
   }
 
+  // ===========================================================================
+  // FORM & NAVIGATION KEYS
+  // ===========================================================================
+  
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
   final ImagePicker _imagePicker = ImagePicker();
 
+  // ===========================================================================
+  // TEXT EDITING CONTROLLERS
+  // ===========================================================================
+  
   final TextEditingController policeNameController = TextEditingController();
   final TextEditingController policePhoneController = TextEditingController();
   final TextEditingController picNameController = TextEditingController();
@@ -31,10 +41,18 @@ class AddLandController extends ChangeNotifier {
   final TextEditingController luasLahanController = TextEditingController(text: "0.00");
   final TextEditingController jmlPetaniController = TextEditingController(text: "0");
   final TextEditingController alamatController = TextEditingController();
-  final TextEditingController ketLainController = TextEditingController();
   final TextEditingController latitudeController = TextEditingController();
   final TextEditingController longitudeController = TextEditingController();
+  
+  // Controller tambahan untuk sinkronisasi model baru
+  final TextEditingController skLahanController = TextEditingController();
+  final TextEditingController lembagaController = TextEditingController();
+  final TextEditingController tahunLahanController = TextEditingController(text: DateTime.now().year.toString());
 
+  // ===========================================================================
+  // SELECTED VALUES - DROPDOWN & STATE
+  // ===========================================================================
+  
   String? selectedResor;
   String? selectedSektor;
   String? selectedJenisLahan;
@@ -46,16 +64,24 @@ class AddLandController extends ChangeNotifier {
   String? selectedTingkatId; 
   String? selectedWilayahId;
 
-  // State khusus untuk ENUM ketlahan (1, 2, 3)
   String selectedKetLainId = "1"; 
-
-  String selectedStatus = "BELUM TERVALIDASI";
+  String selectedStatus = "1"; // Default ENUM '1' (Belum Tervalidasi)
+  String selectedStatusPakai = "1"; // Default ENUM '1'
+  String selectedStatusAktif = "2"; // Default ENUM '2'
+  
+  // ===========================================================================
+  // IMAGE & LOCATION DATA
+  // ===========================================================================
   
   File? selectedImageFile;
   String? existingImageUrl;
   Uint8List? imageBytes;
   LatLng? selectedLocation;
 
+  // ===========================================================================
+  // FILTER OPTIONS LISTS
+  // ===========================================================================
+  
   List<String> resorList = [];
   List<String> sektorList = [];
   List<String> jenisLahanList = [];
@@ -63,14 +89,27 @@ class AddLandController extends ChangeNotifier {
 
   final List<String> ketLainOptions = ["PRODUKTIF", "NON-PRODUKTIF", "LAHAN TIDUR"];
 
+  // ===========================================================================
+  // LOADING STATES
+  // ===========================================================================
+  
   bool isLoading = false;
   bool isDataLoading = true;
   bool isSaving = false;
 
+  // ===========================================================================
+  // GETTERS
+  // ===========================================================================
+  
   bool get isEditMode => editData != null;
   bool get hasLocation => selectedLocation != null;
   bool get hasImage => selectedImageFile != null || imageBytes != null || existingImageUrl != null;
 
+  // ===========================================================================
+  // INITIALIZATION
+  // ===========================================================================
+  
+  /// Inisialisasi controller - memuat data auth, filter options, dan data edit jika ada.
   Future<void> _initialize() async {
     isDataLoading = true;
     notifyListeners();
@@ -78,7 +117,7 @@ class AddLandController extends ChangeNotifier {
     await _loadAuthProfile();
     await _loadFilterOptions();
     
-    if (editData != null) {
+    if (isEditMode) {
       await _loadInitialData();
     }
     
@@ -86,21 +125,23 @@ class AddLandController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Memuat profile user yang sedang login untuk auto-fill data satker.
   Future<void> _loadAuthProfile() async {
     try {
       final profile = await _service.fetchMyProfile(); 
       if (profile != null && !isEditMode) {
-        selectedTingkatId = profile['id_tingkat']; 
-        selectedWilayahId = profile['id_wilayah']; 
-        selectedResor = profile['nama_polres'];
-        selectedSektor = profile['nama_polsek'];
-        debugPrint("Auth Profile Sync: ID Satker $selectedTingkatId.");
+        selectedTingkatId = profile['id_tingkat']?.toString(); 
+        selectedWilayahId = profile['id_wilayah']?.toString(); 
+        selectedResor = profile['nama_polres']?.toString().toUpperCase();
+        selectedSektor = profile['nama_polsek']?.toString().toUpperCase();
+        debugPrint("Auth Profile Sync: Satker $selectedTingkatId terdeteksi.");
       }
     } catch (e) {
       debugPrint("Error loading auth profile: $e");
     }
   }
 
+  /// Memuat opsi filter dari backend (polres, polsek, jenis lahan, komoditas).
   Future<void> _loadFilterOptions({String? polres}) async {
     try {
       final options = await _service.fetchFilterOptions(polres: polres);
@@ -113,6 +154,7 @@ class AddLandController extends ChangeNotifier {
     }
   }
 
+  /// Memuat data awal saat mode edit.
   Future<void> _loadInitialData() async {
     final d = editData!;
     policeNameController.text = d.policeName;
@@ -125,11 +167,18 @@ class AddLandController extends ChangeNotifier {
     jmlPetaniController.text = d.jumlahPetani.toString();
     alamatController.text = d.alamatLahan;
     
-    // Sinkronisasi pilihan ENUM saat edit
+    skLahanController.text = d.skLahan;
+    lembagaController.text = d.lembaga;
+    tahunLahanController.text = d.tahunLahan;
+
     selectedKetLainId = (d.keteranganLain == '1' || d.keteranganLain == '2' || d.keteranganLain == '3') 
         ? d.keteranganLain 
         : "1";
     
+    selectedStatus = d.statusValidasi;
+    selectedStatusPakai = d.statusPakai;
+    selectedStatusAktif = d.statusAktif;
+
     selectedJenisLahan = d.jenisLahan;
     selectedKomoditi = d.komoditi;
     selectedResor = d.resor;
@@ -139,7 +188,6 @@ class AddLandController extends ChangeNotifier {
     selectedDesa = d.desa;
     selectedTingkatId = d.idTingkat;
     selectedWilayahId = d.idWilayah;
-    selectedStatus = d.statusValidasi;
     
     if (d.latitude != null && d.longitude != null) {
       selectedLocation = LatLng(d.latitude!, d.longitude!);
@@ -153,6 +201,11 @@ class AddLandController extends ChangeNotifier {
     }
   }
 
+  // ===========================================================================
+  // EVENT HANDLERS - DROPDOWN CHANGES
+  // ===========================================================================
+  
+  /// Handler perubahan keterangan lain (PRODUKTIF/NON-PRODUKTIF/LAHAN TIDUR).
   void onKetLainChanged(String label) {
     if (label == "PRODUKTIF") selectedKetLainId = "1";
     else if (label == "NON-PRODUKTIF") selectedKetLainId = "2";
@@ -160,16 +213,7 @@ class AddLandController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setTingkatId(String kode) {
-    selectedTingkatId = kode;
-    notifyListeners();
-  }
-
-  void setWilayahId(String kode) {
-    selectedWilayahId = kode;
-    notifyListeners();
-  }
-
+  /// Handler perubahan resor - akan reload daftar sektor.
   Future<void> onResorChanged(String? value) async {
     selectedResor = value;
     selectedSektor = null;
@@ -180,21 +224,15 @@ class AddLandController extends ChangeNotifier {
     }
   }
 
-  void onSektorChanged(String? value) {
-    selectedSektor = value;
-    notifyListeners();
-  }
+  void onSektorChanged(String? value) => {selectedSektor = value, notifyListeners()};
+  void onJenisLahanChanged(String? value) => {selectedJenisLahan = value, notifyListeners()};
+  void onKomoditiChanged(String? value) => {selectedKomoditi = value, notifyListeners()};
 
-  void onJenisLahanChanged(String? value) {
-    selectedJenisLahan = value;
-    notifyListeners();
-  }
-
-  void onKomoditiChanged(String? value) {
-    selectedKomoditi = value;
-    notifyListeners();
-  }
-
+  // ===========================================================================
+  // IMAGE HANDLERS
+  // ===========================================================================
+  
+  /// Memilih gambar dari kamera atau gallery.
   Future<void> pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
@@ -214,6 +252,7 @@ class AddLandController extends ChangeNotifier {
     }
   }
 
+  /// Menghapus gambar yang sudah dipilih.
   void clearImage() {
     selectedImageFile = null;
     imageBytes = null;
@@ -221,6 +260,28 @@ class AddLandController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ✅ VALIDASI GAMBAR
+  /// 
+  /// Memvalidasi apakah gambar lahan sudah dipilih.
+  /// - Mode tambah (create): Wajib ada gambar baru yang dipilih
+  /// - Mode edit: Bisa menggunakan gambar yang sudah ada (existingImageUrl)
+  /// 
+  /// Returns `true` jika valid, `false` jika belum ada gambar.
+  bool validateImage() {
+    // Mode edit: boleh pakai gambar lama atau gambar baru
+    if (isEditMode) {
+      return hasImage; // Cek dari getter: file baru, bytes, atau URL lama
+    }
+    
+    // Mode tambah: wajib ada file gambar baru yang dipilih
+    return selectedImageFile != null;
+  }
+
+  // ===========================================================================
+  // LOCATION HANDLERS
+  // ===========================================================================
+  
+  /// Mengatur lokasi dari peta atau manual input.
   void setLocation(LatLng location, String address) {
     selectedLocation = location;
     latitudeController.text = location.latitude.toString();
@@ -229,25 +290,23 @@ class AddLandController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ✅ MEMBERSIHKAN DATA LOKASI
+  /// 
+  /// Menghapus semua data lokasi yang tersimpan termasuk koordinat dan alamat.
+  /// Digunakan saat user ingin mereset atau menghapus lokasi yang sudah dipilih.
   void clearLocation() {
     selectedLocation = null;
     latitudeController.clear();
     longitudeController.clear();
+    // Note: alamatController tidak di-clear agar user bisa mengisi manual
     notifyListeners();
   }
 
+  /// Mendapatkan lokasi saat ini menggunakan GPS device.
   Future<void> getCurrentLocation() async {
     isLoading = true;
     notifyListeners();
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) return;
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       selectedLocation = LatLng(position.latitude, position.longitude);
       latitudeController.text = position.latitude.toString();
@@ -260,21 +319,21 @@ class AddLandController extends ChangeNotifier {
     }
   }
 
-  bool validate() => formKey.currentState?.validate() ?? false;
-
-  bool validateImage() {
-    if (!isEditMode && selectedImageFile == null) return false;
-    return true;
-  }
+  // ===========================================================================
+  // VALIDATION & SAVE
+  // ===========================================================================
   
+  /// Validasi form sebelum submit.
+  bool validate() => formKey.currentState?.validate() ?? false;
+  
+  /// Menyimpan data lahan ke backend (create atau update).
   Future<bool> saveData() async {
     if (!validate()) return false;
+    
+    // ✅ Gunakan validateImage() untuk konsistensi
     if (!validateImage()) return false;
 
-    if (selectedTingkatId == null || selectedWilayahId == null) {
-      debugPrint("Gagal Simpan: ID belum terisi.");
-      return false;
-    }
+    if (selectedTingkatId == null || selectedWilayahId == null) return false;
 
     isSaving = true;
     notifyListeners();
@@ -309,16 +368,21 @@ class AddLandController extends ChangeNotifier {
         jumlahPetani: int.tryParse(jmlPetaniController.text) ?? 0,
         idKomoditi: 1,
         komoditi: selectedKomoditi ?? "JAGUNG",
-        
-        // PENTING: Mengirim '1', '2', atau '3' sesuai ENUM database
         keteranganLain: selectedKetLainId, 
-        
         fotoLahan: fotoLahanBase64,
         imageUrl: existingImageUrl ?? "",
         infoProses: "-",
         infoValidasi: "-",
         latitude: selectedLocation?.latitude,
         longitude: selectedLocation?.longitude,
+        // Sync field baru sesuai skema DB
+        statusPakai: selectedStatusPakai,
+        statusAktif: selectedStatusAktif,
+        skLahan: skLahanController.text,
+        lembaga: lembagaController.text,
+        sumberData: "-",
+        tglProses: DateTime.now().toIso8601String(),
+        tahunLahan: tahunLahanController.text,
       );
 
       return isEditMode
@@ -334,6 +398,7 @@ class AddLandController extends ChangeNotifier {
     }
   }
 
+  /// Mapping nama jenis lahan ke ID integer.
   int _getIdJenisLahan(String? title) {
     final Map<String, int> mapping = {
       "LAHAN MILIK POLRI": 1,
@@ -348,6 +413,10 @@ class AddLandController extends ChangeNotifier {
     return mapping[title] ?? 9;
   }
 
+  // ===========================================================================
+  // DISPOSE
+  // ===========================================================================
+  
   @override
   void dispose() {
     policeNameController.dispose();
@@ -359,7 +428,9 @@ class AddLandController extends ChangeNotifier {
     luasLahanController.dispose();
     jmlPetaniController.dispose();
     alamatController.dispose();
-    ketLainController.dispose();
+    skLahanController.dispose();
+    lembagaController.dispose();
+    tahunLahanController.dispose();
     latitudeController.dispose();
     longitudeController.dispose();
     super.dispose();

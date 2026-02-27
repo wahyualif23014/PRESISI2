@@ -30,7 +30,7 @@ class DocumentationSection extends StatelessWidget {
           onClear: controller.clearImage,
         ),
         CustomTextField(
-          controller: controller.ketLainController,
+          controller: controller.picKeteranganController,
           label: 'Keterangan Lain',
           hint: 'Info tambahan',
           prefixIcon: Icons.notes_outlined,

@@ -1,35 +1,43 @@
 import 'package:latlong2/latlong.dart' show LatLng;
 
 class LandPotentialModel {
-  final String id;
-  final String idWilayah; // Kode Geografis (NOT NULL)
-  final String idTingkat; // Kode Kesatuan (NOT NULL)
-  final String kabupaten;
-  final String kecamatan;
-  final String desa;
-  final String resor;
-  final String sektor;
-  final int idJenisLahan;
-  final String jenisLahan;
-  final double luasLahan;
-  final String alamatLahan;
-  final String statusValidasi;
-  final String policeName;
-  final String policePhone;
-  final String picName;
-  final String picPhone;
-  final String keterangan; // Deskripsi Panjang (Longtext)
-  final int jumlahPoktan;
-  final int jumlahPetani;
-  final int idKomoditi;
-  final String komoditi;
-  final String keteranganLain; // ENUM '1', '2', '3' (ketlahan)
-  final String fotoLahan; // Base64 String untuk Upload
-  final String imageUrl; // URL untuk Menampilkan Gambar
-  final String infoProses;
-  final String infoValidasi;
-  final double? latitude;
-  final double? longitude;
+  final String id; // idlahan (bigint)
+  final String idWilayah; // idwilayah
+  final String idTingkat; // idtingkat
+  final String kabupaten; // Virtual (Join)
+  final String kecamatan; // Virtual (Join)
+  final String desa; // Virtual (Join)
+  final String resor; // Format UI: POLRES + Kabupaten
+  final String sektor; // Format UI: POLSEK + Kecamatan
+  final int idJenisLahan; // idjenislahan
+  final String jenisLahan; // Virtual (Join)
+  final double luasLahan; // luaslahan (decimal)
+  final String alamatLahan; // alamat (longtext)
+  final String statusValidasi; // statuslahan (enum)
+  final String policeName; // cppolisi
+  final String policePhone; // hppolisi
+  final String picName; // cp
+  final String picPhone; // hp
+  final String keterangan; // keterangan (longtext)
+  final int jumlahPoktan; // poktan
+  final int jumlahPetani; // jmlsantri
+  final int idKomoditi; // idkomoditi (bigint)
+  final String komoditi; // Virtual (Join komoditas)
+  final String keteranganLain; // ketlahan (enum)
+  final String fotoLahan; // dokumentasi (longtext)
+  final String imageUrl; // ImageURL (GORM virtual)
+  final String infoProses; // nama_pemroses (Join)
+  final String infoValidasi; // nama_validator (Join)
+  final double? latitude; // lat
+  final double? longitude; // longi
+
+  final String statusPakai; // statuspakai (enum)
+  final String statusAktif; // statusaktif (enum)
+  final String skLahan; // sk
+  final String lembaga; // lembaga
+  final String sumberData; // sumberdata
+  final String tglProses; // datetransaction
+  final String tahunLahan; // tahunlahan
 
   LandPotentialModel({
     required this.id,
@@ -59,6 +67,13 @@ class LandPotentialModel {
     required this.imageUrl,
     required this.infoProses,
     required this.infoValidasi,
+    required this.statusPakai,
+    required this.statusAktif,
+    required this.skLahan,
+    required this.lembaga,
+    required this.sumberData,
+    required this.tglProses,
+    required this.tahunLahan,
     this.latitude,
     this.longitude,
   });
@@ -72,7 +87,6 @@ class LandPotentialModel {
     return null;
   }
 
-  // Helper untuk mendapatkan Label Human-Readable dari ENUM DB
   String get ketLainLabel {
     switch (keteranganLain) {
       case '1': return "PRODUKTIF";
@@ -87,11 +101,11 @@ class LandPotentialModel {
 
     String getJenisLahanTitle(int id) {
       switch (id) {
-        case 1: return "PERHUTANAN SOSIAL";
+        case 1: return "MILIK POLRI";
         case 2: return "POKTAN BINAAN POLRI";
         case 3: return "MASYARAKAT BINAAN POLRI";
         case 4: return "TUMPANG SARI";
-        case 5: return "MILIK POLRI";
+        case 5: return "PERHUTANAN SOSIAL";
         case 6: return "LBS";
         case 7: return "PESANTREN";
         default: return "LAHAN LAINNYA";
@@ -119,7 +133,7 @@ class LandPotentialModel {
       jenisLahan: getJenisLahanTitle(jnsLahanId),
       luasLahan: double.tryParse(json['luas_lahan']?.toString() ?? '0') ?? 0.0,
       alamatLahan: json['alamat_lahan']?.toString() ?? '-',
-      statusValidasi: json['status_validasi']?.toString() ?? 'BELUM TERVALIDASI',
+      statusValidasi: json['status_validasi']?.toString() ?? '1',
       policeName: json['police_name']?.toString() ?? '-',
       policePhone: json['police_phone']?.toString() ?? '-',
       picName: json['pic_name']?.toString() ?? '-',
@@ -129,18 +143,26 @@ class LandPotentialModel {
       jumlahPetani: int.tryParse(json['jumlah_petani']?.toString() ?? '0') ?? 0,
       idKomoditi: int.tryParse(json['id_komoditi']?.toString() ?? '0') ?? 0,
       komoditi: "${json['jenis_komoditas_nama'] ?? 'TANAMAN'}-${json['nama_komoditi_asli'] ?? 'PANGAN'}",
-      keteranganLain: json['keterangan_lain']?.toString() ?? '1', // Sesuai tag JSON backend
+      keteranganLain: json['keterangan_lain']?.toString() ?? '3', 
       fotoLahan: json['foto_lahan']?.toString() ?? '',
       imageUrl: json['image_url']?.toString() ?? '',
       infoProses: json['nama_pemroses']?.toString() ?? "-",
       infoValidasi: json['nama_validator']?.toString() ?? "-",
       latitude: parseCoordinate(json['latitude']),
       longitude: parseCoordinate(json['longitude']),
+      statusPakai: json['status_pakai']?.toString() ?? '1',
+      statusAktif: json['status_aktif']?.toString() ?? '2',
+      skLahan: json['sk_lahan']?.toString() ?? '-',
+      lembaga: json['lembaga']?.toString() ?? '-',
+      sumberData: json['sumber_data']?.toString() ?? '-',
+      tglProses: json['tgl_proses']?.toString() ?? '-',
+      tahunLahan: json['tahun_lahan']?.toString() ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      "id": id,
       "id_wilayah": idWilayah,
       "id_tingkat": idTingkat,
       "id_jenis_lahan": idJenisLahan,
@@ -151,14 +173,21 @@ class LandPotentialModel {
       "pic_phone": picPhone,
       "police_name": policeName,
       "police_phone": policePhone,
-      "status_validasi": statusValidasi, // Akan diproses backend ke ENUM 1-4
+      "status_validasi": statusValidasi,
       "jumlah_poktan": jumlahPoktan,
       "jumlah_petani": jumlahPetani,
       "id_komoditi": idKomoditi,
-      "keterangan_lain": keteranganLain, // MENGIRIM '1', '2', ATAU '3' (Konsisten)
+      "keterangan_lain": keteranganLain,
       "foto_lahan": fotoLahan,
       "latitude": latitude,
       "longitude": longitude,
+      "status_pakai": statusPakai,
+      "status_aktif": statusAktif,
+      "sk_lahan": skLahan,
+      "lembaga": lembaga,
+      "sumber_data": sumberData,
+      "tgl_proses": tglProses,
+      "tahun_lahan": tahunLahan,
     };
   }
 
@@ -170,6 +199,8 @@ class LandPotentialModel {
     int? jumlahPoktan, int? jumlahPetani, int? idKomoditi, String? komoditi,
     String? keteranganLain, String? fotoLahan, String? imageUrl, String? infoProses,
     String? infoValidasi, double? latitude, double? longitude,
+    String? statusPakai, String? statusAktif, String? skLahan, String? lembaga,
+    String? sumberData, String? tglProses, String? tahunLahan,
   }) {
     return LandPotentialModel(
       id: id ?? this.id, idWilayah: idWilayah ?? this.idWilayah, idTingkat: idTingkat ?? this.idTingkat,
@@ -186,11 +217,18 @@ class LandPotentialModel {
       imageUrl: imageUrl ?? this.imageUrl, infoProses: infoProses ?? this.infoProses,
       infoValidasi: infoValidasi ?? this.infoValidasi, latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      statusPakai: statusPakai ?? this.statusPakai,
+      statusAktif: statusAktif ?? this.statusAktif,
+      skLahan: skLahan ?? this.skLahan,
+      lembaga: lembaga ?? this.lembaga,
+      sumberData: sumberData ?? this.sumberData,
+      tglProses: tglProses ?? this.tglProses,
+      tahunLahan: tahunLahan ?? this.tahunLahan,
     );
   }
 
   @override
   String toString() {
-    return 'LandPotentialModel(id: $id, tingkat: $idTingkat, wilayah: $idWilayah, status: $keteranganLain)';
+    return 'LandPotentialModel(id: $id, status: $keteranganLain, validasi: $statusValidasi)';
   }
 }

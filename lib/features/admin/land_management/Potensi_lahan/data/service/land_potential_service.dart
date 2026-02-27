@@ -12,6 +12,7 @@ import '../model/land_summary_model.dart';
 import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
+  // Gunakan IP yang konsisten dengan konfigurasi server Go Anda
   final String baseUrl = "http://192.168.100.196:8080/api/potensi-lahan";
   final String authUrl = "http://192.168.100.196:8080/api/view/profile";
   final _storage = const FlutterSecureStorage();
@@ -19,6 +20,8 @@ class LandPotentialService {
   static final LandPotentialService _instance = LandPotentialService._internal();
   factory LandPotentialService() => _instance;
   LandPotentialService._internal();
+
+  // ==================== PRIVATE HELPERS ====================
 
   Future<String> _getToken() async {
     try {
@@ -42,6 +45,7 @@ class LandPotentialService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return json.decode(response.body);
     } else {
+      // Sangat krusial untuk melihat detail Error 1265 dari MySQL di console
       debugPrint("HTTP Error Body: ${response.body}");
       throw HttpException(
         'HTTP ${response.statusCode}: ${response.reasonPhrase}',
@@ -52,14 +56,13 @@ class LandPotentialService {
 
   // ==================== AUTH & PROFILE ====================
 
-  // Method baru untuk mengambil identitas user penambah data
   Future<Map<String, dynamic>?> fetchMyProfile() async {
     try {
       final response = await http.get(Uri.parse(authUrl), headers: await _getHeaders());
       final data = _handleResponse(response);
 
       if (data['status'] == 'success' && data['data'] != null) {
-        return data['data']; // Berisi id_tingkat, id_wilayah, nama, dll.
+        return data['data']; // Berisi id_tingkat, id_wilayah, dll untuk auto-fill Satker
       }
       return null;
     } catch (e) {
@@ -146,7 +149,7 @@ class LandPotentialService {
       final response = await http.post(
         Uri.parse(baseUrl),
         headers: await _getHeaders(),
-        body: json.encode(data.toJson()),
+        body: json.encode(data.toJson()), // Mengirim "status_pakai" & "status_aktif" baru
       );
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
@@ -187,6 +190,7 @@ class LandPotentialService {
   Future<LandSummaryModel?> fetchSummaryData() async {
     try {
       final headers = await _getHeaders();
+      // Optimalisasi: Jalankan request secara paralel
       final results = await Future.wait([
         http.get(Uri.parse("$baseUrl/summary"), headers: headers),
         http.get(Uri.parse("$baseUrl/no-potential"), headers: headers),
@@ -272,22 +276,10 @@ class LandPotentialService {
     }
   }
 
-  Future<List<String>> uploadMultipleImages(List<File> imageFiles) async {
-    final List<String> uploadedUrls = [];
-    for (var file in imageFiles) {
-      try {
-        final url = await uploadImage(file);
-        if (url.isNotEmpty) uploadedUrls.add(url);
-      } catch (e) {
-        debugPrint("Error uploading single image: $e");
-      }
-    }
-    return uploadedUrls;
-  }
-
   Future<Uint8List?> fetchImageBytes(String imageUrl) async {
     try {
-      final fullUrl = imageUrl.startsWith('http') ? imageUrl : '$baseUrl/$imageUrl';
+      // FIX: Paksa fetch via endpoint /image/ untuk trigger decoder Base64 di Go
+      final fullUrl = imageUrl.startsWith('http') ? imageUrl : '$baseUrl/image/$imageUrl';
       final response = await http.get(Uri.parse(fullUrl), headers: await _getHeaders());
       if (response.statusCode == 200) return response.bodyBytes;
       return null;
@@ -343,12 +335,4 @@ class LandPotentialService {
       return false;
     }
   }
-}
-
-class HttpException implements Exception {
-  final String message;
-  final Uri? uri;
-  HttpException(this.message, {this.uri});
-  @override
-  String toString() => 'HttpException: $message${uri != null ? ' ($uri)' : ''}';
 }
