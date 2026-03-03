@@ -22,15 +22,17 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
   List<String> _listPolres = [];
   List<String> _listPolsek = [];
 
+  // Diperbarui agar sinkron dengan urutan ID di database (1-8)
   final List<String> _listJenis = [
-    "Perhutanan Sosial",
-    "Poktan Binaan Polri",
-    "Masyarakat Binaan Polri",
-    "Tumpang Sari",
-    "Milik Polri",
-    "LBS",
-    "Pesantren",
-    "Lahan Lainnya",
+    "PRODUKTIF (POKTAN BINAAN POLRI)",
+    "HUTAN (PERHUTANAN SOSIAL)",
+    "LUAS BAKU SAWAH (LBS)",
+    "PESANTREN",
+    "MILIK POLRI",
+    "PRODUKTIF (MASYARAKAT BINAAN POLRI)",
+    "PRODUKTIF (TUMPANG SARI)",
+    "HUTAN (PERHUTANI/INHUTANI)",
+    "LAHAN LAINNYA",
   ];
 
   String? _selPolres, _selPolsek, _selJenis;
@@ -109,9 +111,7 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                   : _buildDrop(
                     label: "Kepolisian Resor",
                     icon: Icons.account_balance,
-                    // Menggunakan .toSet().toList() untuk memastikan tidak ada nama Polres yang duplikat
                     items: _listPolres.toSet().toList(),
-                    // Memastikan value yang terpilih ada di dalam list agar tidak error assertion
                     value: _listPolres.contains(_selPolres) ? _selPolres : null,
                     onChanged: (v) {
                       setState(() {
@@ -130,7 +130,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                   : _buildDrop(
                     label: "Kepolisian Sektor",
                     icon: Icons.location_city,
-                    // Menggunakan .toSet().toList() agar daftar Polsek unik
                     items: _listPolsek.toSet().toList(),
                     value: _listPolsek.contains(_selPolsek) ? _selPolsek : null,
                     onChanged: (v) => setState(() => _selPolsek = v),
@@ -219,10 +218,7 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
       ),
       child: Column(
         children: [
-          const Text(
-            "👮‍♂️", // Icon Polisi
-            style: TextStyle(fontSize: 40),
-          ),
+          const Text("👮‍♂️", style: TextStyle(fontSize: 40)),
           const SizedBox(height: 8),
           const Text(
             "Lapor Komandan!",

@@ -1,10 +1,9 @@
 package controllers
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
-	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,45 +14,27 @@ import (
 )
 
 func GetImageFromDB(c *gin.Context) {
-	filenameRaw := c.Param("filename")
-	filename, err := url.QueryUnescape(filenameRaw)
-	if err != nil {
-		filename = filenameRaw
-	}
+	filename := c.Param("filename")
 
 	var lahan models.PotensiLahan
-	result := initializers.DB.Table("lahan").Where("dokumentasi = ?", filename).First(&lahan)
+	err := initializers.DB.
+		Table("lahan").
+		Where("dokumentasi = ?", filename).
+		First(&lahan).Error
 
-	if result.Error != nil {
-		fmt.Printf("[ERROR] Data tidak ditemukan untuk file: %s\n", filename)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Data SQL tidak ditemukan"})
-		return
-	}
-
-	base64String := lahan.Foto
-	if base64String == "" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Kolom SQL kosong"})
-		return
-	}
-
-	if strings.Contains(base64String, ",") {
-		base64String = strings.Split(base64String, ",")[1]
-	}
-
-	base64String = strings.TrimSpace(base64String)
-	base64String = strings.ReplaceAll(base64String, "\n", "")
-	base64String = strings.ReplaceAll(base64String, "\r", "")
-
-	imageBytes, err := base64.StdEncoding.DecodeString(base64String)
 	if err != nil {
-		imageBytes, err = base64.RawStdEncoding.DecodeString(base64String)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Base64 Rusak", "debug": err.Error()})
-			return
-		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
+		return
 	}
 
-	c.Data(http.StatusOK, "image/jpeg", imageBytes)
+	filePath := "./uploads/" + lahan.Foto
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File tidak ditemukan"})
+		return
+	}
+
+	c.File(filePath)
 }
 
 func GetPotensiLahan(c *gin.Context) {
@@ -66,19 +47,10 @@ func GetPotensiLahan(c *gin.Context) {
 	search := c.Query("search")
 	polres := c.Query("polres")
 	polsek := c.Query("polsek")
+	jenisLahan := c.Query("jenis_lahan")
 
 	db := initializers.DB.Table("lahan").
-		Select(`
-			lahan.*, 
-			w_desa.nama AS nama_desa, 
-			w_kec.nama AS nama_kecamatan, 
-			w_kab.nama AS nama_kabupaten,
-			p.nama AS nama_pemroses, 
-			v.nama AS nama_validator,
-			akt.nama AS nama_poktan_asli,
-			k.jeniskomoditi AS jenis_komoditas_nama,
-			k.namakomoditi AS nama_komoditi_asli
-		`).
+		Select("lahan.*, w_desa.nama AS nama_desa, w_kec.nama AS nama_kecamatan, w_kab.nama AS nama_kabupaten, p.nama AS nama_pemroses, v.nama AS nama_validator, akt.nama AS nama_poktan_asli, k.jeniskomoditi AS jenis_komoditas_nama, k.namakomoditi AS nama_komoditi_asli").
 		Joins("LEFT JOIN wilayah w_desa ON w_desa.kode = lahan.idwilayah").
 		Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = SUBSTR(lahan.idwilayah, 1, 8)").
 		Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah, 1, 5)").
@@ -90,14 +62,45 @@ func GetPotensiLahan(c *gin.Context) {
 
 	if search != "" {
 		s := "%" + strings.ToLower(search) + "%"
-		db = db.Where("LOWER(lahan.alamat) LIKE ? OR LOWER(lahan.ketcp) LIKE ?", s, s)
+		db = db.Where("(LOWER(lahan.alamat) LIKE ? OR LOWER(lahan.ketcp) LIKE ?)", s, s)
 	}
 
 	if polres != "" {
-		db = db.Where("w_kab.nama = ?", polres)
+		p := strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polres), "POLRES", ""))
+		db = db.Where("UPPER(w_kab.nama) LIKE ?", "%"+p+"%")
 	}
+
 	if polsek != "" {
-		db = db.Where("w_kec.nama = ?", polsek)
+		ps := strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polsek), "POLSEK", ""))
+		db = db.Where("UPPER(w_kec.nama) LIKE ?", "%"+ps+"%")
+	}
+
+	if jenisLahan != "" {
+		idJenis := 0
+		jl := strings.ToUpper(strings.TrimSpace(jenisLahan))
+		switch jl {
+		case "PRODUKTIF (POKTAN BINAAN POLRI)":
+			idJenis = 1
+		case "HUTAN (PERHUTANAN SOSIAL)":
+			idJenis = 2
+		case "LUAS BAKU SAWAH (LBS)":
+			idJenis = 3
+		case "PESANTREN":
+			idJenis = 4
+		case "MILIK POLRI":
+			idJenis = 5
+		case "PRODUKTIF (MASYARAKAT BINAAN POLRI)":
+			idJenis = 6
+		case "PRODUKTIF (TUMPANG SARI)":
+			idJenis = 7
+		case "HUTAN (PERHUTANI/INHUTANI)":
+			idJenis = 8
+		case "LAHAN LAINNYA":
+			idJenis = 9
+		}
+		if idJenis > 0 {
+			db = db.Where("lahan.idjenislahan = ?", idJenis)
+		}
 	}
 
 	if err := db.Order("lahan.tgledit DESC").Limit(limit).Offset(offset).Find(&daftarLahan).Error; err != nil {
@@ -106,6 +109,7 @@ func GetPotensiLahan(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": daftarLahan})
+
 }
 
 func ToggleValidation(c *gin.Context) {
@@ -142,6 +146,7 @@ func ToggleValidation(c *gin.Context) {
 		initializers.DB.Table("lahan").Where("idlahan = ?", id).Updates(updates)
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil divalidasi"})
 	}
+
 }
 
 func GetFilterOptions(c *gin.Context) {
@@ -216,7 +221,15 @@ func GetFilterOptions(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{"status": "success", "data": gin.H{"polres": listPolres, "polsek": listPolsek, "jenis_lahan": listJenis}})
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"polres":      listPolres,
+			"polsek":      listPolsek,
+			"jenis_lahan": listJenis,
+		},
+	})
+
 }
 
 func CreatePotensiLahan(c *gin.Context) {
@@ -257,7 +270,6 @@ func UpdatePotensiLahan(c *gin.Context) {
 		"lat":          input.Latitude,
 		"longi":        input.Longitude,
 		"dokumentasi":  input.Foto,
-		"editoleh":     input.EditOleh,
 		"tgledit":      time.Now().Format("2006-01-02 15:04:05"),
 	}
 
@@ -265,8 +277,8 @@ func UpdatePotensiLahan(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil diperbarui"})
+
 }
 
 func DeletePotensiLahan(c *gin.Context) {
@@ -323,6 +335,7 @@ func GetSummaryLahan(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"total_area": totals.TotalArea, "total_locations": totals.TotalLoc, "categories": categories}})
+
 }
 
 func GetNoPotentialLahan(c *gin.Context) {
@@ -342,6 +355,7 @@ func GetNoPotentialLahan(c *gin.Context) {
 	initializers.DB.Table("lahan").Where(dbFilter).Select("COUNT(DISTINCT SUBSTR(idwilayah, 1, 5)) as kab, COUNT(DISTINCT SUBSTR(idwilayah, 1, 8)) as kec, COUNT(DISTINCT idwilayah) as desa").Scan(&isi)
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"total_empty_polres": master.Kab - isi.Kab, "details": gin.H{"polsek": master.Kec - isi.Kec, "kab_kota": master.Kab - isi.Kab, "kecamatan": master.Kec - isi.Kec, "kel_desa": master.Desa - isi.Desa}}})
+
 }
 
 func ValidatePotensiLahan(c *gin.Context) {

@@ -29,7 +29,7 @@ class _OverviewPageState extends State<OverviewPage> {
   String _currentSearch = "";
   Map<String, String>? _activeFilters;
   int _currentPage = 1;
-  final int _limitPerPage = 50;
+  final int _limitPerPage = 150;
 
   @override
   void initState() {

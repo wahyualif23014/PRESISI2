@@ -26,7 +26,6 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
   }
 
   void _checkInitialValidation() {
-    // Validasi berdasarkan nama validator yang ada di model
     final v = widget.data.namaValidator.trim();
     setState(() {
       isValidated = v != "" && v != "null" && v != "-" && v != "0";
@@ -34,7 +33,6 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
   }
 
   Future<void> _openMaps() async {
-    // Menggunakan koordinat asli jika tersedia, jika tidak gunakan alamat
     String googleMapsUrl = "";
     if (widget.data.latitude != "0" && widget.data.longitude != "0") {
       googleMapsUrl =
@@ -66,8 +64,6 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
       _showUnvalidateConfirmation();
     } else {
       setState(() => _isProcessing = true);
-
-      // Poin 5: Menjalankan toggle validation melalui service
       bool success = await _service.toggleValidation(widget.data.id);
 
       if (success && mounted) {
@@ -81,7 +77,7 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Refresh halaman utama
+        Navigator.pop(context, true);
       } else {
         setState(() => _isProcessing = false);
       }
@@ -149,7 +145,6 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // HEADER
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: const BoxDecoration(
@@ -176,13 +171,11 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
               ],
             ),
           ),
-          // CONTENT
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // SECTION: WILAYAH
                   _buildSection(
                     Icons.account_balance_rounded,
                     "Wilayah",
@@ -203,8 +196,6 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // SECTION: PERSONEL
                   _buildSection(
                     Icons.people_alt_rounded,
                     "Personel",
@@ -221,23 +212,17 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // SECTION: DETAIL LAHAN
-                  // Bagian Informasi Lahan
                   _buildSection(
                     Icons.grass_rounded,
                     "Informasi Lahan",
                     Colors.green,
                     [
                       _row("Jenis Lahan", widget.data.jenisLahan),
-                      _row(
-                        "Keterangan",
-                        widget.data.keterangan,
-                      ), // Tampilkan isi ketcp
+                      _row("Keterangan", widget.data.keterangan),
                       _row(
                         "Jumlah Poktan",
                         widget.data.jumlahPoktan.toString(),
-                      ), // Tampilkan isi poktan
+                      ),
                       _row(
                         "Luas Lahan",
                         "${widget.data.luasLahan.toStringAsFixed(2)} Ha",
@@ -251,8 +236,6 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // SECTION: DOKUMENTASI
                   _buildSection(
                     Icons.camera_alt_rounded,
                     "Foto Lahan",
@@ -266,27 +249,20 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // SECTION: LOG & LAINNYA
                   _buildSection(
                     Icons.history_toggle_off_rounded,
                     "Lainnya",
                     Colors.blueGrey,
                     [
-                      _row(
-                        "Keterangan Lain",
-                        widget.data.keteranganLain,
-                      ), // Poin 1
-                      _row("Diproses Oleh", widget.data.infoProses), // Poin 3
+                      _row("Keterangan Lain", widget.data.keteranganLain),
+                      _row("Diproses Oleh", widget.data.infoProses),
                       _row(
                         "Divalidasi Oleh",
                         isValidated ? widget.data.infoValidasi : "-",
-                      ), // Poin 4
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // BUTTON VALIDASI (POIN 5)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -331,52 +307,71 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
     );
   }
 
-  Widget _buildPhoto() {
-    if (widget.data.fotoLahan.isEmpty) return const SizedBox();
-
-    try {
-      // Membersihkan header Base64 jika ada (misal: "data:image/png;base64,")
-      String base64String = widget.data.fotoLahan;
-      if (base64String.contains(',')) {
-        base64String = base64String.split(',').last;
-      }
-
-      Uint8List bytes = base64Decode(base64String);
-      return Image.memory(
-        bytes,
-        fit: BoxFit.cover,
-        errorBuilder:
-            (context, error, stackTrace) => const Icon(Icons.broken_image),
-      );
-    } catch (e) {
-      return const Icon(Icons.error);
-    }
-  }
-
   Widget _buildImageFromData(String photoData) {
     if (photoData.isEmpty || photoData == "null" || photoData == "-") {
       return _emptyImage();
     }
+
+    // 1. DETEKSI NAMA FILE VS BASE64
+    // Gambar Base64 asli berukuran ribuan karakter. Jika sangat pendek (misal < 500)
+    // atau memiliki ekstensi file, maka asumsikan ini adalah nama file yang ada di server.
+    if (photoData.length < 500 ||
+        photoData.toLowerCase().endsWith('.jpg') ||
+        photoData.toLowerCase().endsWith('.png') ||
+        photoData.toLowerCase().endsWith('.jpeg')) {
+      // Ambil dari server backend (sesuaikan IP dengan log backendmu)
+      String fullUrl =
+          "http://192.168.100.195:8080/uploads/${Uri.encodeComponent(photoData)}";
+
+      return Image.network(
+        fullUrl,
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint("Error memuat dari URL: $error");
+          return _emptyImage();
+        },
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const SizedBox(
+            height: 200,
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF0097B2)),
+            ),
+          );
+        },
+      );
+    }
+
+    // 2. JIKA TERNYATA MEMANG DATA BASE64 PANJANG DARI FRONTEND
     try {
       String cleanBase64 =
           photoData.contains(',') ? photoData.split(',').last : photoData;
-      cleanBase64 = cleanBase64
-          .trim()
-          .replaceAll('\n', '')
-          .replaceAll('\r', '')
-          .replaceAll(' ', '');
-      while (cleanBase64.length % 4 != 0) {
-        cleanBase64 += '=';
+
+      // Bersihkan dari sisa timestamp atau karakter aneh
+      cleanBase64 = cleanBase64.replaceAll(RegExp(r'[^A-Za-z0-9+/]'), '');
+
+      // Berikan padding yang benar
+      int mod = cleanBase64.length % 4;
+      if (mod > 0) {
+        cleanBase64 += '=' * (4 - mod);
       }
+
       Uint8List bytes = base64Decode(cleanBase64);
+
       return Image.memory(
         bytes,
         height: 200,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _emptyImage(),
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint("Error rendering Base64 image: $error");
+          return _emptyImage();
+        },
       );
     } catch (e) {
+      debugPrint("Error decoding base64: $e");
       return _emptyImage();
     }
   }

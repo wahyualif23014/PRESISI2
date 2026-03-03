@@ -6,21 +6,21 @@ class LandPotentialCard extends StatelessWidget {
   final LandPotentialModel data;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onRefresh; // Tambahkan refresh callback
 
   const LandPotentialCard({
     super.key,
     required this.data,
     required this.onEdit,
     required this.onDelete,
+    required this.onRefresh, // Masukkan ke constructor
   });
 
-  // Base URL disesuaikan dengan endpoint API image di backend Go
-  static const String _imageBaseUrl =
-      "http://192.168.100.195:8080/api/potensi-lahan/image/";
+  // Sesuaikan Base URL dengan route /uploads/ yang terdaftar di backend
+  static const String _imageBaseUrl = "http://192.168.100.195:8080/uploads/";
 
   @override
   Widget build(BuildContext context) {
-    // Penentuan warna berdasarkan status validasi
     final bool isValidated = data.statusValidasi == 'TERVALIDASI';
     final Color statusColor =
         isValidated ? const Color(0xFF1B9E5E) : Colors.orange;
@@ -50,12 +50,8 @@ class LandPotentialCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // --- 1. FOTO LAHAN ---
                 _buildThumbnail(),
-
                 const SizedBox(width: 12),
-
-                // --- 2. INFORMASI TENGAH (Personel & Alamat) ---
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,15 +69,11 @@ class LandPotentialCard extends StatelessWidget {
                         const Color(0xFF64748B),
                       ),
                       const SizedBox(height: 8),
-                      // Badge Alamat (Gaya Maps)
                       _buildLocationBadge(),
                     ],
                   ),
                 ),
-
                 const SizedBox(width: 8),
-
-                // --- 3. STATUS & AKSI ---
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -112,7 +104,6 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER: THUMBNAIL GAMBAR ---
   Widget _buildThumbnail() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
@@ -134,8 +125,15 @@ class LandPotentialCard extends StatelessWidget {
       );
     }
 
-    // Mengarahkan ke endpoint image controller di backend Go
-    String fullUrl = "$_imageBaseUrl${data.fotoLahan}";
+    // Pastikan data.fotoLahan hanya berisi nama file (misal: image_123.jpg)
+    String fileName = data.fotoLahan;
+    if (fileName.contains(',')) {
+      // Jika data berupa Base64, gunakan widget Image.memory di detail dialog saja
+      // Untuk Card, kita asumsikan mengambil via URL path
+      return const Icon(Icons.image, color: Colors.grey);
+    }
+
+    String fullUrl = "$_imageBaseUrl${Uri.encodeComponent(fileName)}";
 
     return Image.network(
       fullUrl,
@@ -156,7 +154,6 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER: ROW INFO ---
   Widget _buildInfoRow(
     IconData icon,
     String label,
@@ -183,7 +180,6 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER: LOCATION BADGE ---
   Widget _buildLocationBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -214,7 +210,6 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER: STATUS BADGE ---
   Widget _buildStatusBadge(bool isValid, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -234,7 +229,6 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER: ICON BUTTON ---
   Widget _buildIconButton(IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
@@ -250,10 +244,14 @@ class LandPotentialCard extends StatelessWidget {
     );
   }
 
-  void _showDetail(BuildContext context) {
-    showDialog(
+  void _showDetail(BuildContext context) async {
+    final result = await showDialog(
       context: context,
       builder: (context) => LandDetailDialog(data: data),
     );
+    // Jika ada aksi validasi di dalam dialog, refresh halaman utama
+    if (result == true) {
+      onRefresh();
+    }
   }
 }
