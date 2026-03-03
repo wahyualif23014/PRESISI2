@@ -9,6 +9,7 @@ class RecapTableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
+        
         // Memberikan bayangan halus agar header terlihat terpisah dari list
         boxShadow: [
           BoxShadow(

@@ -12,12 +12,13 @@ class LandPotentialService {
   final String baseUrl = "http://192.168.100.195:8080/api/potensi-lahan";
   final _storage = const FlutterSecureStorage();
 
+  // Helper untuk mengambil token JWT
   Future<String> _getToken() async {
-    // FIX: Gunakan SecureStorage dan key 'jwt_token' agar konsisten
     String? token = await _storage.read(key: 'jwt_token');
     return token ?? '';
   }
 
+  // Helper untuk menyusun Header (Content-Type & Auth)
   Future<Map<String, String>> _getHeaders() async {
     final token = await _getToken();
     return {
@@ -52,7 +53,6 @@ class LandPotentialService {
 
       final uri = Uri.parse(baseUrl).replace(queryParameters: qParams);
       final headers = await _getHeaders();
-
       final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
@@ -73,7 +73,6 @@ class LandPotentialService {
   // 2. Ambil Opsi Filter (Cascading Polres/Polsek)
   Future<Map<String, List<String>>> fetchFilterOptions({String? polres}) async {
     try {
-      // FIX: URL diganti menjadi /filter-options sesuai backend
       String url = "$baseUrl/filter-options";
       if (polres != null && polres.isNotEmpty) {
         url += "?polres=${Uri.encodeComponent(polres)}";
@@ -147,12 +146,10 @@ class LandPotentialService {
     }
   }
 
-  // 6. Ambil Data Summary Lengkap (Menggabungkan Data Luas dan Data Wilayah Kosong)
+  // 6. Ambil Data Summary Gabungan
   Future<LandSummaryModel?> fetchSummaryData() async {
     try {
       final headers = await _getHeaders();
-
-      // Mengambil data dari dua endpoint secara paralel untuk efisiensi
       final results = await Future.wait([
         http.get(Uri.parse("$baseUrl/summary"), headers: headers),
         http.get(Uri.parse("$baseUrl/no-potential"), headers: headers),
@@ -167,25 +164,22 @@ class LandPotentialService {
           summaryBody['data'],
         );
 
-        // Jika data wilayah kosong berhasil diambil, masukkan ke dalam objek data utama
         if (noPotentialRes.statusCode == 200) {
           final noPotentialBody = json.decode(noPotentialRes.body);
           if (noPotentialBody['status'] == 'success') {
-            // PENTING: Masukkan ke key 'details' sesuai struktur model di atas
             combinedData['details'] = noPotentialBody['data']['details'];
           }
         }
-
         return LandSummaryModel.fromJson(combinedData);
       }
       return null;
     } catch (e) {
-      debugPrint("Error Fetch Combined Summary: ${e.toString()}");
+      debugPrint("Error Fetch Summary: ${e.toString()}");
       return null;
     }
   }
 
-  // 7. Ambil Data Wilayah yang Belum Memiliki Potensi Saja
+  // 7. Ambil Data Wilayah Tanpa Potensi
   Future<NoLandPotentialModel?> fetchNoLandData() async {
     try {
       final response = await http.get(
@@ -202,6 +196,25 @@ class LandPotentialService {
     } catch (e) {
       debugPrint("Error Fetch No Land Data: ${e.toString()}");
       return null;
+    }
+  }
+
+  // 8. Toggle Validasi (Poin 5: Validasi/Unvalidate otomatis)
+  Future<bool> toggleValidation(String id) async {
+    try {
+      // Menggunakan endpoint /validate-toggle yang sudah disiapkan di Go
+      final uri = Uri.parse("$baseUrl/validate-toggle/$id");
+      final headers = await _getHeaders();
+
+      final response = await http.put(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint("Error Toggle Validation Service: ${e.toString()}");
+      return false;
     }
   }
 }

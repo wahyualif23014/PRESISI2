@@ -11,10 +11,7 @@ import 'widgets/land_sub_bottom_nav.dart';
 class LandShellPage extends StatefulWidget {
   final Widget child;
 
-  const LandShellPage({
-    super.key,
-    required this.child,
-  });
+  const LandShellPage({super.key, required this.child});
 
   @override
   State<LandShellPage> createState() => _LandShellPageState();
@@ -24,11 +21,11 @@ class _LandShellPageState extends State<LandShellPage> {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    
+
     // ✅ Pantau State dari Provider
     final menuProvider = context.watch<MenuProvider>();
     final authProvider = context.watch<AuthProvider>();
-    
+
     final isAdmin = authProvider.userRole == UserRole.admin;
     final isInLandSection = RouteNames.isLandRoute(location);
 
@@ -41,7 +38,7 @@ class _LandShellPageState extends State<LandShellPage> {
         fit: StackFit.expand,
         children: [
           widget.child,
-          
+
           if (showMenu)
             Positioned.fill(
               child: GestureDetector(
@@ -51,7 +48,10 @@ class _LandShellPageState extends State<LandShellPage> {
                   duration: const Duration(milliseconds: 300),
                   builder: (context, value, _) {
                     return BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 3.0 * value, sigmaY: 3.0 * value),
+                      filter: ImageFilter.blur(
+                        sigmaX: 3.0 * value,
+                        sigmaY: 3.0 * value,
+                      ),
                       child: Container(
                         color: Colors.black.withOpacity(0.2 * value),
                       ),
@@ -60,7 +60,7 @@ class _LandShellPageState extends State<LandShellPage> {
                 ),
               ),
             ),
-          
+
           if (showMenu)
             Positioned(
               left: 0,
@@ -72,7 +72,7 @@ class _LandShellPageState extends State<LandShellPage> {
                 curve: Curves.easeOutBack,
                 builder: (context, value, child) {
                   return Opacity(
-                    opacity: value,
+                    opacity: value.clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(0, 50 * (1 - value)),
                       child: child,
@@ -80,7 +80,8 @@ class _LandShellPageState extends State<LandShellPage> {
                   );
                 },
                 child: LandSubBottomNav(
-                  onClose: () => context.read<MenuProvider>().toggleLandMenu(false),
+                  onClose:
+                      () => context.read<MenuProvider>().toggleLandMenu(false),
                 ),
               ),
             ),

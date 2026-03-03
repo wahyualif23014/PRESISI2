@@ -79,6 +79,16 @@ func main() {
 			potensi.GET("/summary", controllers.GetSummaryLahan)
 			potensi.GET("/no-potential", controllers.GetNoPotentialLahan)
 			potensi.GET("/filter-options", controllers.GetFilterOptions)
+
+			// Endpoint Baru
+			potensi.PUT("/validate-toggle/:id", controllers.ToggleValidation) // Gunakan ini untuk Flutter
+			potensi.PUT("/validate/:id", controllers.ValidatePotensiLahan)
+			potensi.PUT("/unvalidate/:id", controllers.UnvalidatePotensiLahan)
+
+			// Update & Delete umum
+			potensi.PUT("/:id", controllers.UpdatePotensiLahan)
+			potensi.DELETE("/:id", controllers.DeletePotensiLahan)
+
 			potensi.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.CreatePotensiLahan)
 		}
 

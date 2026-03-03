@@ -19,7 +19,7 @@ class OverviewPage extends StatefulWidget {
 class _OverviewPageState extends State<OverviewPage> {
   final LandPotentialService _service = LandPotentialService();
 
-  // REFAKTOR: Tambahkan GlobalKey untuk memicu update widget summary
+  // Key untuk mengakses fungsi fetch di dalam widget summary
   final GlobalKey<LandSummaryWidgetState> _summaryKey = GlobalKey();
   final GlobalKey<NoLandPotentialWidgetState> _noLandKey = GlobalKey();
 
@@ -37,7 +37,7 @@ class _OverviewPageState extends State<OverviewPage> {
     _fetchData();
   }
 
-  // REFAKTOR: Fungsi untuk menyegarkan angka-angka summary
+  // Poin 5: Menyegarkan data statistik saat data utama berubah
   void _refreshSummaries() {
     _summaryKey.currentState?.fetchSummaryData();
     _noLandKey.currentState?.fetchData();
@@ -47,23 +47,27 @@ class _OverviewPageState extends State<OverviewPage> {
     String keyword = "",
     Map<String, String>? filters,
   }) async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _isError = false;
     });
 
     if (filters != null) _activeFilters = filters;
+    // Jika keyword kosong dikirim, kita tetap pakai _currentSearch yang lama kecuali direset
     if (keyword.isNotEmpty) _currentSearch = keyword;
 
     try {
-      // Ambil nilai dari filter dan pastikan tidak null
       String? polresVal = _activeFilters?['polres'];
       String? polsekVal = _activeFilters?['polsek'];
+      String? statusVal = _activeFilters?['status'];
 
       final List<LandPotentialModel> data = await _service.fetchLandData(
         search: keyword.isNotEmpty ? keyword : _currentSearch,
-        polres: polresVal, // Data ini dikirim ke API
+        polres: polresVal,
         polsek: polsekVal,
+        status: statusVal ?? '',
         page: _currentPage,
         limit: _limitPerPage,
       );
@@ -71,17 +75,18 @@ class _OverviewPageState extends State<OverviewPage> {
       Map<String, List<LandPotentialModel>> grouped = {};
 
       if (data.isEmpty) {
-        setState(() {
-          _groupedData = {};
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _groupedData = {};
+            _isLoading = false;
+          });
+        }
       } else {
+        // Pengelompokan berdasarkan Kabupaten/Resor hasil JOIN Backend
         for (var item in data) {
-          // Gunakan format string yang lebih rapi untuk header grup
-          String fullRegion =
-              "POLRES ${item.kabupaten} - POLSEK ${item.kecamatan}";
-          if (!grouped.containsKey(fullRegion)) grouped[fullRegion] = [];
-          grouped[fullRegion]!.add(item);
+          String kabName = item.kabupaten.toUpperCase();
+          if (!grouped.containsKey(kabName)) grouped[kabName] = [];
+          grouped[kabName]!.add(item);
         }
 
         if (mounted) {
@@ -93,6 +98,7 @@ class _OverviewPageState extends State<OverviewPage> {
         }
       }
     } catch (e) {
+      debugPrint("Error OverviewPage Fetch: $e");
       if (mounted) {
         setState(() {
           _isError = true;
@@ -108,78 +114,63 @@ class _OverviewPageState extends State<OverviewPage> {
       color: Colors.white,
       child: Column(
         children: [
+          // Toolbar untuk Search, Filter, dan Tambah
           LandPotentialToolbar(
             onSearchChanged: _onSearch,
             onFilterTap: _onFilterTap,
-            onAddTap:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (c) => const AddLandDataPage()),
-                ).then((_) => _fetchData()),
+            onAddTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (c) => const AddLandDataPage()),
+              );
+              if (result == true) _fetchData();
+            },
           ),
           Expanded(
-            child: ListView(
-              children: [
-                LandSummaryWidget(key: _summaryKey),
-                NoLandPotentialWidget(key: _noLandKey),
+            child: RefreshIndicator(
+              onRefresh: () => _fetchData(),
+              color: const Color(0xFF0097B2),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  LandSummaryWidget(key: _summaryKey),
+                  NoLandPotentialWidget(key: _noLandKey),
+                  _buildHeaderPembatas("DAFTAR POTENSI LAHAN"),
 
-                _buildHeaderPembatas("DAFTAR POTENSI LAHAN"),
-
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(50),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF0097B2),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(80),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF0097B2),
+                        ),
                       ),
-                    ),
-                  )
-                else if (_groupedData.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Column(
-                      children: [
-                        const Text("🔍", style: TextStyle(fontSize: 50)),
-                        const SizedBox(height: 16),
-                        const Text(
-                          "Data tidak ditemukan",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const Text(
-                          "Coba ubah filter atau kata kunci pencarian kamu",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            _activeFilters = null;
-                            _currentSearch = "";
-                            _fetchData();
-                          },
-                          child: const Text("Reset Filter"),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ..._groupedData.entries.map(
-                    (entry) => KabupatenExpansionTile(
-                      kabupatenName: entry.key,
-                      itemsInKabupaten: entry.value,
-                      onEdit:
-                          (item) => Navigator.push(
+                    )
+                  else if (_isError)
+                    _buildErrorState()
+                  else if (_groupedData.isEmpty)
+                    _buildEmptyState()
+                  else
+                    ..._groupedData.entries.map(
+                      (entry) => KabupatenExpansionTile(
+                        kabupatenName: entry.key,
+                        itemsInKabupaten: entry.value,
+                        onEdit: (item) async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (c) => AddLandDataPage(editData: item),
                             ),
-                          ).then((_) => _fetchData()),
-                      onDelete: (item) => _confirmDelete(item),
+                          );
+                          if (result == true) _fetchData();
+                        },
+                        onDelete: (item) => _confirmDelete(item),
+                        onRefresh: () => _fetchData(),
+                      ),
                     ),
-                  ),
-              ],
+                  const SizedBox(height: 50),
+                ],
+              ),
             ),
           ),
         ],
@@ -189,6 +180,7 @@ class _OverviewPageState extends State<OverviewPage> {
 
   void _onSearch(String val) {
     _currentPage = 1;
+    _currentSearch = val;
     _fetchData(keyword: val);
   }
 
@@ -203,6 +195,8 @@ class _OverviewPageState extends State<OverviewPage> {
             },
             onReset: () {
               _activeFilters = null;
+              _currentSearch = "";
+              _currentPage = 1;
               _fetchData();
             },
           ),
@@ -214,21 +208,100 @@ class _OverviewPageState extends State<OverviewPage> {
       context: context,
       builder:
           (c) => AlertDialog(
-            title: const Text("Hapus Data"),
+            title: const Text(
+              "Hapus Data",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              "Apakah kamu yakin ingin menghapus data lahan di ${item.alamatLahan}?",
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(c),
-                child: const Text("Batal"),
+                child: const Text(
+                  "BATAL",
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: () async {
                   Navigator.pop(c);
-                  if (await _service.deleteLandData(item.id)) _fetchData();
+                  setState(() => _isLoading = true);
+                  bool success = await _service.deleteLandData(item.id);
+
+                  if (success) {
+                    _fetchData();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Data berhasil dihapus"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    setState(() => _isLoading = false);
+                  }
                 },
-                child: const Text("Hapus"),
+                child: const Text(
+                  "HAPUS",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          const Text("🔍", style: TextStyle(fontSize: 50)),
+          const SizedBox(height: 16),
+          const Text(
+            "Data tidak ditemukan",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const Text(
+            "Coba ubah filter atau kata kunci pencarian kamu",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
+          ),
+          TextButton(
+            onPressed: () {
+              _activeFilters = null;
+              _currentSearch = "";
+              _fetchData();
+            },
+            child: const Text("Reset Filter"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 50),
+            const SizedBox(height: 16),
+            const Text(
+              "Gagal memuat data",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () => _fetchData(),
+              child: const Text("Coba Lagi"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -236,11 +309,15 @@ class _OverviewPageState extends State<OverviewPage> {
     margin: const EdgeInsets.all(16),
     padding: const EdgeInsets.only(left: 12),
     decoration: const BoxDecoration(
-      border: Border(left: BorderSide(color: Colors.black, width: 4)),
+      border: Border(left: BorderSide(color: Color(0xFF0097B2), width: 4)),
     ),
     child: Text(
       title,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1,
+      ),
     ),
   );
 }

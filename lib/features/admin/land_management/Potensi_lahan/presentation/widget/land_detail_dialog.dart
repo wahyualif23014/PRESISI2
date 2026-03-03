@@ -3,20 +3,141 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/model/land_potential_model.dart';
+import '../../data/service/land_potential_service.dart';
 
-class LandDetailDialog extends StatelessWidget {
+class LandDetailDialog extends StatefulWidget {
   final LandPotentialModel data;
 
   const LandDetailDialog({super.key, required this.data});
 
+  @override
+  State<LandDetailDialog> createState() => _LandDetailDialogState();
+}
+
+class _LandDetailDialogState extends State<LandDetailDialog> {
+  final LandPotentialService _service = LandPotentialService();
+  bool isValidated = false;
+  bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialValidation();
+  }
+
+  void _checkInitialValidation() {
+    // Validasi berdasarkan nama validator yang ada di model
+    final v = widget.data.namaValidator.trim();
+    setState(() {
+      isValidated = v != "" && v != "null" && v != "-" && v != "0";
+    });
+  }
+
   Future<void> _openMaps() async {
-    final String query = Uri.encodeComponent(data.alamatLahan);
-    final Uri url = Uri.parse(
-      "https://www.google.com/maps/search/?api=1&query=$query",
-    );
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Tidak dapat membuka peta');
+    // Menggunakan koordinat asli jika tersedia, jika tidak gunakan alamat
+    String googleMapsUrl = "";
+    if (widget.data.latitude != "0" && widget.data.longitude != "0") {
+      googleMapsUrl =
+          "https://www.google.com/maps/search/?api=1&query=${widget.data.latitude},${widget.data.longitude}";
+    } else {
+      final String query = Uri.encodeComponent(widget.data.alamatLahan);
+      googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$query";
     }
+
+    final Uri url = Uri.parse(googleMapsUrl);
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Tidak bisa membuka link peta';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal membuka peta: $e")));
+      }
+    }
+  }
+
+  Future<void> _handleValidation() async {
+    if (isValidated) {
+      _showUnvalidateConfirmation();
+    } else {
+      setState(() => _isProcessing = true);
+
+      // Poin 5: Menjalankan toggle validation melalui service
+      bool success = await _service.toggleValidation(widget.data.id);
+
+      if (success && mounted) {
+        setState(() {
+          isValidated = true;
+          _isProcessing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Data berhasil divalidasi"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Refresh halaman utama
+      } else {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  void _showUnvalidateConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            "Konfirmasi",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            "Data ini sudah divalidasi. Apakah kamu ingin membatalkan validasi (unvalidate) kembali?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("BATAL", style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                setState(() => _isProcessing = true);
+
+                bool success = await _service.toggleValidation(widget.data.id);
+
+                if (success && mounted) {
+                  setState(() {
+                    isValidated = false;
+                    _isProcessing = false;
+                  });
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Status validasi dibatalkan"),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  Navigator.pop(this.context, true);
+                }
+              },
+              child: const Text(
+                "YA, UNVALIDATE",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -28,7 +149,7 @@ class LandDetailDialog extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // HEADER DIALOG
+          // HEADER
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: const BoxDecoration(
@@ -55,132 +176,150 @@ class LandDetailDialog extends StatelessWidget {
               ],
             ),
           ),
-
+          // CONTENT
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // SECTION 1: LOKASI
+                  // SECTION: WILAYAH
                   _buildSection(
-                    Icons.location_on_outlined,
-                    "Lokasi Lahan",
-                    Colors.orange,
-                    [
-                      _row("Resor", data.resor),
-                      _row("Sektor", data.sektor),
-                      _row(
-                        "Wilayah",
-                        "Desa ${data.desa}, Kec. ${data.kecamatan}, Kab. ${data.kabupaten}",
-                      ),
-                      _row("Alamat", data.alamatLahan),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: _openMaps,
-                        child: const Text(
-                          "LIHAT LOKASI DI GOOGLE MAPS",
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // SECTION 2: PERSONEL
-                  _buildSection(
-                    Icons.person_outline,
-                    "Personel & Pengelola",
+                    Icons.account_balance_rounded,
+                    "Wilayah",
                     Colors.blue,
                     [
                       _row(
-                        "Polisi",
-                        "${data.policeName} (${data.policePhone})",
+                        "Kepolisian Resor",
+                        "POLRES ${widget.data.kabupaten}",
                       ),
-                      _row("PJ Lahan", "${data.picName} (${data.picPhone})"),
-                      _row("Poktan", data.jumlahPoktan.toString()),
-                      _row("Petani", "${data.jumlahPetani} Orang"),
+                      _row(
+                        "Kepolisian Sektor",
+                        "POLSEK ${widget.data.kecamatan}",
+                      ),
+                      _row(
+                        "Wilayah Lahan",
+                        "Desa ${widget.data.desa} Kecamatan ${widget.data.kecamatan} Kabupaten ${widget.data.kabupaten}",
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // SECTION 3: KOMODITAS (REFACTORED)
-                  _buildSection(Icons.grass, "Data Komoditas", Colors.green, [
-                    _row("Jenis Lahan", data.jenisLahan),
-                    _row("Luas", "${data.luasLahan.toStringAsFixed(2)} Ha"),
-                    _row("Jenis Komoditi", data.komoditi),
-                    _row(
-                      "Nama Poktan",
-                      data.keterangan,
-                    ), // Mengambil dari kolom poktan
-                  ]),
+                  // SECTION: PERSONEL
+                  _buildSection(
+                    Icons.people_alt_rounded,
+                    "Personel",
+                    Colors.teal,
+                    [
+                      _row(
+                        "Polisi Penggerak",
+                        "${widget.data.policeName} (${widget.data.policePhone})",
+                      ),
+                      _row(
+                        "Penanggung Jawab",
+                        "${widget.data.picName} (${widget.data.picPhone})",
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
 
-                  // SECTION 4: DOKUMENTASI
+                  // SECTION: DETAIL LAHAN
+                  // Bagian Informasi Lahan
                   _buildSection(
-                    Icons.camera_alt_outlined,
-                    "Dokumentasi Lahan",
+                    Icons.grass_rounded,
+                    "Informasi Lahan",
+                    Colors.green,
+                    [
+                      _row("Jenis Lahan", widget.data.jenisLahan),
+                      _row(
+                        "Keterangan",
+                        widget.data.keterangan,
+                      ), // Tampilkan isi ketcp
+                      _row(
+                        "Jumlah Poktan",
+                        widget.data.jumlahPoktan.toString(),
+                      ), // Tampilkan isi poktan
+                      _row(
+                        "Luas Lahan",
+                        "${widget.data.luasLahan.toStringAsFixed(2)} Ha",
+                      ),
+                      _row(
+                        "Jumlah Petani",
+                        widget.data.jumlahPetani.toString(),
+                      ),
+                      _row("Komoditi", widget.data.komoditi),
+                      _row("Alamat Lahan", widget.data.alamatLahan),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // SECTION: DOKUMENTASI
+                  _buildSection(
+                    Icons.camera_alt_rounded,
+                    "Foto Lahan",
                     Colors.purple,
                     [
                       const SizedBox(height: 8),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: _buildImageFromData(data.fotoLahan),
+                        borderRadius: BorderRadius.circular(12),
+                        child: _buildImageFromData(widget.data.fotoLahan),
                       ),
-                      if (data.fotoLahan.isNotEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            "* Foto diproses langsung dari database dokumentasi",
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                  // SECTION 5: LOG AKTIVITAS (REFACTORED - GABUNG NAMA & TGL)
+                  // SECTION: LOG & LAINNYA
                   _buildSection(
-                    Icons.history,
-                    "Log Aktivitas",
+                    Icons.history_toggle_off_rounded,
+                    "Lainnya",
                     Colors.blueGrey,
                     [
-                      _row("Diproses Oleh", data.infoProses),
-                      _row("Validasi Oleh", data.infoValidasi),
+                      _row(
+                        "Keterangan Lain",
+                        widget.data.keteranganLain,
+                      ), // Poin 1
+                      _row("Diproses Oleh", widget.data.infoProses), // Poin 3
+                      _row(
+                        "Divalidasi Oleh",
+                        isValidated ? widget.data.infoValidasi : "-",
+                      ), // Poin 4
                     ],
                   ),
-
                   const SizedBox(height: 24),
 
-                  // TOMBOL AKSI
+                  // BUTTON VALIDASI (POIN 5)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor:
+                            _isProcessing
+                                ? Colors.grey
+                                : (isValidated ? Colors.orange : Colors.green),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      onPressed: () {
-                        // Logika validasi data
-                      },
-                      child: const Text(
-                        "VALIDASI DATA SEKARANG",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
+                      onPressed: _isProcessing ? null : _handleValidation,
+                      child:
+                          _isProcessing
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : Text(
+                                isValidated
+                                    ? "BATALKAN VALIDASI"
+                                    : "VALIDASI DATA SEKARANG",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                     ),
                   ),
                 ],
@@ -192,34 +331,47 @@ class LandDetailDialog extends StatelessWidget {
     );
   }
 
-  // FUNGSI UNTUK MERUBAH TEKS SQL MENJADI GAMBAR (DENGAN PEMBERSIHAN DATA)
-  Widget _buildImageFromData(String photoData) {
-    if (photoData.isEmpty || photoData == "null") {
-      return _emptyImage();
-    }
+  Widget _buildPhoto() {
+    if (widget.data.fotoLahan.isEmpty) return const SizedBox();
 
     try {
-      // 1. Bersihkan prefix data:image jika ada
+      // Membersihkan header Base64 jika ada (misal: "data:image/png;base64,")
+      String base64String = widget.data.fotoLahan;
+      if (base64String.contains(',')) {
+        base64String = base64String.split(',').last;
+      }
+
+      Uint8List bytes = base64Decode(base64String);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        errorBuilder:
+            (context, error, stackTrace) => const Icon(Icons.broken_image),
+      );
+    } catch (e) {
+      return const Icon(Icons.error);
+    }
+  }
+
+  Widget _buildImageFromData(String photoData) {
+    if (photoData.isEmpty || photoData == "null" || photoData == "-") {
+      return _emptyImage();
+    }
+    try {
       String cleanBase64 =
           photoData.contains(',') ? photoData.split(',').last : photoData;
-
-      // 2. Bersihkan karakter ilegal (spasi, newline, carriage return)
       cleanBase64 = cleanBase64
           .trim()
           .replaceAll('\n', '')
           .replaceAll('\r', '')
           .replaceAll(' ', '');
-
-      // 3. Tambahkan padding '=' jika panjang string tidak sesuai (Kelipatan 4)
       while (cleanBase64.length % 4 != 0) {
         cleanBase64 += '=';
       }
-
       Uint8List bytes = base64Decode(cleanBase64);
-
       return Image.memory(
         bytes,
-        height: 180,
+        height: 200,
         width: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => _emptyImage(),
@@ -233,7 +385,10 @@ class LandDetailDialog extends StatelessWidget {
     return Container(
       height: 150,
       width: double.infinity,
-      color: Colors.grey.shade100,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -262,8 +417,11 @@ class LandDetailDialog extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,12 +435,12 @@ class LandDetailDialog extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 13,
                 ),
               ),
             ],
           ),
-          const Divider(height: 24),
+          const Divider(height: 24, thickness: 0.5),
           ...items,
         ],
       ),
@@ -296,16 +454,24 @@ class LandDetailDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 85,
+            width: 110,
             child: Text(
               label,
-              style: const TextStyle(color: Colors.grey, fontSize: 11),
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value.isEmpty || value == "null" ? "-" : value,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
