@@ -8,49 +8,45 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/router/router_provider.dart';
 
-// --- PROVIDERS FEATURES ---
+// --- PROVIDERS FEATURES (Unified) ---
+// Gunakan satu DashboardProvider dari folder utama/admin untuk semua role
 import 'package:KETAHANANPANGAN/features/admin/dashboard/providers/dashboard_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
-import 'package:KETAHANANPANGAN/features/operator/dashboard/providers/dashboard_provider.dart';
-import 'package:KETAHANANPANGAN/features/view/dashboard/providers/dashboard_provider.dart';
 
 Future<void> main() async {
   // 1. Pastikan binding engine Flutter sudah siap
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inisialisasi format tanggal Indonesia (Wajib untuk Recap & Laporan)
+  // 2. Inisialisasi format tanggal Indonesia (id_ID)
   await initializeDateFormatting('id_ID');
 
-  // 3. Inisialisasi AuthProvider & Restore Session (Auto Login)
+  // 3. Inisialisasi AuthProvider & Restore Session (Auto Login via Secure Storage)
   final authProvider = AuthProvider();
   await authProvider.tryAutoLogin();
 
-  // 4. Inisialisasi Router dengan instance authProvider untuk Redirect Logic
+  // 4. Inisialisasi Router dengan instance authProvider
   final appRouter = AppRouter(authProvider);
 
   runApp(
     MultiProvider(
       providers: [
-        // Gunakan .value untuk authProvider karena sudah diinisialisasi di atas
+        // Master Auth & Menu
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
 
-        // Feature Providers
+        // Feature Providers (Unified)
+        // Cukup panggil satu DashboardProvider untuk Admin, Operator, dan View
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        
         ChangeNotifierProvider(create: (_) => PersonelProvider()),
         ChangeNotifierProvider(create: (_) => UnitProvider()),
         ChangeNotifierProvider(create: (_) => RegionProvider()),
         ChangeNotifierProvider(create: (_) => JabatanProvider()),
         ChangeNotifierProvider(create: (_) => CommodityProvider()),
-        // Tambahkan Provider lain di sini jika sudah siap (misal: LandProvider)
-
-        // bagian operator
-        ChangeNotifierProvider(create: (_) => OperatorDashboardProvider()),
-        ChangeNotifierProvider(create: (_) => ViewerDashboardProvider()),
       ],
       child: MyApp(appRouter: appRouter),
     ),
@@ -67,10 +63,10 @@ class MyApp extends StatelessWidget {
       title: 'Ketahanan Pangan Presisi',
       debugShowCheckedModeBanner: false,
 
-      // Menggunakan GoRouter untuk navigasi terpusat
+      // Konfigurasi GoRouter
       routerConfig: appRouter.router,
 
-      // Konfigurasi Lokalisasi (Bahasa)
+      // Konfigurasi Lokalisasi (Wajib untuk format angka dan tanggal ID)
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -83,7 +79,7 @@ class MyApp extends StatelessWidget {
       theme: _appTheme,
       themeMode: ThemeMode.light,
 
-      // Error Handling Global (Safe View)
+      // Global Safe Error View
       builder: (context, child) {
         ErrorWidget.builder = (FlutterErrorDetails details) {
           return _SafeErrorView(errorMessage: details.exceptionAsString());
@@ -94,12 +90,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// --- THEME DATA ---
+// --- GLOBAL THEME DATA ---
 final ThemeData _appTheme = ThemeData(
   useMaterial3: true,
   fontFamily: 'Ramabhadra',
   colorScheme: ColorScheme.fromSeed(
-    seedColor: const Color(0xFF10B981), // Emerald/Hijau Ketahanan Pangan
+    seedColor: const Color(0xFF10B981), // Emerald Green
     brightness: Brightness.light,
   ),
   appBarTheme: const AppBarTheme(
@@ -111,10 +107,10 @@ final ThemeData _appTheme = ThemeData(
   scaffoldBackgroundColor: const Color(0xFFF8FAFC),
 );
 
-// --- GLOBAL ERROR VIEW ---
+// --- GLOBAL ERROR VIEW (UI Debugging) ---
 class _SafeErrorView extends StatelessWidget {
   final String? errorMessage;
-  const _SafeErrorView({this.errorMessage});
+  const _SafeErrorView({super.key, this.errorMessage});
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +121,7 @@ class _SafeErrorView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.bug_report_outlined,
-                size: 64,
-                color: Colors.redAccent,
-              ),
+              const Icon(Icons.bug_report_outlined, size: 64, color: Colors.redAccent),
               const SizedBox(height: 16),
               const Text(
                 'Terjadi Kesalahan UI',

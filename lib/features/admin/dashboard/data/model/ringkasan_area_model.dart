@@ -1,37 +1,51 @@
 import 'package:flutter/material.dart';
 
-enum LandCategory {
-  productive,   // Produktif -> Icon Gear
-  forestry,     // Perhutanan -> Icon Pohon
-  agriculture,  
-  religious,    
-  other,        
-}
-
 class RingkasanAreaItemModel {
-  final LandCategory category;
   final String label;
-  final double value;
+  final double value; // HA
+  final int count;    // LOKASI (Tambahan)
 
   const RingkasanAreaItemModel({
-    required this.category,
     required this.label,
     required this.value,
+    required this.count,
   });
+
+  factory RingkasanAreaItemModel.fromJson(Map<String, dynamic> json) {
+    return RingkasanAreaItemModel(
+      label: json['label'] ?? '',
+      value: (json['value'] as num?)?.toDouble() ?? 0.0,
+      count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 class RingkasanAreaModel {
-  final String title;            // Judul bawah (Ex: "Total Potensi Lahan...")
-  final double totalValue;       // Angka besar di kanan atas (Ex: 430.98)
-  final Color backgroundColor;   // Warna kartu (Biru/Hijau/Merah)
-  final bool isDetailed;         // Logika UI: True = List Panjang, False = Grid Compact
-  final List<RingkasanAreaItemModel> items; // Daftar item data kecil-kecil
+  final String title;
+  final double totalValue;
+  final Color backgroundColor;
+  final List<RingkasanAreaItemModel> items;
 
   const RingkasanAreaModel({
     required this.title,
     required this.totalValue,
     required this.backgroundColor,
     required this.items,
-    this.isDetailed = false,
   });
+
+  factory RingkasanAreaModel.fromJson(Map<String, dynamic> json) {
+    return RingkasanAreaModel(
+      title: json['title'] ?? '',
+      totalValue: (json['total_value'] as num?)?.toDouble() ?? 0.0,
+      backgroundColor: _parseColor(json['background_color']),
+      items: (json['items'] as List? ?? [])
+          .map((e) => RingkasanAreaItemModel.fromJson(e))
+          .toList(),
+    );
+  }
+
+  static Color _parseColor(String? hex) {
+    if (hex == null) return Colors.blue;
+    return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+  }
 }

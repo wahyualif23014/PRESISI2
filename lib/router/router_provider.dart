@@ -1,19 +1,19 @@
-import 'package:KETAHANANPANGAN/features/operator/dashboard/presentation/operator_dashboard_page.dart' show OperatorDashboardPage;
-import 'package:KETAHANANPANGAN/features/view/dashboard/presentation/dashboard_page.dart' show ViewerDashboardPage;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'route_names.dart';
 
 // --- AUTH & CORE ---
 import '../../auth/provider/auth_provider.dart';
-import '../../auth/models/role_enum.dart'; 
+import '../../auth/models/role_enum.dart';
 import '../../auth/pages/login_screen.dart';
 import '../../presentation/main_layout.dart';
 import '../../presentation/profile/profile_page.dart';
 import '../../splash/pages/custom_splash_screen.dart';
 
 // --- FEATURE PAGES ---
-import '../../features/admin/dashboard/presentation/dashboard_page.dart' as admin;
+import '../../features/admin/dashboard/presentation/dashboard_page.dart'
+    as admin;
 import '../../features/admin/personnel/presentation/personel_page.dart';
 import '../../features/admin/recap/page_recap.dart';
 import '../../features/admin/main_data/units/units.dart';
@@ -30,8 +30,12 @@ class AppRouter {
   final AuthProvider authProvider;
   AppRouter(this.authProvider);
 
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
-  static final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
+  static final _rootNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'root',
+  );
+  static final _shellNavigatorKey = GlobalKey<NavigatorState>(
+    debugLabel: 'shell',
+  );
 
   late final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -46,8 +50,8 @@ class AppRouter {
 
       if (location == RouteNames.splash) return null;
 
-      final isAuthRoute = location == RouteNames.login || 
-                          location == RouteNames.register;
+      final isAuthRoute =
+          location == RouteNames.login || location == RouteNames.register;
 
       if (!isLoggedIn) {
         return isAuthRoute ? null : RouteNames.login;
@@ -64,11 +68,10 @@ class AppRouter {
       return null;
     },
 
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Route tidak ditemukan: ${state.uri.path}'),
-      ),
-    ),
+    errorBuilder:
+        (context, state) => Scaffold(
+          body: Center(child: Text('Route tidak ditemukan: ${state.uri.path}')),
+        ),
 
     routes: [
       // --- SPLASH & LOGIN ---
@@ -89,23 +92,15 @@ class AppRouter {
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => MainLayout(child: child),
         routes: [
-          
           // DASHBOARD
+          // Di dalam AppRouter rute Dashboard
           GoRoute(
             path: RouteNames.dashboard,
             name: RouteNames.dashboard,
             pageBuilder: (context, state) {
-              final role = authProvider.userRole;
-              switch (role) {
-                case UserRole.admin:
-                  return NoTransitionPage(child: admin.DashboardPage());
-                case UserRole.operator:
-                  return const NoTransitionPage(child: OperatorDashboardPage());
-                case UserRole.view:
-                  return const NoTransitionPage(child: ViewerDashboardPage());
-                default:
-                  return const NoTransitionPage(child: PageRecap());
-              }
+              // Arahkan semua role ke DashboardPage utama.
+              // DashboardPage akan menentukan widget mana yang muncul berdasarkan role di AuthProvider.
+              return const NoTransitionPage(child: admin.DashboardPage());
             },
           ),
 
@@ -113,18 +108,38 @@ class AppRouter {
           GoRoute(
             path: RouteNames.personnel,
             name: RouteNames.personnel,
-            pageBuilder: (_, __) => const NoTransitionPage(child: PersonelPage()),
+            pageBuilder:
+                (_, __) => const NoTransitionPage(child: PersonelPage()),
           ),
 
           // DATA UTAMA (Shell Popup untuk Admin)
           ShellRoute(
             builder: (context, state, child) => MainDataShellPage(child: child),
             routes: [
-              GoRoute(path: RouteNames.data, redirect: (_, __) => RouteNames.dataUnits),
-              GoRoute(path: RouteNames.dataUnits, pageBuilder: (_, __) => const NoTransitionPage(child: UnitsPage())),
-              GoRoute(path: RouteNames.dataPositions, pageBuilder: (_, __) => const NoTransitionPage(child: PositionPage())),
-              GoRoute(path: RouteNames.dataRegions, pageBuilder: (_, __) => const NoTransitionPage(child: RegionsPage())),
-              GoRoute(path: RouteNames.dataCommodities, pageBuilder: (_, __) => const NoTransitionPage(child: ComoditiesPage())),
+              GoRoute(
+                path: RouteNames.data,
+                redirect: (_, __) => RouteNames.dataUnits,
+              ),
+              GoRoute(
+                path: RouteNames.dataUnits,
+                pageBuilder:
+                    (_, __) => const NoTransitionPage(child: UnitsPage()),
+              ),
+              GoRoute(
+                path: RouteNames.dataPositions,
+                pageBuilder:
+                    (_, __) => const NoTransitionPage(child: PositionPage()),
+              ),
+              GoRoute(
+                path: RouteNames.dataRegions,
+                pageBuilder:
+                    (_, __) => const NoTransitionPage(child: RegionsPage()),
+              ),
+              GoRoute(
+                path: RouteNames.dataCommodities,
+                pageBuilder:
+                    (_, __) => const NoTransitionPage(child: ComoditiesPage()),
+              ),
             ],
           ),
 
@@ -139,18 +154,23 @@ class AppRouter {
               ),
               GoRoute(
                 path: RouteNames.landOverview,
-                name: RouteNames.landOverview, // Gunakan konstanta agar konsisten
-                pageBuilder: (_, __) => const NoTransitionPage(child: OverviewPage()),
+                name:
+                    RouteNames.landOverview, // Gunakan konstanta agar konsisten
+                pageBuilder:
+                    (_, __) => const NoTransitionPage(child: OverviewPage()),
               ),
               GoRoute(
                 path: RouteNames.landPlots,
                 name: RouteNames.landPlots,
-                pageBuilder: (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
+                pageBuilder:
+                    (_, __) => const NoTransitionPage(child: KelolaLahanPage()),
               ),
               GoRoute(
                 path: RouteNames.landCrops,
                 name: RouteNames.landCrops,
-                pageBuilder: (_, __) => const NoTransitionPage(child: RiwayatKelolaLahanPage()),
+                pageBuilder:
+                    (_, __) =>
+                        const NoTransitionPage(child: RiwayatKelolaLahanPage()),
               ),
             ],
           ),

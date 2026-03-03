@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Ganti SharedPrefs jadi ini
 
 class AdminService {
-  final String baseUrl = 'http://192.168.100.195:8080'; 
+  final String baseUrl = 'http://10.243.68.231:8080'; 
   final _storage = const FlutterSecureStorage();
 
   // Helper Private: Ambil Token dari SecureStorage (Bukan SharedPreferences lagi)

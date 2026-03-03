@@ -27,8 +27,10 @@ func init() {
 func main() {
 	r := gin.Default()
 
+	// Static routes for images
 	r.GET("/uploads/:filename", controllers.GetImageFromDB)
 
+	// CORS Configuration
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -38,16 +40,22 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Utility routes
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "SIKAP PRESISI Backend v2.0 Online"})
 	})
 
+	// Public Auth routes
 	r.POST("/login", controllers.Login)
 
+	// API Group with Middleware Authentication
 	api := r.Group("/api")
 	api.Use(middleware.RequireAuth)
 	{
+		// === DASHBOARD AGGREGATION ===
+		api.GET("/dashboard", controllers.GetDashboardData)
+
 		// A. ADMIN ONLY
 		admin := api.Group("/admin")
 		admin.Use(middleware.RequireRoles(models.RoleAdmin))
@@ -72,7 +80,7 @@ func main() {
 			admin.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
 		}
 
-		// B. POTENSI LAHAN (Sesuai Log: /api/potensi-lahan)
+		// B. POTENSI LAHAN
 		potensi := api.Group("/potensi-lahan")
 		{
 			potensi.GET("", controllers.GetPotensiLahan)
@@ -80,19 +88,20 @@ func main() {
 			potensi.GET("/no-potential", controllers.GetNoPotentialLahan)
 			potensi.GET("/filter-options", controllers.GetFilterOptions)
 
-			// Endpoint Baru
-			potensi.PUT("/validate-toggle/:id", controllers.ToggleValidation) // Gunakan ini untuk Flutter
+			// Validation endpoints
+			potensi.PUT("/validate-toggle/:id", controllers.ToggleValidation)
 			potensi.PUT("/validate/:id", controllers.ValidatePotensiLahan)
 			potensi.PUT("/unvalidate/:id", controllers.UnvalidatePotensiLahan)
 
-			// Update & Delete umum
+			// General CRUD
 			potensi.PUT("/:id", controllers.UpdatePotensiLahan)
 			potensi.DELETE("/:id", controllers.DeletePotensiLahan)
 
+			// Create with role restriction
 			potensi.POST("", middleware.RequireRoles(models.RoleAdmin, models.RoleOperator), controllers.CreatePotensiLahan)
 		}
 
-		// C. KELOLA LAHAN (Sesuai Log: /api/kelola-lahan)
+		// C. KELOLA LAHAN
 		kelola := api.Group("/kelola-lahan")
 		{
 			kelola.GET("/", controllers.GetKelolaList)
@@ -100,7 +109,7 @@ func main() {
 			kelola.GET("/filters", controllers.GetKelolaFilterOptions)
 		}
 
-		// D. RIWAYAT LAHAN (Sesuai Log: /api/riwayat-lahan)
+		// D. RIWAYAT LAHAN
 		riwayat := api.Group("/riwayat-lahan")
 		{
 			riwayat.GET("/", controllers.GetRiwayatList)
@@ -108,7 +117,7 @@ func main() {
 			riwayat.GET("/filter-options", controllers.GetRiwayatFilterOptions)
 		}
 
-		// E. REKAPITULASI (Sesuai Log: /api/rekapitulasi)
+		// E. REKAPITULASI
 		rekap := api.Group("/rekapitulasi")
 		{
 			rekap.GET("", controllers.GetRecapData)

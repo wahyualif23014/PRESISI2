@@ -9,7 +9,7 @@ import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
   // Gunakan IP server yang sesuai dengan konfigurasi backend Go kamu
-  final String baseUrl = "http://192.168.100.195:8080/api/potensi-lahan";
+  final String baseUrl = "http://10.243.68.231:8080/api/potensi-lahan";
   final _storage = const FlutterSecureStorage();
 
   // Helper untuk mengambil token JWT

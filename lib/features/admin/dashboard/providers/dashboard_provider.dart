@@ -1,45 +1,54 @@
 import 'package:flutter/material.dart';
-
-import '../data/model/dashboard_ui_model.dart';
-import '../data/services/dashboard_service.dart';
+import '../data/model/dashboard_data_response.dart';
+import '../data/services/dashboard_service.dart' show DashboardService;
 
 class DashboardProvider with ChangeNotifier {
   final DashboardService _service = DashboardService();
-
-  // --- STATE ---
-  DashboardUiModel? _data;
+  
+  DashboardDataResponse? _dashboardData;
   bool _isLoading = false;
-  String? _errorMessage;
+  String _errorMessage = '';
 
-  // --- GETTERS ---
-  DashboardUiModel? get data => _data;
+  DashboardDataResponse? get dashboardData => _dashboardData;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
+  String get errorMessage => _errorMessage;
 
-  // --- ACTIONS ---
-
-  Future<void> fetchDashboardData() async {
-    // 1. Set Loading State
+  Future<void> fetchDashboard({
+    String? resor,
+    String? sektor,
+    String? idJenisLahan,
+    String? idKomoditi,
+    String? tahun,
+    String? kwartal,
+    String? tglMulai,
+    String? tglSelesai,
+  }) async {
     _isLoading = true;
-    _errorMessage = null;
+    _errorMessage = '';
     notifyListeners();
 
     try {
-      final result = await _service.getDashboardData();
+      final result = await _service.getDashboardData(
+        resor: resor,
+        sektor: sektor,
+        idJenisLahan: idJenisLahan,
+        idKomoditi: idKomoditi,
+        tahun: tahun,
+        kwartal: kwartal,
+        tglMulai: tglMulai,
+        tglSelesai: tglSelesai,
+      );
 
-      _data = result;
-      _isLoading = false;
-      notifyListeners();
+      if (result != null) {
+        _dashboardData = result;
+      } else {
+        _errorMessage = 'Data tidak ditemukan';
+      }
     } catch (e) {
-      debugPrint("Error Dashboard Provider: $e");
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _errorMessage = 'Gagal memuat data: ${e.toString()}';
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  // Fungsi Refresh untuk Pull-to-Refresh
-  Future<void> refresh() async {
-    await fetchDashboardData();
   }
 }

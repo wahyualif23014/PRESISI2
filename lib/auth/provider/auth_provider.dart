@@ -1,26 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
-// Import Master Model dan Enum Role
 import '../models/auth_model.dart';
 import '../models/role_enum.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
+  // Gunakan SecureStorage agar konsisten dengan LandPotentialService Anda
+  final _storage = const FlutterSecureStorage();
 
   UserModel? _user;
   String? _token;
   bool _isLoading = false;
 
-  // --- GETTERS ---
   UserModel? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
 
-  // Pengecekan autentikasi via validitas Token
   bool get isAuthenticated {
     if (_token == null) return false;
     try {
@@ -30,13 +29,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- IAM ROLE GETTERS (Untuk kemudahan UI) ---
+  // Getters untuk UI Switcher di DashboardPage
   UserRole get userRole => _user?.role ?? UserRole.unknown;
   bool get isAdmin => userRole == UserRole.admin;
   bool get isOperator => userRole == UserRole.operator;
   bool get isViewer => userRole == UserRole.view;
 
-  // --- LOGIN LOGIC ---
   Future<String?> login(String username, String password) async {
     _isLoading = true;
     notifyListeners();
@@ -46,19 +44,16 @@ class AuthProvider with ChangeNotifier {
 
       if (result['success']) {
         final data = result['data'];
-
-        // Ambil token dan data user dari response backend
         _token = data['token'];
         _user = UserModel.fromJson(data['data'] ?? data['user']);
 
-        // Simpan ke penyimpanan lokal (SharedPreferences)
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('jwt_token', _token!);
-        await prefs.setString('user_data', jsonEncode(_user!.toJson()));
+        // Simpan ke SecureStorage menggunakan key yang sama dengan LandPotentialService
+        await _storage.write(key: 'jwt_token', value: _token);
+        await _storage.write(key: 'user_data', value: jsonEncode(_user!.toJson()));
 
         _isLoading = false;
         notifyListeners();
-        return null; // Sukses
+        return null; 
       } else {
         _isLoading = false;
         notifyListeners();
@@ -71,37 +66,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- AUTO LOGIN (Restore Session) ---
   Future<void> tryAutoLogin() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final savedToken = await _storage.read(key: 'jwt_token');
+      if (savedToken == null) return;
 
-    if (!prefs.containsKey('jwt_token')) return;
-
-    final savedToken = prefs.getString('jwt_token');
-    if (savedToken == null) return;
-
-    // Cek apakah token sudah expired
-    if (JwtDecoder.isExpired(savedToken)) {
-      await logout();
-      return;
-    }
-
-    _token = savedToken;
-
-    final userString = prefs.getString('user_data');
-    if (userString != null) {
-      try {
-        _user = UserModel.fromJson(jsonDecode(userString));
-      } catch (e) {
+      if (JwtDecoder.isExpired(savedToken)) {
         await logout();
         return;
       }
-    }
 
-    notifyListeners();
+      _token = savedToken;
+      final userString = await _storage.read(key: 'user_data');
+      if (userString != null) {
+        _user = UserModel.fromJson(jsonDecode(userString));
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Auto Login Error: $e");
+    }
   }
 
-  // --- REGISTER (Didaftarkan oleh Admin) ---
   Future<String?> register({
     required String namaLengkap,
     required String idTugas,
@@ -124,22 +109,13 @@ class AuthProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-
-    if (result['success']) {
-      return null; // Registrasi sukses
-    } else {
-      return result['message'];
-    }
+    return result['success'] ? null : result['message'];
   }
 
-  // --- LOGOUT LOGIC ---
   Future<void> logout() async {
     _token = null;
     _user = null;
-    
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); 
-    
+    await _storage.deleteAll(); // Hapus semua data di SecureStorage
     notifyListeners();
   }
 }
