@@ -90,8 +90,8 @@ func main() {
 
 			// Validation endpoints
 			potensi.PUT("/validate-toggle/:id", controllers.ToggleValidation)
-			potensi.PUT("/validate/:id", controllers.ValidatePotensiLahan)
-			potensi.PUT("/unvalidate/:id", controllers.UnvalidatePotensiLahan)
+			potensi.POST("/validate", controllers.ValidatePotensiLahan)
+			potensi.POST("/unvalidate", controllers.UnvalidatePotensiLahan)
 
 			// General CRUD
 			potensi.PUT("/:id", controllers.UpdatePotensiLahan)

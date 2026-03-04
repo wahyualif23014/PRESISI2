@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../data/model/land_potential_model.dart';
 import '../../data/service/land_potential_service.dart';
 
@@ -16,16 +17,28 @@ class LandDetailDialog extends StatefulWidget {
 
 class _LandDetailDialogState extends State<LandDetailDialog> {
   final LandPotentialService _service = LandPotentialService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
   bool isValidated = false;
   bool _isProcessing = false;
+  int currentUserId = 0;
 
   @override
   void initState() {
     super.initState();
     _checkInitialValidation();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final storedId = await _storage.read(key: 'user_id');
+    setState(() {
+      currentUserId = int.tryParse(storedId ?? '') ?? 0;
+    });
   }
 
   void _checkInitialValidation() {
+    // Memeriksa status validasi berdasarkan nama validator dari model
     final v = widget.data.namaValidator.trim();
     setState(() {
       isValidated = v != "" && v != "null" && v != "-" && v != "0";
@@ -34,11 +47,12 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
 
   Future<void> _openMaps() async {
     String googleMapsUrl = "";
+
     if (widget.data.latitude != "0" && widget.data.longitude != "0") {
       googleMapsUrl =
           "https://www.google.com/maps/search/?api=1&query=${widget.data.latitude},${widget.data.longitude}";
     } else {
-      final String query = Uri.encodeComponent(widget.data.alamatLahan);
+      final query = Uri.encodeComponent(widget.data.alamatLahan);
       googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$query";
     }
 
@@ -51,79 +65,110 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
         throw 'Tidak bisa membuka link peta';
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Gagal membuka peta: $e")));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal membuka peta: $e")));
     }
   }
 
   Future<void> _handleValidation() async {
+    // Validasi ID Lahan sebelum dikirim ke service
+    int landId = int.tryParse(widget.data.id.toString()) ?? 0;
+
+    if (landId == 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("ID lahan tidak valid")));
+      return;
+    }
+
     if (isValidated) {
       _showUnvalidateConfirmation();
-    } else {
-      setState(() => _isProcessing = true);
-      bool success = await _service.toggleValidation(widget.data.id);
+      return;
+    }
 
-      if (success && mounted) {
-        setState(() {
-          isValidated = true;
-          _isProcessing = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Data berhasil divalidasi"),
-            backgroundColor: Colors.green,
+    setState(() => _isProcessing = true);
+
+    // Memanggil service toggleValidation yang sudah disesuaikan dengan backend Go
+    bool success = await _service.toggleValidation(landId);
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        isValidated = true;
+        _isProcessing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Data berhasil divalidasi"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Kembali ke halaman utama dengan nilai true untuk trigger refresh list
+      Navigator.pop(context, true);
+    } else {
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Gagal memproses validasi, cek koneksi atau sesi login",
           ),
-        );
-        Navigator.pop(context, true);
-      } else {
-        setState(() => _isProcessing = false);
-      }
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   void _showUnvalidateConfirmation() {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
           title: const Text(
             "Konfirmasi",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          content: const Text(
-            "Data ini sudah divalidasi. Apakah kamu ingin membatalkan validasi (unvalidate) kembali?",
-          ),
+          content: const Text("Data ini sudah divalidasi. Batalkan validasi?"),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("BATAL", style: TextStyle(color: Colors.grey)),
+              child: const Text("BATAL"),
             ),
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
+
                 setState(() => _isProcessing = true);
 
-                bool success = await _service.toggleValidation(widget.data.id);
+                int landId = int.tryParse(widget.data.id.toString()) ?? 0;
+                bool success = await _service.toggleValidation(landId);
 
-                if (success && mounted) {
+                if (!mounted) return;
+
+                if (success) {
                   setState(() {
                     isValidated = false;
                     _isProcessing = false;
                   });
+
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(
                       content: Text("Status validasi dibatalkan"),
                       backgroundColor: Colors.orange,
                     ),
                   );
+
                   Navigator.pop(this.context, true);
+                } else {
+                  setState(() => _isProcessing = false);
                 }
               },
               child: const Text(
-                "YA, UNVALIDATE",
+                "YA, BATALKAN",
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -233,6 +278,26 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
                       ),
                       _row("Komoditi", widget.data.komoditi),
                       _row("Alamat Lahan", widget.data.alamatLahan),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _openMaps,
+                          icon: const Icon(
+                            Icons.map,
+                            size: 18,
+                            color: Color(0xFF0097B2),
+                          ),
+                          label: const Text(
+                            "Lihat di Google Maps",
+                            style: TextStyle(
+                              color: Color(0xFF0097B2),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -312,14 +377,10 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
       return _emptyImage();
     }
 
-    // 1. DETEKSI NAMA FILE VS BASE64
-    // Gambar Base64 asli berukuran ribuan karakter. Jika sangat pendek (misal < 500)
-    // atau memiliki ekstensi file, maka asumsikan ini adalah nama file yang ada di server.
     if (photoData.length < 500 ||
         photoData.toLowerCase().endsWith('.jpg') ||
         photoData.toLowerCase().endsWith('.png') ||
         photoData.toLowerCase().endsWith('.jpeg')) {
-      // Ambil dari server backend (sesuaikan IP dengan log backendmu)
       String fullUrl =
           "http://192.168.100.195:8080/uploads/${Uri.encodeComponent(photoData)}";
 
@@ -328,10 +389,7 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
         height: 200,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint("Error memuat dari URL: $error");
-          return _emptyImage();
-        },
+        errorBuilder: (context, error, stackTrace) => _emptyImage(),
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           return const SizedBox(
@@ -344,20 +402,12 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
       );
     }
 
-    // 2. JIKA TERNYATA MEMANG DATA BASE64 PANJANG DARI FRONTEND
     try {
       String cleanBase64 =
           photoData.contains(',') ? photoData.split(',').last : photoData;
-
-      // Bersihkan dari sisa timestamp atau karakter aneh
       cleanBase64 = cleanBase64.replaceAll(RegExp(r'[^A-Za-z0-9+/]'), '');
-
-      // Berikan padding yang benar
       int mod = cleanBase64.length % 4;
-      if (mod > 0) {
-        cleanBase64 += '=' * (4 - mod);
-      }
-
+      if (mod > 0) cleanBase64 += '=' * (4 - mod);
       Uint8List bytes = base64Decode(cleanBase64);
 
       return Image.memory(
@@ -365,13 +415,9 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
         height: 200,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint("Error rendering Base64 image: $error");
-          return _emptyImage();
-        },
+        errorBuilder: (context, error, stackTrace) => _emptyImage(),
       );
     } catch (e) {
-      debugPrint("Error decoding base64: $e");
       return _emptyImage();
     }
   }

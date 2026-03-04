@@ -1,64 +1,68 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Wajib Import Ini
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  final String baseUrl = 'http://10.243.68.231:8080';
-  
-  // Instance Storage (Brankas Token)
+  final String baseUrl = 'http://192.168.100.195:8080';
   final _storage = const FlutterSecureStorage();
 
-  // --- FUNGSI LOGIN (SUDAH DIPERBAIKI) ---
+  // =========================
+  // LOGIN
+  // =========================
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
+        body: jsonEncode({'username': username, 'password': password}),
       );
 
-      final data = jsonDecode(response.body);
+      Map<String, dynamic> data = {};
+      if (response.body.isNotEmpty) {
+        data = jsonDecode(response.body);
+      }
 
       if (response.statusCode == 200) {
-        // [PENTING] SIMPAN TOKEN KE BRANKAS HP
-        // Pastikan backend mengirim key json bernama 'token'
-        if (data['token'] != null) {
-          await _storage.write(key: 'jwt_token', value: data['token']);
+        // Backend kadang pakai 'token' atau 'access_token'
+        final token = data['token'] ?? data['access_token'];
+
+        if (token == null) {
+          return {
+            'success': false,
+            'message': 'Token tidak ditemukan dari server',
+          };
         }
-        
-        return {
-          'success': true,
-          'data': data,
-        };
+
+        await _storage.write(key: 'jwt_token', value: token);
+
+        return {'success': true, 'data': data};
       } else {
         return {
           'success': false,
-          'message': data['error'] ?? 'Login failed',
+          'message':
+              data['error'] ??
+              data['message'] ??
+              'Login gagal (${response.statusCode})',
         };
       }
     } on SocketException {
-      return {
-        'success': false,
-        'message': 'No internet connection or server unreachable',
-      };
+      return {'success': false, 'message': 'Server tidak bisa dijangkau'};
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 
-  // --- FUNGSI LOGOUT (WAJIB ADA UNTUK BERSIH-BERSIH) ---
+  // =========================
+  // LOGOUT
+  // =========================
   Future<void> logout() async {
     await _storage.delete(key: 'jwt_token');
   }
 
-  // --- FUNGSI REGISTER (TETAP SAMA) ---
+  // =========================
+  // REGISTER
+  // =========================
   Future<Map<String, dynamic>> register({
     required String namaLengkap,
     required String idTugas,
@@ -81,29 +85,44 @@ class AuthService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      Map<String, dynamic> data = {};
+      if (response.body.isNotEmpty) {
+        data = jsonDecode(response.body);
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {
           'success': true,
-          'message': data['message'] ?? 'Registration successful',
+          'message': data['message'] ?? 'Registrasi berhasil',
         };
       } else {
         return {
           'success': false,
-          'message': data['error'] ?? 'Registration failed',
+          'message':
+              data['error'] ??
+              data['message'] ??
+              'Registrasi gagal (${response.statusCode})',
         };
       }
     } on SocketException {
-      return {
-        'success': false,
-        'message': 'No internet connection or server unreachable',
-      };
+      return {'success': false, 'message': 'Server tidak bisa dijangkau'};
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
     }
+  }
+
+  // =========================
+  // CEK TOKEN (BUAT VALIDASI)
+  // =========================
+  Future<String?> getToken() async {
+    return await _storage.read(key: 'jwt_token');
+  }
+
+  // =========================
+  // CEK APAKAH SUDAH LOGIN
+  // =========================
+  Future<bool> isLoggedIn() async {
+    final token = await _storage.read(key: 'jwt_token');
+    return token != null;
   }
 }

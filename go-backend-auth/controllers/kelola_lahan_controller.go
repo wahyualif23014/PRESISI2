@@ -58,21 +58,21 @@ func GetKelolaFilterOptions(c *gin.Context) {
 			title := "LAHAN LAINNYA"
 			switch id {
 			case 1:
-				title = "PERHUTANAN SOSIAL"
+				title = "PRODUKTIF (POKTAN BINAAN POLRI)"
 			case 2:
-				title = "POKTAN BINAAN POLRI"
+				title = "HUTAN (PERHUTANAN SOSIAL)"
 			case 3:
-				title = "MASYARAKAT BINAAN POLRI"
+				title = "LUAS BAKU SAWAH (LBS)"
 			case 4:
-				title = "TUMPANG SARI"
+				title = "PESANTREN"
 			case 5:
 				title = "MILIK POLRI"
 			case 6:
-				title = "LBS"
+				title = "PRODUKTIF (MASYARAKAT BINAAN POLRI)"
 			case 7:
-				title = "PESANTREN"
+				title = "PRODUKTIF (TUMPANG SARI)"
 			case 8:
-				title = "PERHUTANI/INHUTANI"
+				title = "HUTAN (PERHUTANI/INHUTANI)"
 			}
 
 			if !uniqueJenis[title] {
@@ -144,8 +144,8 @@ func GetKelolaList(c *gin.Context) {
 	polres := c.Query("polres")
 	polsek := c.Query("polsek")
 	jenisLahan := c.Query("jenis_lahan")
-	komoditas := c.Query("komoditas") // <-- Tambahkan parameter ini
-
+	komoditas := c.Query("komoditas") 
+	
 	query := initializers.DB.Table("lahan").
 		Select(`
 			lahan.idlahan as id,

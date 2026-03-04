@@ -3,7 +3,9 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,10 +16,16 @@ import (
 )
 
 func GetImageFromDB(c *gin.Context) {
-	filename := c.Param("filename")
+
+	rawFilename := c.Param("filename")
+	filename, err := url.QueryUnescape(rawFilename)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Filename tidak valid"})
+		return
+	}
 
 	var lahan models.PotensiLahan
-	err := initializers.DB.
+	err = initializers.DB.
 		Table("lahan").
 		Where("dokumentasi = ?", filename).
 		First(&lahan).Error
@@ -26,8 +34,7 @@ func GetImageFromDB(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
 		return
 	}
-
-	filePath := "./uploads/" + lahan.Foto
+	filePath := filepath.Join("uploads", lahan.Foto)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File tidak ditemukan"})
@@ -113,40 +120,75 @@ func GetPotensiLahan(c *gin.Context) {
 }
 
 func ToggleValidation(c *gin.Context) {
-	id := c.Param("id")
-	currentUserID, exists := c.Get("user_id")
-	if !exists {
-		var body struct {
-			ValidatorID string `json:"validator_id"`
-		}
-		if err := c.ShouldBindJSON(&body); err != nil {
-			currentUserID = "0"
-		} else {
-			currentUserID = body.ValidatorID
-		}
+	// 1. Ambil ID Lahan dari Body JSON (bukan dari URL)
+	var body struct {
+		IDLahan int `json:"id_lahan"`
 	}
 
-	var lahan models.PotensiLahan
-	if err := initializers.DB.Table("lahan").Where("idlahan = ?", id).First(&lahan).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Format request tidak valid"})
 		return
 	}
 
-	updates := map[string]interface{}{}
-	if lahan.StatusLahan == "2" {
-		updates["validoleh"] = nil
-		updates["tglvalid"] = nil
-		updates["statuslahan"] = "1"
-		initializers.DB.Table("lahan").Where("idlahan = ?", id).Select("validoleh", "tglvalid", "statuslahan").Updates(updates)
-		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Validasi berhasil dibatalkan"})
-	} else {
-		updates["validoleh"] = currentUserID
-		updates["tglvalid"] = time.Now().Format("2006-01-02 15:04:05")
-		updates["statuslahan"] = "2"
-		initializers.DB.Table("lahan").Where("idlahan = ?", id).Updates(updates)
-		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil divalidasi"})
+	if body.IDLahan == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "ID Lahan tidak boleh kosong"})
+		return
 	}
 
+	// 2. Ambil Validator ID dari Middleware JWT
+	var validatorID int
+	if userID, exists := c.Get("user_id"); exists {
+		switch v := userID.(type) {
+		case string:
+			validatorID, _ = strconv.Atoi(v)
+		case float64:
+			validatorID = int(v)
+		case int:
+			validatorID = v
+		}
+	}
+
+	// 3. Cek Status Lahan Saat Ini
+	var currentStatus string
+	err := initializers.DB.Table("lahan").Where("idlahan = ?", body.IDLahan).Select("statuslahan").Row().Scan(&currentStatus)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Data lahan tidak ditemukan di database"})
+		return
+	}
+
+	// 4. Siapkan Data Update Berdasarkan Status Saat Ini
+	updates := map[string]interface{}{}
+
+	if currentStatus == "2" {
+		// Jika sudah validasi, batalkan validasi (kembali ke 1)
+		updates["validoleh"] = 0 // Sesuaikan dengan standar kolom database milikmu (0 atau nil)
+		updates["tglvalid"] = nil
+		updates["statuslahan"] = "1"
+	} else {
+		// Jika belum validasi, lakukan validasi (ubah ke 2)
+		updates["validoleh"] = validatorID
+		updates["tglvalid"] = time.Now().Format("2006-01-02 15:04:05")
+		updates["statuslahan"] = "2"
+	}
+
+	// 5. Eksekusi Update dan Tangani Error Database
+	result := initializers.DB.Table("lahan").Where("idlahan = ?", body.IDLahan).Updates(updates)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Gagal menyimpan ke database: " + result.Error.Error()})
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Data tidak berhasil diubah"})
+		return
+	}
+
+	// 6. Balas Sukses
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Status validasi berhasil diperbarui",
+	})
 }
 
 func GetFilterOptions(c *gin.Context) {
@@ -300,11 +342,26 @@ func GetSummaryLahan(c *gin.Context) {
 		TotalArea float64 `gorm:"column:total_area"`
 		TotalLoc  int64   `gorm:"column:total_loc"`
 	}
-	dbFilter := "idwilayah IS NOT NULL AND statuslahan IN ('1', '2', '3', '4')"
-	initializers.DB.Table("lahan").Where(dbFilter).Select("COALESCE(SUM(luaslahan), 0) as total_area, COUNT(DISTINCT idlahan) as total_loc").Scan(&totals)
+
+	dbFilter := "idjenislahan IS NOT NULL AND statuslahan = '1'"
+
+	initializers.DB.Table("lahan").
+		Where(dbFilter).
+		Select("COALESCE(SUM(luaslahan),0) as total_area, COUNT(DISTINCT idjenislahan) as total_loc").
+		Scan(&totals)
 
 	var categories []SummaryCategory
-	rows, err := initializers.DB.Table("lahan").Where(dbFilter).Select("idjenislahan, COALESCE(SUM(luaslahan), 0) as area, COUNT(DISTINCT idlahan) as count").Group("idjenislahan").Rows()
+	rows, err := initializers.DB.Table("lahan").
+		Where(dbFilter).
+		Select(`
+		idjenislahan,
+		COALESCE(SUM(luaslahan),0) as area,
+		COUNT(idlahan) as count
+	`).
+		Group("idjenislahan").
+		Order("idjenislahan ASC").
+		Rows()
+
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -312,6 +369,7 @@ func GetSummaryLahan(c *gin.Context) {
 			var area float64
 			var count int64
 			rows.Scan(&id, &area, &count)
+
 			title := "LAHAN LAINNYA"
 			switch id {
 			case 1:
@@ -331,11 +389,22 @@ func GetSummaryLahan(c *gin.Context) {
 			case 8:
 				title = "HUTAN (PERHUTANI/INHUTANI)"
 			}
-			categories = append(categories, SummaryCategory{Title: title, Area: area, Count: count})
+			categories = append(categories, SummaryCategory{
+				Title: title,
+				Area:  area,
+				Count: count,
+			})
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"total_area": totals.TotalArea, "total_locations": totals.TotalLoc, "categories": categories}})
 
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"total_area":      totals.TotalArea,
+			"total_locations": totals.TotalLoc,
+			"categories":      categories,
+		},
+	})
 }
 
 func GetNoPotentialLahan(c *gin.Context) {
@@ -359,17 +428,78 @@ func GetNoPotentialLahan(c *gin.Context) {
 }
 
 func ValidatePotensiLahan(c *gin.Context) {
-	id := c.Param("id")
 	var body struct {
-		ValidatorID string `json:"validator_id"`
+		IDLahan int `json:"id_lahan"`
 	}
+
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Validator ID diperlukan"})
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Format request tidak valid"})
 		return
 	}
-	updates := map[string]interface{}{"validoleh": body.ValidatorID, "tglvalid": time.Now().Format("2006-01-02 15:04:05"), "statuslahan": "2"}
-	initializers.DB.Table("lahan").Where("idlahan = ?", id).Updates(updates)
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil divalidasi"})
+
+	var validatorID int
+
+	// Mengambil data user dari context Gin
+	if val, exists := c.Get("user"); exists {
+		// Karena val berisi objek, kita coba akses field ID-nya.
+		// Sesuaikan nama field 'ID' atau 'Idanggota' dengan struct models.User milikmu.
+		// Berdasarkan log: 3283 adalah ID user kamu.
+
+		// Kita gunakan pendekatan interface untuk mengambil ID dari struct
+		if user, ok := val.(models.User); ok {
+			validatorID = int(user.ID) // Atau user.Idanggota sesuai modelmu
+		} else {
+			// Jika casting struct gagal, kita coba cara alternatif (map atau manual)
+			fmt.Printf("Data user ditemukan tapi tipe data berbeda: %T\n", val)
+
+			// Berdasarkan logmu, ID ada di posisi pertama (3283).
+			// Kita coba paksa ambil ID-nya jika middleware menyimpan sebagai ID langsung
+			if id, ok := val.(int); ok {
+				validatorID = id
+			}
+		}
+	}
+
+	// Jika validatorID masih 0, kita coba ambil 3283 secara manual dari log untuk tes sementara
+	// Tapi sebaiknya pastikan casting model.User di atas sudah benar.
+	if validatorID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":  "error",
+			"message": "Gagal membaca ID User dari objek user. Cek tipe data struct User.",
+		})
+		return
+	}
+
+	var currentStatus string
+	err := initializers.DB.Table("lahan").Where("idlahan = ?", body.IDLahan).Select("statuslahan").Row().Scan(&currentStatus)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Data lahan tidak ditemukan"})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if currentStatus == "2" {
+		updates["validoleh"] = nil
+		updates["tglvalid"] = nil
+		updates["statuslahan"] = "1"
+	} else {
+		updates["validoleh"] = validatorID
+		updates["tglvalid"] = time.Now().Format("2006-01-02 15:04:05")
+		updates["statuslahan"] = "2"
+	}
+
+	// Debug untuk melihat query asli di terminal
+	result := initializers.DB.Debug().Table("lahan").Where("idlahan = ?", body.IDLahan).Updates(updates)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Gagal update database"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Status validasi berhasil diperbarui",
+	})
 }
 
 func UnvalidatePotensiLahan(c *gin.Context) {

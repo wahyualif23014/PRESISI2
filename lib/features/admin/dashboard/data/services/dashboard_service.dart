@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../model/dashboard_data_response.dart'; // Sesuaikan dengan nama model Go Anda
 
 class DashboardService {
-  final String baseUrl = "http://10.243.68.231:8080/api/dashboard";
+  final String baseUrl = "http://192.168.100.195:8080/api/dashboard";
   final _storage = const FlutterSecureStorage();
 
   static final DashboardService _instance = DashboardService._internal();
@@ -64,8 +64,10 @@ class DashboardService {
           return DashboardDataResponse.fromJson(body['data']);
         }
       }
-      
-      debugPrint("Dashboard API Error: ${response.statusCode} - ${response.body}");
+
+      debugPrint(
+        "Dashboard API Error: ${response.statusCode} - ${response.body}",
+      );
       return null;
     } catch (e) {
       debugPrint("Exception Dashboard Service: $e");

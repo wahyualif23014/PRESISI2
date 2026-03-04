@@ -8,26 +8,22 @@ import '../model/land_summary_model.dart';
 import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
-  // Gunakan IP server yang sesuai dengan konfigurasi backend Go kamu
-  final String baseUrl = "http://10.243.68.231:8080/api/potensi-lahan";
+  final String baseUrl = "http://192.168.100.195:8080/api/potensi-lahan";
   final _storage = const FlutterSecureStorage();
 
-  // Helper untuk mengambil token JWT
   Future<String> _getToken() async {
     String? token = await _storage.read(key: 'jwt_token');
     return token ?? '';
   }
 
-  // Helper untuk menyusun Header (Content-Type & Auth)
   Future<Map<String, String>> _getHeaders() async {
     final token = await _getToken();
     return {
       'Content-Type': 'application/json',
-      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      if (token.isNotEmpty) 'Authorization': 'Bearer ' + token,
     };
   }
 
-  // 1. Ambil List Data dengan Filter Aktif
   Future<List<LandPotentialModel>> fetchLandData({
     String search = '',
     String status = '',
@@ -65,17 +61,16 @@ class LandPotentialService {
       }
       return [];
     } catch (e) {
-      debugPrint("Error Fetch Data: ${e.toString()}");
+      debugPrint("Error Fetch Data: " + e.toString());
       return [];
     }
   }
 
-  // 2. Ambil Opsi Filter (Cascading Polres/Polsek)
   Future<Map<String, List<String>>> fetchFilterOptions({String? polres}) async {
     try {
-      String url = "$baseUrl/filter-options";
+      String url = baseUrl + "/filter-options";
       if (polres != null && polres.isNotEmpty) {
-        url += "?polres=${Uri.encodeComponent(polres)}";
+        url += "?polres=" + Uri.encodeComponent(polres);
       }
 
       final response = await http.get(
@@ -97,12 +92,11 @@ class LandPotentialService {
       }
       return {"polres": [], "polsek": [], "jenis_lahan": [], "komoditas": []};
     } catch (e) {
-      debugPrint("Error Filter Options: ${e.toString()}");
+      debugPrint("Error Filter Options: " + e.toString());
       return {"polres": [], "polsek": [], "jenis_lahan": [], "komoditas": []};
     }
   }
 
-  // 3. Tambah Data Baru
   Future<bool> postLandData(LandPotentialModel data) async {
     try {
       final response = await http.post(
@@ -110,49 +104,60 @@ class LandPotentialService {
         headers: await _getHeaders(),
         body: json.encode(data.toJson()),
       );
-      return response.statusCode == 201 || response.statusCode == 200;
+
+      debugPrint("Post Response: " + response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final body = json.decode(response.body);
+        return body['status'] != 'error' && body['status'] != 'failed';
+      }
+      return false;
     } catch (e) {
-      debugPrint("Error Post: ${e.toString()}");
+      debugPrint("Error Post: " + e.toString());
       return false;
     }
   }
 
-  // 4. Update Data Lahan Berdasarkan ID
   Future<bool> updateLandData(String id, LandPotentialModel data) async {
     try {
       final response = await http.put(
-        Uri.parse("$baseUrl/$id"),
+        Uri.parse(baseUrl + "/" + id),
         headers: await _getHeaders(),
         body: json.encode(data.toJson()),
       );
-      return response.statusCode == 200;
+
+      debugPrint("Update Response: " + response.body);
+
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        return body['status'] != 'error' && body['status'] != 'failed';
+      }
+      return false;
     } catch (e) {
-      debugPrint("Error Update: ${e.toString()}");
+      debugPrint("Error Update: " + e.toString());
       return false;
     }
   }
 
-  // 5. Hapus Data Lahan Berdasarkan ID
   Future<bool> deleteLandData(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse("$baseUrl/$id"),
+        Uri.parse(baseUrl + "/" + id),
         headers: await _getHeaders(),
       );
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Error Delete: ${e.toString()}");
+      debugPrint("Error Delete: " + e.toString());
       return false;
     }
   }
 
-  // 6. Ambil Data Summary Gabungan
   Future<LandSummaryModel?> fetchSummaryData() async {
     try {
       final headers = await _getHeaders();
       final results = await Future.wait([
-        http.get(Uri.parse("$baseUrl/summary"), headers: headers),
-        http.get(Uri.parse("$baseUrl/no-potential"), headers: headers),
+        http.get(Uri.parse(baseUrl + "/summary"), headers: headers),
+        http.get(Uri.parse(baseUrl + "/no-potential"), headers: headers),
       ]);
 
       final summaryRes = results[0];
@@ -174,16 +179,15 @@ class LandPotentialService {
       }
       return null;
     } catch (e) {
-      debugPrint("Error Fetch Summary: ${e.toString()}");
+      debugPrint("Error Fetch Summary: " + e.toString());
       return null;
     }
   }
 
-  // 7. Ambil Data Wilayah Tanpa Potensi
   Future<NoLandPotentialModel?> fetchNoLandData() async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/no-potential"),
+        Uri.parse(baseUrl + "/no-potential"),
         headers: await _getHeaders(),
       );
       if (response.statusCode == 200) {
@@ -194,26 +198,43 @@ class LandPotentialService {
       }
       return null;
     } catch (e) {
-      debugPrint("Error Fetch No Land Data: ${e.toString()}");
+      debugPrint("Error Fetch No Land Data: " + e.toString());
       return null;
     }
   }
 
-  // 8. Toggle Validasi (Poin 5: Validasi/Unvalidate otomatis)
-  Future<bool> toggleValidation(String id) async {
+  Future<bool> toggleValidation(int landId) async {
     try {
-      // Menggunakan endpoint /validate-toggle yang sudah disiapkan di Go
-      final uri = Uri.parse("$baseUrl/validate-toggle/$id");
-      final headers = await _getHeaders();
+      final token = await _storage.read(key: 'jwt_token');
 
-      final response = await http.put(uri, headers: headers);
+      if (token == null) {
+        throw Exception("Token tidak ditemukan");
+      }
+
+      final response = await http.post(
+        Uri.parse(baseUrl + '/validate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+        },
+        body: jsonEncode({
+          'id_lahan': landId,
+          'idlahan': landId,
+          'id': landId,
+          'id_lahan_string': landId.toString(),
+        }),
+      );
+
+      debugPrint("Validate Response: " + response.body);
 
       if (response.statusCode == 200) {
-        return true;
+        final body = json.decode(response.body);
+        return body['status'] != 'error' && body['status'] != 'failed';
+      } else {
+        return false;
       }
-      return false;
     } catch (e) {
-      debugPrint("Error Toggle Validation Service: ${e.toString()}");
+      debugPrint("Error Validate: " + e.toString());
       return false;
     }
   }

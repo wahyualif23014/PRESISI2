@@ -9,8 +9,7 @@ import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  // Gunakan SecureStorage agar konsisten dengan LandPotentialService Anda
-  final _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = FlutterSecureStorage();
 
   UserModel? _user;
   String? _token;
@@ -29,7 +28,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Getters untuk UI Switcher di DashboardPage
   UserRole get userRole => _user?.role ?? UserRole.unknown;
   bool get isAdmin => userRole == UserRole.admin;
   bool get isOperator => userRole == UserRole.operator;
@@ -44,16 +42,28 @@ class AuthProvider with ChangeNotifier {
 
       if (result['success']) {
         final data = result['data'];
-        _token = data['token'];
-        _user = UserModel.fromJson(data['data'] ?? data['user']);
 
-        // Simpan ke SecureStorage menggunakan key yang sama dengan LandPotentialService
+        _token = data['token'];
+
+        // Ambil data user dari response
+        final userData = data['data'] ?? data['user'];
+
+        _user = UserModel.fromJson(userData);
+
+        // Simpan ke SecureStorage
         await _storage.write(key: 'jwt_token', value: _token);
-        await _storage.write(key: 'user_data', value: jsonEncode(_user!.toJson()));
+        await _storage.write(
+          key: 'user_data',
+          value: jsonEncode(_user!.toJson()),
+        );
+        await _storage.write(
+          key: 'username',
+          value: _user!.username,
+        ); // FIX DI SINI
 
         _isLoading = false;
         notifyListeners();
-        return null; 
+        return null;
       } else {
         _isLoading = false;
         notifyListeners();
@@ -77,10 +87,12 @@ class AuthProvider with ChangeNotifier {
       }
 
       _token = savedToken;
+
       final userString = await _storage.read(key: 'user_data');
       if (userString != null) {
         _user = UserModel.fromJson(jsonDecode(userString));
       }
+
       notifyListeners();
     } catch (e) {
       debugPrint("Auto Login Error: $e");
@@ -115,7 +127,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _user = null;
-    await _storage.deleteAll(); // Hapus semua data di SecureStorage
+    await _storage.deleteAll();
     notifyListeners();
   }
 }

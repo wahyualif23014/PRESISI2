@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../data/model/land_potential_model.dart';
 import '../../data/service/land_potential_service.dart';
 import 'land_detail_dialog.dart';
@@ -73,19 +75,23 @@ class LandPotentialCard extends StatefulWidget {
 
 class _LandPotentialCardState extends State<LandPotentialCard> {
   final LandPotentialService _service = LandPotentialService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
   bool _isProcessing = false;
 
   bool _checkIsValidated() {
     final v = widget.data.namaValidator.trim();
-    if (v == "" || v == "null" || v == "-" || v == "0") {
-      return false;
-    }
-    return true;
+    return !(v == "" || v == "null" || v == "-" || v == "0");
   }
 
-  // Fungsi untuk menampilkan Dialog Konfirmasi (Notifikasi)
+  Future<bool> _checkLogin() async {
+    final token = await _storage.read(key: 'jwt_token');
+    return token != null && token.isNotEmpty;
+  }
+
   Future<void> _showConfirmDialog(bool isCurrentlyValidated) async {
     final title = isCurrentlyValidated ? "Batalkan Validasi" : "Validasi Data";
+
     final message =
         isCurrentlyValidated
             ? "Apakah kamu yakin ingin membatalkan validasi data lahan ini?"
@@ -126,26 +132,50 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
   }
 
   Future<void> _handleToggleValidation() async {
+    final isLoggedIn = await _checkLogin();
+
+    if (!isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Sesi login tidak ditemukan. Silakan login ulang"),
+        ),
+      );
+      return;
+    }
+
+    // Konversi ID string menjadi int yang valid
+    int landId = int.tryParse(widget.data.id.toString()) ?? 0;
+
+    if (landId == 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("ID lahan tidak valid")));
+      return;
+    }
+
     setState(() => _isProcessing = true);
 
-    // Backend akan otomatis menyimpan Nama (Fajri) & ID (23171) berdasarkan Token Login
-    bool success = await _service.toggleValidation(widget.data.id);
+    // Hanya kirimkan landId bertipe int
+    bool success = await _service.toggleValidation(landId);
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             !_checkIsValidated()
-                ? "Data Berhasil divalidasi"
-                : "Validasi Telah dibatalkan",
+                ? "Data berhasil divalidasi"
+                : "Validasi berhasil dibatalkan",
           ),
           backgroundColor: !_checkIsValidated() ? Colors.green : Colors.orange,
         ),
       );
-      widget
-          .onRefresh(); // Refresh untuk menarik Nama Penvalidasi terbaru dari DB
+
+      widget.onRefresh();
     }
-    if (mounted) setState(() => _isProcessing = false);
+
+    setState(() => _isProcessing = false);
   }
 
   void _showDetail(BuildContext context) async {
@@ -153,6 +183,7 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
       context: context,
       builder: (context) => LandDetailDialog(data: widget.data),
     );
+
     if (result == true) {
       widget.onRefresh();
     }
@@ -261,10 +292,8 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
-                  // Menampilkan siapa yang memvalidasi di bawah badge (jika sudah divalidasi)
                   if (isValidated)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -332,14 +361,17 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
       fontWeight: FontWeight.w600,
     ),
   );
+
   Widget _buildName(String text) => Text(
     text,
     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
   );
+
   Widget _buildPhone(String text) =>
       Text(text, style: TextStyle(fontSize: 10, color: Colors.grey[600]));
+
   Widget _buildVerticalDivider() =>
       Container(width: 1, height: 20, color: Colors.grey.shade300);
 
