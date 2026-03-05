@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+// Pastikan path ini benar dan file kelola_mode.dart memiliki class LandManagementSummaryModel
 import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
-  // Ganti endpoint filter-options ke filters agar sesuai rute grup di main.go
   final String baseUrl = "http://192.168.100.195:8080/api/kelola-lahan";
   final _storage = const FlutterSecureStorage();
 
@@ -14,19 +14,18 @@ class LandManagementRepository {
     return token ?? '';
   }
 
-  // ========================================================
-  // PERBAIKAN: Ambil data dari key 'data' sesuai format Backend
-  // ========================================================
+  // 1. GET FILTER OPTIONS
   Future<Map<String, dynamic>> getFilterOptions({
     String? polres,
     String? polsek,
   }) async {
-    // Sesuai route backend: /api/kelola-lahan/filters
     String url = '$baseUrl/filters?';
-    if (polres != null && polres.isNotEmpty)
+    if (polres != null && polres.isNotEmpty) {
       url += 'polres=${Uri.encodeComponent(polres)}&';
-    if (polsek != null && polsek.isNotEmpty)
+    }
+    if (polsek != null && polsek.isNotEmpty) {
       url += 'polsek=${Uri.encodeComponent(polsek)}';
+    }
 
     try {
       final token = await _getToken();
@@ -40,10 +39,7 @@ class LandManagementRepository {
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
-
-        // Ambil objek 'data' dari response sukses backend
         final data = jsonResponse['data'] ?? {};
-
         return {
           'polres': List<String>.from(data['polres'] ?? []),
           'polsek': List<String>.from(data['polsek'] ?? []),
@@ -58,9 +54,9 @@ class LandManagementRepository {
     }
   }
 
+  // 2. GET SUMMARY STATS
   Future<LandManagementSummaryModel> getSummaryStats() async {
     final token = await _getToken();
-
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/summary'),
@@ -74,32 +70,31 @@ class LandManagementRepository {
         final data = jsonDecode(response.body);
         return LandManagementSummaryModel.fromJson(data);
       } else {
-        return LandManagementSummaryModel(
-          totalPotensiLahan: 0,
-          totalTanamLahan: 0,
-          totalPanenLahanHa: 0,
-          totalPanenLahanTon: 0,
-          totalSerapanTon: 0,
-        );
+        return _emptySummary();
       }
     } catch (e) {
-      return LandManagementSummaryModel(
-        totalPotensiLahan: 0,
-        totalTanamLahan: 0,
-        totalPanenLahanHa: 0,
-        totalPanenLahanTon: 0,
-        totalSerapanTon: 0,
-      );
+      debugPrint("Error summary: $e");
+      return _emptySummary();
     }
   }
 
+  // Helper untuk data kosong agar tidak menulis ulang
+  LandManagementSummaryModel _emptySummary() {
+    return LandManagementSummaryModel(
+      totalPotensiLahan: 0,
+      totalTanamLahan: 0,
+      totalPanenLahanHa: 0,
+      totalPanenLahanTon: 0,
+      totalSerapanTon: 0,
+    );
+  }
+
+  // 3. GET LIST DATA
   Future<List<LandManagementItemModel>> getLandManagementList({
     String keyword = "",
     Map<String, String>? filters,
   }) async {
     final token = await _getToken();
-
-    // Sesuai route backend: /api/kelola-lahan (tanpa /list jika rute kosong di Go)
     String url = '$baseUrl?search=${Uri.encodeComponent(keyword)}';
 
     if (filters != null) {
@@ -136,6 +131,40 @@ class LandManagementRepository {
     } catch (e) {
       debugPrint("Error repo list: $e");
       return [];
+    }
+  }
+
+  // 4. DELETE DATA
+  Future<bool> deleteLahan(String id) async {
+    final token = await _getToken();
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error delete: $e");
+      return false;
+    }
+  }
+
+  // 5. UPDATE DATA TANAM
+  Future<bool> updateTanam(String idLahan, Map<String, dynamic> data) async {
+    final token = await _getToken();
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/$idLahan/tanam'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error update tanam: $e");
+      return false;
     }
   }
 }

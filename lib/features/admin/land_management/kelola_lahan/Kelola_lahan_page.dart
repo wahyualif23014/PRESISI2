@@ -5,7 +5,6 @@ import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/filter_lahan_dialog.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_list.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_summary.dart';
-// Menggunakan toolbar kotak yang sama dengan modul Potensi Lahan
 import 'package:KETAHANANPANGAN/features/admin/land_management/Potensi_lahan/presentation/widget/land_potential_toolbar.dart';
 
 class KelolaLahanPage extends StatefulWidget {
@@ -17,10 +16,7 @@ class KelolaLahanPage extends StatefulWidget {
 
 class _KelolaLahanPageState extends State<KelolaLahanPage> {
   final LandManagementRepository _repo = LandManagementRepository();
-
-  // GlobalKey untuk akses fungsi refresh di widget summary
   final GlobalKey<KelolaSummaryWidgetState> _summaryKey = GlobalKey();
-
   Timer? _debounce;
   List<LandManagementItemModel> _listData = [];
   Map<String, List<LandManagementItemModel>> _groupedData = {};
@@ -39,7 +35,6 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
     super.dispose();
   }
 
-  // FUNGSI FETCH: Tetap mempertahankan logika asli Anda
   Future<void> _fetchData({
     String keyword = "",
     Map<String, String>? filters,
@@ -61,7 +56,6 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
         _isLoading = false;
       });
 
-      // Update angka summary di widget anak secara otomatis
       _summaryKey.currentState?.calculateSummaryFromList(list);
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
@@ -96,7 +90,6 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // UI TOOLBAR: Kotak, Border Hitam, Bayangan Tebal (Sesuai Gambar)
           LandPotentialToolbar(
             onSearchChanged: (query) {
               if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -105,20 +98,14 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
               });
             },
             onFilterTap: _showFilterDialog,
-            onAddTap: () {}, // Pertahankan navigasi tambah data jika ada
+            onAddTap: () {},
           ),
-
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(
-                bottom: 100,
-              ), // Ruang untuk Bottom Nav
+              padding: const EdgeInsets.only(bottom: 100),
               children: [
-                // UI SUMMARY: Expandable dengan icon "i" kuning (Sesuai Gambar)
                 KelolaSummaryWidget(key: _summaryKey),
-
                 _buildSectionLabel("DAFTAR PENGELOLAAN LAHAN"),
-
                 if (_isLoading)
                   const Center(
                     child: Padding(
@@ -134,11 +121,11 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
                     ),
                   )
                 else ...[
-                  // UI LIST: Grouping ExpansionTile Ungu (Sesuai Gambar)
                   ..._groupedData.entries.map((entry) {
                     return KelolaRegionExpansionGroup(
                       title: entry.key,
                       items: entry.value,
+                      onRefresh: () => _fetchData(),
                     );
                   }),
                 ],
@@ -150,7 +137,6 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
     );
   }
 
-  // Label pembatas vertikal hitam (Sesuai Gambar)
   Widget _buildSectionLabel(String title) => Container(
     margin: const EdgeInsets.all(16),
     padding: const EdgeInsets.only(left: 12),

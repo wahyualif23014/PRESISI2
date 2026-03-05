@@ -23,32 +23,28 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
   final _luasLahanController = TextEditingController(text: "0.0");
   final _jmlPetaniController = TextEditingController(text: "0");
   final _alamatController = TextEditingController();
-
-  final _keteranganController = TextEditingController(); // Untuk ketcp
+  final _keteranganController = TextEditingController();
   final _ketLainController = TextEditingController();
+  final _latController = TextEditingController();
+  final _lngController = TextEditingController();
 
-  final _latController = TextEditingController(text: "0");
-  final _lngController = TextEditingController(text: "0");
-
-  String? _selectedResor;
-  String? _selectedSektor;
-  String? _selectedJenisLahan;
-  String? _selectedKomoditi;
   String? _selectedKab;
   String? _selectedKec;
   String? _selectedDesa;
+  String? _selectedJenisLahan;
+  String? _selectedKomoditi;
 
-  String _currentStatus = "1";
   bool _isLoading = false;
 
   final List<String> _kategoriLahan = [
-    "PERHUTANAN SOSIAL",
-    "POKTAN BINAAN POLRI",
-    "MASYARAKAT BINAAN POLRI",
-    "TUMPANG SARI",
-    "MILIK POLRI",
-    "LBS",
-    "PESANTREN",
+    "LAHAN MILIK POLRI",
+    "LAHAN PRODUKTIF (POKTAN BINAAN POLRI)",
+    "LAHAN PRODUKTIF (MASYARAKAT BINAAN POLRI)",
+    "LAHAN PRODUKTIF (TUMPANG SARI)",
+    "LAHAN HUTAN (PERHUTANAN SOSIAL)",
+    "LAHAN HUTAN (PERHUTANI/INHUTANI)",
+    "LAHAN PESANTREN",
+    "LAHAN LUAS BAKU SAWAH (LBS)",
     "LAHAN LAINNYA",
   ];
 
@@ -76,75 +72,48 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
       _latController.text = d.latitude;
       _lngController.text = d.longitude;
       _selectedJenisLahan = d.jenisLahan;
-      _selectedKomoditi =
-          d.komoditi.contains("-")
-              ? d.komoditi.split("-")[1].trim()
-              : d.komoditi;
+      _selectedKomoditi = d.komoditi.split("-").last.trim();
       _selectedKab = d.kabupaten;
       _selectedKec = d.kecamatan;
       _selectedDesa = d.desa;
-      _currentStatus = d.statusValidasi == "TERVALIDASI" ? "2" : "1";
     });
-  }
-
-  int _getIdJenisLahan(String? title) {
-    switch (title) {
-      case "PERHUTANAN SOSIAL":
-        return 1;
-      case "POKTAN BINAAN POLRI":
-        return 2;
-      case "MASYARAKAT BINAAN POLRI":
-        return 3;
-      case "TUMPANG SARI":
-        return 4;
-      case "MILIK POLRI":
-        return 5;
-      case "LBS":
-        return 6;
-      case "PESANTREN":
-        return 7;
-      default:
-        return 8;
-    }
   }
 
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     final payload = LandPotentialModel(
       id: widget.editData?.id ?? "0",
-      idWilayah: "3510010101",
+      idWilayah: "3510000000",
       kabupaten: _selectedKab ?? "-",
       kecamatan: _selectedKec ?? "-",
       desa: _selectedDesa ?? "-",
-      idJenisLahan: _getIdJenisLahan(_selectedJenisLahan),
+      idJenisLahan: 9,
       jenisLahan: _selectedJenisLahan ?? "LAHAN LAINNYA",
       luasLahan: double.tryParse(_luasLahanController.text) ?? 0.0,
       alamatLahan: _alamatController.text,
-      statusValidasi: _currentStatus,
+      statusValidasi: widget.editData?.statusValidasi ?? "1",
       policeName: _policeNameController.text,
       policePhone: _policePhoneController.text,
       picName: _picNameController.text,
       picPhone: _picPhoneController.text,
       keterangan: _keteranganController.text,
       keteranganLain: _ketLainController.text,
-
       jumlahPoktan: int.tryParse(_jmlPoktanController.text) ?? 0,
       jumlahPetani: int.tryParse(_jmlPetaniController.text) ?? 0,
       idKomoditi: 1,
-      komoditi: "TANAMAN PANGAN - ${_selectedKomoditi ?? 'JAGUNG'}",
-      fotoLahan: widget.editData?.fotoLahan ?? "",
-      infoProses: widget.editData?.infoProses ?? "-",
-      infoValidasi: widget.editData?.infoValidasi ?? "-",
-      namaPemroses: widget.editData?.namaPemroses ?? "",
-      tglEdit: widget.editData?.tglEdit ?? "",
-      namaValidator: widget.editData?.namaValidator ?? "",
-      tglValid: widget.editData?.tglValid ?? "",
+      komoditi: "TANAMAN PANGAN - ${_selectedKomoditi ?? 'Jagung'}",
+      fotoLahan: "",
       latitude: _latController.text,
       longitude: _lngController.text,
-      namaPoktan: widget.editData?.namaPoktan ?? "-",
+      infoProses: "-",
+      infoValidasi: "-",
+      namaPemroses: "",
+      tglEdit: "",
+      namaValidator: "",
+      tglValid: "",
+      namaPoktan: "-",
     );
 
     bool success =
@@ -157,7 +126,7 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Data Berhasil Disimpan"),
+          content: Text("Data Berhasil Disimpan ke Database"),
           backgroundColor: Colors.green,
         ),
       );
@@ -168,87 +137,132 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF4F7FA),
       appBar: AppBar(
         title: Text(
           widget.editData != null ? "EDIT DATA LAHAN" : "TAMBAH DATA LAHAN",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        elevation: 0,
-        backgroundColor: const Color(0xFF0D47A1),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body:
           _isLoading
-              ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF0D47A1)),
-              )
+              ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionTitle("Lokasi & Administrasi"),
-                      _buildLabel("Kabupaten / Kota"),
-                      _buildDropdown(
-                        "Pilih Kabupaten",
-                        ["BANYUWANGI", "JEMBER"],
-                        (v) => setState(() => _selectedKab = v),
-                        _selectedKab,
+                      _buildCard(
+                        title: "LOKASI & KOORDINAT",
+                        icon: Icons.location_on,
+                        child: Column(
+                          children: [
+                            _buildTextField(
+                              _latController,
+                              "Latitude",
+                              Icons.explore,
+                            ),
+                            _buildTextField(
+                              _lngController,
+                              "Longitude",
+                              Icons.explore,
+                            ),
+                            _buildTextField(
+                              _alamatController,
+                              "Alamat Lengkap Lahan",
+                              Icons.map,
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
                       ),
-                      _buildLabel("Kecamatan"),
-                      _buildDropdown(
-                        "Pilih Kecamatan",
-                        ["KEC. KABAT", "KEC. ROGOJAMPI"],
-                        (v) => setState(() => _selectedKec = v),
-                        _selectedKec,
+                      _cardWrapper(
+                        title: "PERSONEL TERKAIT",
+                        icon: Icons.people,
+                        child: Column(
+                          children: [
+                            _buildTextField(
+                              _policeNameController,
+                              "Nama Polisi Penggerak",
+                              Icons.person,
+                            ),
+                            _buildTextField(
+                              _picNameController,
+                              "Nama Penanggung Jawab",
+                              Icons.person_outline,
+                            ),
+                          ],
+                        ),
                       ),
-                      _buildLabel("Kelurahan / Desa"),
-                      _buildDropdown(
-                        "Pilih Desa",
-                        ["DESA A", "DESA B"],
-                        (v) => setState(() => _selectedDesa = v),
-                        _selectedDesa,
+                      _buildCard(
+                        title: "DETAIL POTENSI LAHAN",
+                        icon: Icons.grass,
+                        child: Column(
+                          children: [
+                            _buildDropdown(
+                              "Jenis Lahan",
+                              _kategoriLahan,
+                              (v) => setState(() => _selectedJenisLahan = v),
+                              _selectedJenisLahan,
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    _luasLahanController,
+                                    "Luas (Ha)",
+                                    null,
+                                    isNumber: true,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildTextField(
+                                    _jmlPetaniController,
+                                    "Jml Petani",
+                                    null,
+                                    isNumber: true,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildTextField(
+                              _keteranganController,
+                              "Keterangan Lahan",
+                              Icons.notes,
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
                       ),
-
-                      const Divider(height: 40),
-                      _buildSectionTitle("Detail Potensi Lahan"),
-                      _buildLabel("Jenis Lahan"),
-                      _buildDropdown(
-                        "Pilih Jenis Lahan",
-                        _kategoriLahan,
-                        (v) => setState(() => _selectedJenisLahan = v),
-                        _selectedJenisLahan,
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton.icon(
+                          onPressed: _handleSave,
+                          icon: const Icon(Icons.save),
+                          label: const Text(
+                            "SIMPAN DATA KE DATABASE",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1B5E20),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       ),
-
-                      const SizedBox(height: 15),
-                      _buildLabel("Alamat Lengkap Lahan"),
-                      _buildTextField(
-                        _alamatController,
-                        "Jl. Raya...",
-                        maxLines: 2,
-                      ),
-
-                      // Field Input untuk Keterangan (ketcp)
-                      _buildLabel("Keterangan (Ketcp)"),
-                      _buildTextField(
-                        _keteranganController,
-                        "Masukkan catatan ketcp...",
-                        maxLines: 2,
-                      ),
-
-                      // Field Input untuk Keterangan Lain (keterangan)
-                      _buildLabel("Keterangan Tambahan (Keterangan)"),
-                      _buildTextField(
-                        _ketLainController,
-                        "Catatan lainnya...",
-                        maxLines: 3,
-                      ),
-
-                      const SizedBox(height: 30),
-                      _buildActionButtons(),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -257,114 +271,129 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
-          color: Color(0xFF0D47A1),
-        ),
+  Widget _buildCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: const Color(0xFF1A237E)),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A237E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(padding: const EdgeInsets.all(16), child: child),
+        ],
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 12),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-      ),
-    );
+  Widget _cardWrapper({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return _buildCard(title: title, icon: icon, child: child);
   }
 
   Widget _buildTextField(
     TextEditingController controller,
-    String hint, {
+    String label,
+    IconData? icon, {
+    bool isNumber = false,
     int maxLines = 1,
   }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 15,
-          vertical: 12,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: icon != null ? Icon(icon) : null,
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
+        validator:
+            (v) => v == null || v.isEmpty ? "Bidang ini wajib diisi" : null,
       ),
-      validator: (v) => v == null || v.isEmpty ? "Wajib diisi" : null,
     );
   }
 
   Widget _buildDropdown(
-    String hint,
+    String label,
     List<String> items,
     Function(String?) onChanged,
     String? value,
   ) {
-    return DropdownButtonFormField<String>(
-      value: items.contains(value) ? value : null,
-      hint: Text(hint, style: const TextStyle(fontSize: 12)),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        isExpanded: true,
+        value: items.contains(value) ? value : null,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
         ),
-      ),
-      items:
-          items
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e, style: const TextStyle(fontSize: 13)),
+        items:
+            items.map((e) {
+              return DropdownMenuItem(
+                value: e,
+                child: Text(
+                  e,
+                  style: const TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              )
-              .toList(),
-      onChanged: onChanged,
-      validator: (v) => v == null ? "Pilih salah satu" : null,
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("BATAL"),
-          ),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _handleSave,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D47A1),
-            ),
-            child: const Text(
-              "SIMPAN DATA",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
-      ],
+              );
+            }).toList(),
+        onChanged: onChanged,
+        validator: (v) => v == null ? "Wajib dipilih" : null,
+      ),
     );
   }
 }

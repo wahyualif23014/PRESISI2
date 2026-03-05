@@ -33,16 +33,33 @@ class LandManagementItemModel {
   final String picName;
   final String picPhone;
   final double landArea;
-
   final double luasTanam;
   final String estPanen;
   final double luasPanen;
   final double hasilPanen;
   final double serapan;
-
   final String status;
   final String statusColor;
   final String kategoriLahan;
+  final String polresName;
+  final String polsekName;
+  final String jenisLahanName;
+  final String keterangan;
+  final String keteranganLain;
+  final String jmlPoktan;
+  final int jmlPetani;
+  final String komoditiName;
+  final String alamatLahan;
+  final String wilayahLahan;
+  final String idTanam;
+  final String tglTanam;
+  final double luasTanamDetail;
+  final String jenisBibit;
+  final double kebutuhanBibit;
+  final String estAwalPanen;
+  final String estAkhirPanen;
+  final String dokumenPendukung;
+  final String keteranganTanam;
 
   LandManagementItemModel({
     required this.id,
@@ -61,6 +78,25 @@ class LandManagementItemModel {
     required this.status,
     required this.statusColor,
     this.kategoriLahan = '-',
+    required this.polresName,
+    required this.polsekName,
+    required this.jenisLahanName,
+    required this.keterangan,
+    required this.keteranganLain,
+    required this.jmlPoktan,
+    required this.jmlPetani,
+    required this.komoditiName,
+    required this.alamatLahan,
+    required this.wilayahLahan,
+    required this.idTanam,
+    required this.tglTanam,
+    required this.luasTanamDetail,
+    required this.jenisBibit,
+    required this.kebutuhanBibit,
+    required this.estAwalPanen,
+    required this.estAkhirPanen,
+    required this.dokumenPendukung,
+    required this.keteranganTanam,
   });
 
   factory LandManagementItemModel.fromJson(Map<String, dynamic> json) {
@@ -72,18 +108,33 @@ class LandManagementItemModel {
       policePhone: json['police_phone'] ?? '-',
       picName: json['pic_name'] ?? '-',
       picPhone: json['pic_phone'] ?? '-',
-
       landArea: (json['land_area'] as num?)?.toDouble() ?? 0.0,
-
       luasTanam: (json['luas_tanam'] as num?)?.toDouble() ?? 0.0,
       estPanen: json['est_panen'] ?? '-',
       luasPanen: (json['luas_panen'] as num?)?.toDouble() ?? 0.0,
       hasilPanen: (json['berat_panen'] as num?)?.toDouble() ?? 0.0,
       serapan: (json['serapan'] as num?)?.toDouble() ?? 0.0,
-
-      status: json['status'] ?? 'BELUM TANAM',
+      status: json['status'] ?? 'PENDING',
       statusColor: json['status_color'] ?? '#FF9800',
-      kategoriLahan: json['kategori_lahan'] ?? '-',
+      polresName: json['polres_name'] ?? '-',
+      polsekName: json['polsek_name'] ?? '-',
+      jenisLahanName: json['jenis_lahan_name'] ?? '-',
+      keterangan: json['keterangan'] ?? '-',
+      keteranganLain: json['keterangan_lain'] ?? '-',
+      jmlPoktan: json['jml_poktan']?.toString() ?? '0',
+      jmlPetani: (json['jml_petani'] as num?)?.toInt() ?? 0,
+      komoditiName: json['komoditi_name'] ?? '-',
+      alamatLahan: json['alamat_lahan'] ?? '-',
+      wilayahLahan: json['wilayah_lahan'] ?? '-',
+      idTanam: json['id_tanam']?.toString() ?? '',
+      tglTanam: json['tgl_tanam'] ?? '',
+      luasTanamDetail: (json['luas_tanam_detail'] as num?)?.toDouble() ?? 0.0,
+      jenisBibit: json['jenis_bibit'] ?? '',
+      kebutuhanBibit: (json['kebutuhan_bibit'] as num?)?.toDouble() ?? 0.0,
+      estAwalPanen: json['est_awal_panen'] ?? '',
+      estAkhirPanen: json['est_akhir_panen'] ?? '',
+      dokumenPendukung: json['dokumen_pendukung'] ?? '',
+      keteranganTanam: json['keterangan_tanam'] ?? '',
     );
   }
 }

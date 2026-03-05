@@ -107,6 +107,8 @@ func main() {
 			kelola.GET("/", controllers.GetKelolaList)
 			kelola.GET("/summary", controllers.GetKelolaSummary)
 			kelola.GET("/filters", controllers.GetKelolaFilterOptions)
+			kelola.PUT("/:id/tanam", controllers.UpdateTanamLahan)
+			kelola.DELETE("/:id", controllers.DeleteKelolaLahan)
 		}
 
 		// D. RIWAYAT LAHAN
