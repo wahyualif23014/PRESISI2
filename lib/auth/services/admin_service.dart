@@ -3,8 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AdminService {
-  final String baseUrl = 'http://192.168.100.195:8080';
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  final String baseUrl = 'http://10.16.15.158:8080'; 
+  final _storage = const FlutterSecureStorage();
 
   // ===============================
   // PRIVATE: Ambil Header dengan JWT

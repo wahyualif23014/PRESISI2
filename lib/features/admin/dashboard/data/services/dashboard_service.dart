@@ -22,7 +22,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String baseUrl = "http://192.168.100.195:8080/api/dashboard";
+  final String apiBaseUrl = "http://10.16.15.158:8080/api";
   final _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();
 
@@ -40,10 +40,9 @@ class DashboardService {
   }
 
   Uri _buildUri(String path, Map<String, String> query) {
-    final base = Uri.parse(baseUrl); // FIX DISINI
+    final base = Uri.parse(apiBaseUrl);
     return base.replace(
-      path:
-          (base.path.endsWith('/')
+      path: (base.path.endsWith('/')
               ? base.path.substring(0, base.path.length - 1)
               : base.path) +
           path,
