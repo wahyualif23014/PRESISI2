@@ -49,12 +49,14 @@ func main() {
 	// Public Auth routes
 	r.POST("/login", controllers.Login)
 
-	// API Group with Middleware Authentication
 	api := r.Group("/api")
 	api.Use(middleware.RequireAuth)
 	{
 		// === DASHBOARD AGGREGATION ===
 		api.GET("/dashboard", controllers.GetDashboardData)
+		api.GET("/dashboard/filters/jenis-komoditi", controllers.GetJenisKomoditiFilter)
+		api.GET("/dashboard/filters/komoditi", controllers.GetKomoditiByJenisFilter)
+		api.GET("/dashboard/map-potensi", controllers.GetDashboardMapPotensi)
 
 		// A. ADMIN ONLY
 		admin := api.Group("/admin")
