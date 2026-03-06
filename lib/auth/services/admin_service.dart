@@ -3,12 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Ganti SharedPrefs jadi ini
 
 class AdminService {
-  final String baseUrl = 'http://10.243.68.231:8080'; 
+  final String baseUrl = 'http://10.16.7.173:8080'; 
   final _storage = const FlutterSecureStorage();
 
   // Helper Private: Ambil Token dari SecureStorage (Bukan SharedPreferences lagi)
   Future<Map<String, String>> _getHeaders() async {
-    // KONSISTENSI: Gunakan key 'jwt_token' sesuai AuthService
     final token = await _storage.read(key: 'jwt_token');
     
     if (token == null) throw Exception('Sesi berakhir. Silakan login ulang.');

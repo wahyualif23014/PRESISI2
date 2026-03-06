@@ -1,222 +1,584 @@
 import 'package:flutter/material.dart';
-import '../../data/model/ringkasan_area_model.dart'; 
+import '../../data/model/ringkasan_area_model.dart';
 
-enum CardLayoutType { list, grid }
+enum CardLayoutType { list, compact }
 
-class LahanStatCard extends StatelessWidget {
-  final RingkasanAreaModel data; 
+class LahanStatCard extends StatefulWidget {
+  final RingkasanAreaModel data;
   final CardLayoutType layoutType;
+  final VoidCallback? onTap;
+  final bool isElevated;
+  final bool initiallyExpanded;
+  final int previewItemCount;
 
   const LahanStatCard({
     super.key,
     required this.data,
-    this.layoutType = CardLayoutType.grid,
+    this.layoutType = CardLayoutType.list,
+    this.onTap,
+    this.isElevated = false,
+    this.initiallyExpanded = false,
+    this.previewItemCount = 3,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final Color cardColor = data.backgroundColor;
+  State<LahanStatCard> createState() => _LahanStatCardState();
+}
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: cardColor.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+class _LahanStatCardState extends State<LahanStatCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _slideAnimation;
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+    
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpand() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+    
+    if (_isExpanded) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = widget.data.backgroundColor;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - _slideAnimation.value) * 20),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: child,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 16),
-          // Pemilihan tata letak berdasarkan layoutType
-          layoutType == CardLayoutType.list
-              ? _buildVerticalListLayout()
-              : _buildGridLayout(),
-          const SizedBox(height: 12),
-          // Judul Footer (Centered)
-          Center(
-            child: Text(
-              data.title.toUpperCase(), 
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
+        );
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                cardColor,
+                Color.lerp(cardColor, Colors.black, 0.15) ?? cardColor,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 24),
+            boxShadow: [
+              BoxShadow(
+                color: cardColor.withOpacity(isDark ? 0.4 : 0.3),
+                blurRadius: widget.isElevated ? 30 : 20,
+                offset: Offset(0, widget.isElevated ? 15 : 10),
+                spreadRadius: -5,
               ),
+              if (widget.isElevated)
+                BoxShadow(
+                  color: cardColor.withOpacity(0.2),
+                  blurRadius: 60,
+                  offset: const Offset(0, 20),
+                  spreadRadius: -10,
+                ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 24),
+            child: Stack(
+              children: [
+                // Background Pattern
+                Positioned(
+                  right: -30,
+                  top: -30,
+                  child: Opacity(
+                    opacity: 0.08,
+                    child: Icon(
+                      _getBackgroundIcon(),
+                      size: isSmallScreen ? 100 : 140,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildHeader(isSmallScreen),
+                      const SizedBox(height: 16),
+                      _buildContent(isSmallScreen),
+                      const SizedBox(height: 12),
+                      _buildFooter(isSmallScreen),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isSmallScreen) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Data",
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  "DATA STATISTIK",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: isSmallScreen ? 9 : 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-            ),
-            Text(
-              "Total Keseluruhan",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 8),
+              Text(
+                widget.data.title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isSmallScreen ? 13 : 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              _formatNumber(data.totalValue),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 2),
-            const Text(
-              "HA",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
+        const SizedBox(width: 12),
+        _buildTotalValue(isSmallScreen),
       ],
     );
   }
 
-  Widget _buildVerticalListLayout() {
-    return Column(
-      children: data.items.map((item) {
+  Widget _buildTotalValue(bool isSmallScreen) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: widget.data.totalValue),
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeOutQuart,
+      builder: (context, value, child) {
         return Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 10 : 12, 
+            vertical: isSmallScreen ? 6 : 8
           ),
-          child: Row(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
-                child: Text(
-                  "${item.label} :",
-                  style: TextStyle(
-                    color: Colors.grey[800],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 9,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Text(
+                _formatNumber(value),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isSmallScreen ? 20 : 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
-                "${_formatNumber(item.value)} HA",
-                style: const TextStyle(
-                  color: Color(0xFF1E88E5), // Biru informatif
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
+                "HEKTAR",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: isSmallScreen ? 8 : 9,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
           ),
         );
-      }).toList(),
+      },
     );
   }
 
-  Widget _buildGridLayout() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: data.items.map((item) {
-        return LayoutBuilder(builder: (context, constraints) {
-          // Menghitung lebar agar muat 2 kolom dalam grid card
-          return Container(
-            width: (100), 
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+  Widget _buildContent(bool isSmallScreen) {
+    final items = widget.data.items;
+    final displayItems = _isExpanded 
+        ? items 
+        : items.take(widget.previewItemCount).toList();
+    final hasMoreItems = items.length > widget.previewItemCount;
+
+    return Column(
+      children: [
+        // Vertical List Layout (Mobile Optimized)
+        _buildVerticalList(displayItems, isSmallScreen),
+        
+        // Expand/Collapse Button
+        if (hasMoreItems) ...[
+          const SizedBox(height: 12),
+          _buildExpandButton(isSmallScreen, items.length),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildVerticalList(List<dynamic> items, bool isSmallScreen) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      child: Column(
+        children: List.generate(items.length, (index) {
+          final delay = (index * 0.08).clamp(0.0, 0.4);
+          return _buildStaggeredItem(
+            index: index,
+            delay: delay,
+            child: _VerticalItemRow(
+              item: items[index],
+              groupTitle: widget.data.title,
+              isLast: index == items.length - 1,
+              isSmallScreen: isSmallScreen,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildExpandButton(bool isSmallScreen, int totalItems) {
+    return GestureDetector(
+      onTap: _toggleExpand,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 14 : 16, 
+          vertical: isSmallScreen ? 8 : 10
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedRotation(
+              turns: _isExpanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Colors.white.withOpacity(0.9),
+                size: isSmallScreen ? 18 : 20,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _isExpanded 
+                ? "Sembunyikan" 
+                : "Lihat ${totalItems - widget.previewItemCount} data lainnya",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: isSmallScreen ? 11 : 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStaggeredItem({
+    required int index,
+    required double delay,
+    required Widget child,
+  }) {
+    final itemAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(
+        delay,
+        (delay + 0.6).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    return AnimatedBuilder(
+      animation: itemAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - itemAnimation.value) * 15),
+          child: Opacity(
+            opacity: itemAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
+  Widget _buildFooter(bool isSmallScreen) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: isSmallScreen ? 11 : 12,
+                color: Colors.white.withOpacity(0.6),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                "Updated today",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: isSmallScreen ? 9 : 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          if (widget.onTap != null)
+            Row(
               children: [
-                _CategoryIcon(groupTitle: data.title, size: 14),
+                Text(
+                  "Details",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: isSmallScreen ? 9 : 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    "${_formatNumber(item.value)} HA",
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 8,
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: isSmallScreen ? 9 : 10,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getBackgroundIcon() {
+    final title = widget.data.title.toUpperCase();
+    if (title.contains("PRODUKTIF")) return Icons.agriculture_rounded;
+    if (title.contains("HUTAN")) return Icons.forest_rounded;
+    if (title.contains("LAHAN")) return Icons.terrain_rounded;
+    if (title.contains("TANAM")) return Icons.spa_rounded;
+    if (title.contains("PANEN")) return Icons.inventory_rounded;
+    return Icons.landscape_rounded;
+  }
+
+  String _formatNumber(double number) {
+    if (number >= 1000000) {
+      return "${(number / 1000000).toStringAsFixed(1)}M";
+    } else if (number >= 1000) {
+      return "${(number / 1000).toStringAsFixed(1)}K";
+    }
+    return number % 1 == 0
+        ? number.toInt().toString()
+        : number.toStringAsFixed(1);
+  }
+}
+
+// ==================== VERTICAL ITEM ROW ====================
+
+class _VerticalItemRow extends StatelessWidget {
+  final dynamic item;
+  final String groupTitle;
+  final bool isLast;
+  final bool isSmallScreen;
+
+  const _VerticalItemRow({
+    required this.item,
+    required this.groupTitle,
+    this.isLast = false,
+    this.isSmallScreen = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: isLast ? 0 : 8),
+      padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildIcon(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isSmallScreen ? 11 : 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                // Progress Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: _getProgressValue(),
+                    backgroundColor: Colors.white.withOpacity(0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.white.withOpacity(0.8),
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    minHeight: isSmallScreen ? 4 : 5,
                   ),
                 ),
               ],
             ),
-          );
-        });
-      }).toList(),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatNumber(item.value),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isSmallScreen ? 13 : 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                "ha",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: isSmallScreen ? 8 : 9,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  double _getProgressValue() {
+    // Calculate progress based on item value vs max value in group
+    // This is a placeholder - you might want to pass max value from parent
+    return 0.7; // Default 70% for visual
+  }
+
+  Widget _buildIcon() {
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        _getIconData(),
+        size: isSmallScreen ? 14 : 16,
+        color: Colors.white,
+      ),
+    );
+  }
+
+  IconData _getIconData() {
+    final title = groupTitle.toUpperCase();
+    if (title.contains("PRODUKTIF")) return Icons.settings_suggest_rounded;
+    if (title.contains("HUTAN")) return Icons.park_rounded;
+    if (title.contains("TANAM")) return Icons.spa_rounded;
+    if (title.contains("PANEN")) return Icons.inventory_2_rounded;
+    return Icons.grid_view_rounded;
   }
 
   String _formatNumber(double number) {
-    if (number % 1 == 0) return number.toInt().toString();
-    return number.toStringAsFixed(2);
-  }
-}
-
-class _CategoryIcon extends StatelessWidget {
-  final String groupTitle;
-  final double size;
-
-  const _CategoryIcon({required this.groupTitle, this.size = 20});
-
-  @override
-  Widget build(BuildContext context) {
-    IconData iconData = Icons.grid_view_rounded;
-    final title = groupTitle.toUpperCase();
-
-    if (title.contains("PRODUKTIF")) iconData = Icons.settings_suggest_rounded;
-    if (title.contains("HUTAN")) iconData = Icons.park_rounded;
-    if (title.contains("LBS")) iconData = Icons.agriculture_rounded;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFA726), // Orange accent per desain
-        shape: BoxShape.circle,
-      ),
-      child: Icon(iconData, size: size * 0.7, color: Colors.white),
-    );
+    if (number >= 1000) {
+      return "${(number / 1000).toStringAsFixed(1)}k";
+    }
+    return number % 1 == 0
+        ? number.toInt().toString()
+        : number.toStringAsFixed(1);
   }
 }

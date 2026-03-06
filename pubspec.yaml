@@ -38,7 +38,6 @@ dependencies:
   flutter_localization: ^0.1.14
   fl_chart: ^0.69.0
   flutter_secure_storage: ^9.2.4
-  supabase_flutter: ^2.12.0
   widget_slider: ^0.1.0
   shimmer: ^3.0.0
   cached_network_image: ^3.3.0
@@ -50,6 +49,9 @@ dependencies:
   dio: ^5.4.1
   path_provider: ^2.1.2
   # image_picker: ^1.1.2
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  flutter_map_marker_cluster: ^1.4.0
 
 
   # The following adds the Cupertino Icons font to your application.

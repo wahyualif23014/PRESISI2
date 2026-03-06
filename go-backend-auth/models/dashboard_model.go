@@ -1,34 +1,60 @@
 package models
 
 type DashboardDataResponse struct {
-	SummaryCards []SummaryCardModel `json:"summary_data"`
+	ActiveFilterLabel string               `json:"active_filter_label"`
+	SummaryCards      []SummaryCardModel   `json:"summary_data"`
+	LahanSummary      []LahanSummaryModel  `json:"lahan_data"`
+	HarvestSummary    HarvestSummaryModel  `json:"harvest_data"`
+	QuarterlyData     []QuarterlyItemModel `json:"quarterly_data"`
+	Distribution      []DistributionModel  `json:"distribution_data"`
+	ResapanYearly     ResapanModel         `json:"resapan_data"`
 
-	LahanSummary []LahanSummaryModel `json:"lahan_data"`
+	// ✅ BARU: peta penyebaran potensi lahan
+	MapPotensi MapPotensiModel `json:"map_potensi"`
+}
 
-	HarvestSummary HarvestSummaryModel `json:"harvest_data"`
+type MapPotensiModel struct {
+	TotalPoints int64            `json:"total_points"`
+	Points      []MapPotensiItem `json:"points"`
+}
 
-	QuarterlyData []QuarterlyItemModel `json:"quarterly_data"`
+type MapPotensiItem struct {
+	IDLahan     string  `json:"id_lahan"`
+	Lat         float64 `json:"lat"`
+	Lng         float64 `json:"lng"`
+	LuasLahan   float64 `json:"luas_lahan"`
+	StatusLahan string  `json:"status_lahan"`
+	JenisLahan  string  `json:"jenis_lahan"`
 
-	Distribution []DistributionModel `json:"distribution_data"`
+	IDKomoditi    *string `json:"id_komoditi,omitempty"`
+	NamaKomoditi  *string `json:"nama_komoditi,omitempty"`
+	JenisKomoditi *string `json:"jenis_komoditi,omitempty"`
 
-	ResapanYearly ResapanModel `json:"resapan_data"`
-
-	ActiveFilterLabel string `json:"active_filter_label"`
+	KodeWilayah *string `json:"kode_wilayah,omitempty"`
+	NamaWilayah *string `json:"nama_wilayah,omitempty"`
 }
 
 type LahanSummaryModel struct {
 	Title           string            `json:"title"`
 	TotalValue      float64           `json:"total_value"`
+	Unit            string            `json:"unit"` // Contoh: "HA"
 	BackgroundColor string            `json:"background_color"`
 	IsDetailed      bool              `json:"is_detailed"`
 	Items           []LahanDetailItem `json:"items"`
 }
 
 type LahanDetailItem struct {
-	Category string  `json:"category"`
-	Label    string  `json:"label"`
-	Value    float64 `json:"value"`
-	Count    int64   `json:"count"` // Tambahkan jumlah lokasi per sub-kategori
+	Label string  `json:"label"` // Diisi dari getLahanLabel(id)
+	Value float64 `json:"value"` // Nilai Luas (Area)
+	Count int64   `json:"count"` // Jumlah Lokasi (Distinct idlahan)
+}
+
+type SummaryCardModel struct {
+	Label      string  `json:"label"`
+	Value      float64 `json:"value"`
+	Unit       string  `json:"unit"` // HA, LOKASI, dsb.
+	Type       string  `json:"type"` // "potensi", "tanam", "panen", "lokasi"
+	Percentage float64 `json:"percentage,omitempty"`
 }
 
 type HarvestSummaryModel struct {
@@ -51,23 +77,15 @@ type HarvestPoint struct {
 }
 
 type QuarterlyItemModel struct {
+	Label  string  `json:"label"`
 	Value  float64 `json:"value"`
 	Unit   string  `json:"unit"`
-	Label  string  `json:"label"`
 	Period string  `json:"period"` // "KW1", "KW2", dst
-}
-
-type SummaryCardModel struct {
-	Label      string  `json:"label"`
-	Value      float64 `json:"value"`
-	Unit       string  `json:"unit"`
-	Type       string  `json:"type"` // "potensi", "validasi", "empty_wilayah"
-	Percentage float64 `json:"percentage,omitempty"`
 }
 
 type DistributionModel struct {
 	Label string             `json:"label"`
-	Total int64              `json:"total"` // Gunakan int64 untuk hasil Count DB
+	Total int64              `json:"total"`
 	Items []DistributionItem `json:"items"`
 }
 
