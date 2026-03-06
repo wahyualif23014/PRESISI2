@@ -13,7 +13,41 @@ class LandHistoryRepository {
   }
 
   // ==============================
-  // GET FILTER OPTIONS (FIXED PROPERLY)
+  // GET SUMMARY STATS
+  // ==============================
+  Future<LandHistorySummaryModel> getSummaryStats() async {
+    try {
+      final token = await _getToken();
+      final uri = Uri.parse('$baseUrl/summary');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return LandHistorySummaryModel.fromJson(body);
+      }
+    } catch (e) {
+      debugPrint("Error Fetch Summary: $e");
+    }
+
+    // Kembalikan nilai 0 jika gagal agar UI tidak error
+    return LandHistorySummaryModel(
+      totalPotensiLahan: 0,
+      totalTanamLahan: 0,
+      totalPanenLahanHa: 0,
+      totalPanenLahanTon: 0,
+      totalSerapanTon: 0,
+    );
+  }
+
+  // ==============================
+  // GET FILTER OPTIONS
   // ==============================
   Future<Map<String, List<String>>> getFilterOptions({String? polres}) async {
     try {
@@ -67,8 +101,6 @@ class LandHistoryRepository {
   // ==============================
   // GET HISTORY LIST
   // ==============================
-  // lahan_history_repos.dart
-
   Future<List<LandHistoryItemModel>> getHistoryList({
     String keyword = "",
     Map<String, String>? filters,

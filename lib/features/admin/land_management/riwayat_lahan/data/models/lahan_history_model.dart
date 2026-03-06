@@ -1,4 +1,3 @@
-// MODEL 1: Untuk Statistik Header (Kotak-kotak atas)
 class LandHistorySummaryModel {
   final double totalPotensiLahan;
   final double totalTanamLahan;
@@ -25,26 +24,22 @@ class LandHistorySummaryModel {
   }
 }
 
-// MODEL 2: Untuk Item List Riwayat (Baris Data)
 class LandHistoryItemModel {
   final String id;
-  // Grouping Level 1 (Ungu Tua)
   final String regionGroup;
-  // Grouping Level 2 (Ungu Muda)
   final String subRegionGroup;
-
-  // Data Personil
   final String policeName;
   final String policePhone;
-  final String picName; // Penanggung Jawab
+  final String picName;
   final String picPhone;
-
-  // Data Lahan
-  final double landArea; // Luas (HA)
-  final String landCategory; // Tambahan khusus Riwayat: "POKTAN BINAAN POLRI"
-
-  // Status
-  final String status; // Contoh: "PROSES PANEN"
+  final double landArea;
+  final double tanamArea;
+  final String estPanen;
+  final double panenArea;
+  final double panenTon;
+  final double serapanTon;
+  final String landCategory;
+  final String status;
   final String statusColor;
 
   LandHistoryItemModel({
@@ -56,12 +51,16 @@ class LandHistoryItemModel {
     required this.picName,
     required this.picPhone,
     required this.landArea,
-    required this.landCategory, // Field baru
+    required this.tanamArea,
+    required this.estPanen,
+    required this.panenArea,
+    required this.panenTon,
+    required this.serapanTon,
+    required this.landCategory,
     required this.status,
     this.statusColor = '#FF9800',
   });
 
-  // Sesuaikan factory dari JSON agar menggunakan key yang sama dengan Go
   factory LandHistoryItemModel.fromJson(Map<String, dynamic> json) {
     return LandHistoryItemModel(
       id: json['id']?.toString() ?? '',
@@ -72,6 +71,11 @@ class LandHistoryItemModel {
       picName: json['pic_name'] ?? '',
       picPhone: json['pic_phone'] ?? '',
       landArea: (json['land_area'] as num?)?.toDouble() ?? 0.0,
+      tanamArea: (json['tanam_ha'] as num?)?.toDouble() ?? 0.0,
+      estPanen: json['est_panen'] ?? '-',
+      panenArea: (json['panen_ha'] as num?)?.toDouble() ?? 0.0,
+      panenTon: (json['panen_ton'] as num?)?.toDouble() ?? 0.0,
+      serapanTon: (json['serapan_ton'] as num?)?.toDouble() ?? 0.0,
       landCategory: json['land_category'] ?? '-',
       status: json['status'] ?? '',
       statusColor: json['status_color'] ?? '#9E9E9E',

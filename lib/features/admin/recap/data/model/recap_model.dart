@@ -10,6 +10,7 @@ class RecapModel {
   final double serapan;
   final RecapRowType type;
   final String? namaPolsek;
+  bool isSelected;
 
   RecapModel({
     required this.id,
@@ -21,21 +22,8 @@ class RecapModel {
     required this.serapan,
     this.type = RecapRowType.desa,
     this.namaPolsek,
+    this.isSelected = false,
   });
-
-  RecapModel copyWith({String? namaPolsek}) {
-    return RecapModel(
-      id: id,
-      namaWilayah: namaWilayah,
-      potensiLahan: potensiLahan,
-      tanamLahan: tanamLahan,
-      panenLuas: panenLuas,
-      panenTon: panenTon,
-      serapan: serapan,
-      type: type,
-      namaPolsek: namaPolsek ?? this.namaPolsek,
-    );
-  }
 
   factory RecapModel.fromJson(Map<String, dynamic> json) {
     RecapRowType parseType(dynamic val) {
@@ -54,6 +42,22 @@ class RecapModel {
       serapan: (json['serapan'] as num?)?.toDouble() ?? 0.0,
       type: parseType(json['level']),
       namaPolsek: json['nama_polsek'],
+      isSelected: false,
+    );
+  }
+
+  RecapModel copyWith({String? namaPolsek, bool? isSelected}) {
+    return RecapModel(
+      id: id,
+      namaWilayah: namaWilayah,
+      potensiLahan: potensiLahan,
+      tanamLahan: tanamLahan,
+      panenLuas: panenLuas,
+      panenTon: panenTon,
+      serapan: serapan,
+      type: type,
+      namaPolsek: namaPolsek ?? this.namaPolsek,
+      isSelected: isSelected ?? this.isSelected,
     );
   }
 }

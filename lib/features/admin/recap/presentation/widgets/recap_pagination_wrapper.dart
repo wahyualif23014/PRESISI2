@@ -4,16 +4,20 @@ import 'recap_data_row.dart';
 
 class RecapPaginationWrapper extends StatefulWidget {
   final Map<String, List<RecapModel>> groupedData;
+  final Function(String, bool) onToggle; // Tambahkan ini
 
-  const RecapPaginationWrapper({super.key, required this.groupedData});
+  const RecapPaginationWrapper({
+    super.key,
+    required this.groupedData,
+    required this.onToggle, // Tambahkan ini
+  });
 
   @override
   State<RecapPaginationWrapper> createState() => _RecapPaginationWrapperState();
 }
 
 class _RecapPaginationWrapperState extends State<RecapPaginationWrapper> {
-  // SETTING: 8 Polres per halaman
-  final int _itemsPerPage = 8;
+  final int _itemsPerPage = 15;
   int _currentPage = 0;
 
   @override
@@ -22,7 +26,6 @@ class _RecapPaginationWrapperState extends State<RecapPaginationWrapper> {
     final int totalItems = polresKeys.length;
     final int totalPages = (totalItems / _itemsPerPage).ceil();
 
-    // Hitung index untuk halaman saat ini
     final int startIndex = _currentPage * _itemsPerPage;
     final int endIndex =
         (startIndex + _itemsPerPage < totalItems)
@@ -38,25 +41,21 @@ class _RecapPaginationWrapperState extends State<RecapPaginationWrapper> {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: ListView.builder(
-        // Key unik agar scroll reset ke atas saat ganti halaman
         key: ValueKey<int>(_currentPage),
-        // Padding bawah ekstra agar tombol tidak tertutup floating action button (jika ada)
         padding: const EdgeInsets.only(bottom: 24, top: 8),
-        // +1 item untuk tombol pagination yang ikut di-scroll
         itemCount: currentKeys.length + 1,
         itemBuilder: (context, index) {
-          // --- ITEM TERAKHIR: TOMBOL PAGINATION ---
           if (index == currentKeys.length) {
             return _buildPaginationControls(totalPages);
           }
 
-          // --- ITEM DATA ---
           final String polresName = currentKeys[index];
           final List<RecapModel> items = widget.groupedData[polresName]!;
 
           return RecapPolresSection(
             polresName: polresName,
             itemsInPolres: items,
+            onToggle: widget.onToggle, // Gunakan widget.onToggle
           );
         },
       ),

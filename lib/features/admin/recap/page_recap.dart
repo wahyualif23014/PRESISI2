@@ -72,10 +72,8 @@ class _PageRecapState extends State<PageRecap> {
     );
 
     if (result != null && mounted) {
-      // Jika result adalah Map kosong {}, controller akan mereset filter dan fetch ulang semua data
       _controller.onFilterComplex(result);
 
-      // Menampilkan pesan umpan balik ke pengguna
       if (result.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -113,6 +111,7 @@ class _PageRecapState extends State<PageRecap> {
           const SizedBox(height: 16),
 
           // 2. Table Header: Label kolom statis
+          // Sekarang kita menyertakan checkbox header jika dibutuhkan
           const RecapTableHeader(),
 
           // 3. Content List: Area data yang bersifat dinamis (reactive)
@@ -136,8 +135,10 @@ class _PageRecapState extends State<PageRecap> {
 
                   case RecapState.loaded:
                   default:
+                    // Melewatkan callback onToggle ke wrapper agar diteruskan ke row
                     return RecapPaginationWrapper(
                       groupedData: _controller.groupedData,
+                      onToggle: _controller.toggleSelection,
                     );
                 }
               },
@@ -163,6 +164,9 @@ class _PageRecapState extends State<PageRecap> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF673AB7),
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text("Coba Lagi"),
           ),
@@ -173,15 +177,28 @@ class _PageRecapState extends State<PageRecap> {
 
   /// UI saat data hasil filter/pencarian tidak ditemukan
   Widget _buildEmptyState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.folder_off_outlined, size: 48, color: Colors.grey),
+          Icon(
+            Icons.folder_off_outlined,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "Data Tidak Ditemukan",
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
-            "Data Tidak Ditemukan",
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+            "Coba ubah filter atau kata kunci pencarian kamu",
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
           ),
         ],
       ),

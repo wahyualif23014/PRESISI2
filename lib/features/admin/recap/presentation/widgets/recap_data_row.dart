@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/model/recap_model.dart';
 
-// =========================================================
-// WARNA (TIDAK DIUBAH)
-// =========================================================
 class AppColors {
   static const Color primary = Color(0xFF673AB7);
   static const Color accent = Color(0xFFF3E5F5);
@@ -13,218 +10,208 @@ class AppColors {
   static const Color surface = Colors.white;
 }
 
-// =========================================================
-// HELPER SUM
-// =========================================================
-double _sum(
-  List<RecapModel> items,
-  double Function(RecapModel) selector,
-) {
+double _sum(List<RecapModel> items, double Function(RecapModel) selector) {
   if (items.isEmpty) return 0.0;
   return items.fold(0.0, (a, b) => a + selector(b));
 }
 
-// =========================================================
-// 1. POLRES SECTION
-// =========================================================
-class RecapPolresSection extends StatelessWidget {
+class RecapPolresSection extends StatefulWidget {
   final String polresName;
   final List<RecapModel> itemsInPolres;
+  final Function(String, bool) onToggle;
 
   const RecapPolresSection({
     super.key,
     required this.polresName,
     required this.itemsInPolres,
+    required this.onToggle,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // DESA = id lebih dari 8 karakter
-    final desaOnly =
-        itemsInPolres.where((e) => e.id.length > 8).toList();
+  State<RecapPolresSection> createState() => _RecapPolresSectionState();
+}
 
-    // GROUP BY KODE POLSEK (8 digit pertama)
+class _RecapPolresSectionState extends State<RecapPolresSection> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final desaOnly =
+        widget.itemsInPolres.where((e) => e.id.length > 8).toList();
     final Map<String, List<RecapModel>> grouped = {};
 
     for (var item in desaOnly) {
       if (item.id.length < 8) continue;
       final key = item.id.substring(0, 8);
-
       grouped.putIfAbsent(key, () => []);
       grouped[key]!.add(item);
     }
 
     final sortedKeys = grouped.keys.toList()..sort();
-
-    // TOTAL POLRES
-    final totalPotensi = _sum(desaOnly, (m) => m.potensiLahan);
-    final totalTanam = _sum(desaOnly, (m) => m.tanamLahan);
-    final totalPanenLuas = _sum(desaOnly, (m) => m.panenLuas);
-    final totalPanenTon = _sum(desaOnly, (m) => m.panenTon);
-    final totalSerapan = _sum(desaOnly, (m) => m.serapan);
+    final bool isPolresSelected =
+        desaOnly.isNotEmpty && desaOnly.every((e) => e.isSelected);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
+      margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 12,
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 8),
+            blurRadius: 24,
           ),
         ],
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          _buildHeaderPolres(polresName),
-
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(24),
+              bottom: Radius.circular(_isExpanded ? 0 : 24),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      widget.polresName
+                          .replaceFirst("KAB. ", "POLRES\n")
+                          .toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textDark,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           Container(
-            color: AppColors.accent.withOpacity(0.4),
-            padding: const EdgeInsets.symmetric(
-              vertical: 14,
-              horizontal: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withOpacity(0.3),
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(_isExpanded ? 0 : 24),
+              ),
             ),
             child: _DataRowLayout(
-              label: polresName,
+              label: widget.polresName,
               tag: "POLRES",
-              potensi: totalPotensi,
-              tanam: totalTanam,
-              panenLuas: totalPanenLuas,
-              panenTon: totalPanenTon,
-              serapan: totalSerapan,
+              isSelected: isPolresSelected,
+              onToggle:
+                  (val) => widget.onToggle(
+                    widget.itemsInPolres.first.id.substring(0, 5),
+                    val ?? false,
+                  ),
+              potensi: _sum(desaOnly, (m) => m.potensiLahan),
+              tanam: _sum(desaOnly, (m) => m.tanamLahan),
+              panenLuas: _sum(desaOnly, (m) => m.panenLuas),
+              panenTon: _sum(desaOnly, (m) => m.panenTon),
+              serapan: _sum(desaOnly, (m) => m.serapan),
               isHeader: true,
             ),
           ),
-
-          const Divider(height: 1, color: AppColors.border),
-
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: sortedKeys.length,
-            separatorBuilder: (_, __) =>
-                const Divider(height: 1, color: AppColors.border),
-            itemBuilder: (context, index) {
-              final key = sortedKeys[index];
-              final items = grouped[key]!;
-
-              // Sort desa biar stabil
-              items.sort((a, b) => a.id.compareTo(b.id));
-
-              return RecapPolsekSection(
-                key: ValueKey(key),
-                polsekName: items.first.namaPolsek ?? "-",
-                itemsInPolsek: items,
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderPolres(String name) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.location_city_rounded,
-            color: AppColors.primary,
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            name.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textDark,
+          if (_isExpanded)
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: sortedKeys.length,
+              itemBuilder: (context, index) {
+                final key = sortedKeys[index];
+                final items = grouped[key]!;
+                return RecapPolsekSection(
+                  polsekName: items.first.namaPolsek ?? "-",
+                  polsekId: key,
+                  itemsInPolsek: items,
+                  onToggle: widget.onToggle,
+                );
+              },
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-// =========================================================
-// 2. POLSEK SECTION
-// =========================================================
 class RecapPolsekSection extends StatefulWidget {
-  final String polsekName;
+  final String polsekName, polsekId;
   final List<RecapModel> itemsInPolsek;
+  final Function(String, bool) onToggle;
 
   const RecapPolsekSection({
     super.key,
     required this.polsekName,
+    required this.polsekId,
     required this.itemsInPolsek,
+    required this.onToggle,
   });
 
   @override
-  State<RecapPolsekSection> createState() =>
-      _RecapPolsekSectionState();
+  State<RecapPolsekSection> createState() => _RecapPolsekSectionState();
 }
 
-class _RecapPolsekSectionState
-    extends State<RecapPolsekSection> {
+class _RecapPolsekSectionState extends State<RecapPolsekSection> {
   bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    final desaOnly =
-        widget.itemsInPolsek.where((e) => e.id.length > 8).toList();
-
-    final totalPotensi = _sum(desaOnly, (m) => m.potensiLahan);
-    final totalTanam = _sum(desaOnly, (m) => m.tanamLahan);
-    final totalPanenLuas = _sum(desaOnly, (m) => m.panenLuas);
-    final totalPanenTon = _sum(desaOnly, (m) => m.panenTon);
-    final totalSerapan = _sum(desaOnly, (m) => m.serapan);
+    final bool isSelected = widget.itemsInPolsek.every((e) => e.isSelected);
 
     return Column(
       children: [
+        const Divider(height: 1, color: AppColors.border),
         InkWell(
           onTap: () => setState(() => _isExpanded = !_isExpanded),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 16),
-            color: _isExpanded
-                ? AppColors.accent.withOpacity(0.3)
-                : Colors.transparent,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: _DataRowLayout(
               label: widget.polsekName,
               tag: "POLSEK",
-              potensi: totalPotensi,
-              tanam: totalTanam,
-              panenLuas: totalPanenLuas,
-              panenTon: totalPanenTon,
-              serapan: totalSerapan,
+              isSelected: isSelected,
+              onToggle: (val) => widget.onToggle(widget.polsekId, val ?? false),
+              potensi: _sum(widget.itemsInPolsek, (m) => m.potensiLahan),
+              tanam: _sum(widget.itemsInPolsek, (m) => m.tanamLahan),
+              panenLuas: _sum(widget.itemsInPolsek, (m) => m.panenLuas),
+              panenTon: _sum(widget.itemsInPolsek, (m) => m.panenTon),
+              serapan: _sum(widget.itemsInPolsek, (m) => m.serapan),
               isSubHeader: true,
-              highlight: _isExpanded,
+              isExpanded: _isExpanded,
             ),
           ),
         ),
         if (_isExpanded)
-          ...desaOnly.map(
+          ...widget.itemsInPolsek.map(
             (desa) => Container(
-              key: ValueKey(desa.id),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFAFAFA),
-                border: Border(
-                  top: BorderSide(
-                    color: AppColors.border,
-                    width: 0.5,
-                  ),
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.grey.shade50,
               child: _DataRowLayout(
                 label: desa.namaWilayah,
                 tag: "DESA",
+                isSelected: desa.isSelected,
+                onToggle: (val) => widget.onToggle(desa.id, val ?? false),
                 potensi: desa.potensiLahan,
                 tanam: desa.tanamLahan,
                 panenLuas: desa.panenLuas,
@@ -238,18 +225,17 @@ class _RecapPolsekSectionState
   }
 }
 
-// =========================================================
-// 3. DATA ROW (UI TIDAK DIUBAH)
-// =========================================================
 class _DataRowLayout extends StatelessWidget {
-  final String label;
-  final String tag;
+  final String label, tag;
   final double potensi, tanam, panenLuas, panenTon, serapan;
-  final bool isHeader, isSubHeader, highlight;
+  final bool isHeader, isSubHeader, isSelected, isExpanded;
+  final Function(bool?) onToggle;
 
   const _DataRowLayout({
     required this.label,
     required this.tag,
+    required this.isSelected,
+    required this.onToggle,
     required this.potensi,
     required this.tanam,
     required this.panenLuas,
@@ -257,176 +243,135 @@ class _DataRowLayout extends StatelessWidget {
     required this.serapan,
     this.isHeader = false,
     this.isSubHeader = false,
-    this.highlight = false,
+    this.isExpanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color mainColor =
-        highlight || isHeader
-            ? AppColors.primary
-            : AppColors.textDark;
-
     return Row(
       children: [
+        SizedBox(
+          width: 24,
+          child: Transform.scale(
+            scale: 0.8,
+            child: Checkbox(
+              value: isSelected,
+              onChanged: onToggle,
+              activeColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(
           flex: 4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: isHeader
-                      ? Colors.orange
-                      : (isSubHeader
-                          ? Colors.blue
-                          : Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  tag,
-                  style: const TextStyle(
-                    fontSize: 8,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
               Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: isHeader ? 12 : 11,
-                  fontWeight: isHeader || isSubHeader
-                      ? FontWeight.w900
-                      : FontWeight.w600,
-                  color: mainColor,
+                  fontSize: isHeader ? 12 : 10,
+                  fontWeight:
+                      isHeader || isSubHeader
+                          ? FontWeight.w900
+                          : FontWeight.w600,
+                  color: AppColors.textDark,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
+              _buildTag(tag),
             ],
           ),
         ),
-        _DataCell(
-            value: potensi,
-            unit: "HA",
-            flex: 2,
-            isBold: isHeader || isSubHeader),
-        _DataCell(
-            value: tanam,
-            unit: "HA",
-            flex: 2,
-            isBold: isHeader || isSubHeader),
-        Expanded(
-          flex: 3,
-          child: Column(
-            children: [
-              _TextVal(
-                  value: panenLuas,
-                  unit: "HA",
-                  isBold: isHeader || isSubHeader),
-              const SizedBox(height: 2),
-              _TextVal(
-                  value: panenTon,
-                  unit: "TN",
-                  isBold: isHeader || isSubHeader),
-            ],
-          ),
-        ),
-        _DataCell(
-            value: serapan,
-            unit: "TN",
-            flex: 2,
-            isBold: isHeader || isSubHeader),
+        _buildCol("POTENSI", potensi, "Ha"),
+        _buildCol("TANAM", tanam, "Ha"),
+        _buildColPanen(panenLuas, panenTon),
+        _buildCol("SERAPAN", serapan, "Ton"),
       ],
     );
   }
-}
 
-class _DataCell extends StatelessWidget {
-  final double value;
-  final String unit;
-  final int flex;
-  final bool isBold;
+  Widget _buildTag(String text) {
+    return Container(
+      margin: const EdgeInsets.only(top: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color:
+            isHeader
+                ? Colors.orange
+                : (isSubHeader ? Colors.blue : Colors.grey),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 7,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 
-  const _DataCell({
-    required this.value,
-    required this.unit,
-    required this.flex,
-    required this.isBold,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildCol(String title, double val, String unit) {
     return Expanded(
-      flex: flex,
+      flex: 2,
       child: Column(
         children: [
           Text(
-            value.toInt().toString(),
-            style: TextStyle(
-              fontSize: isBold ? 13 : 12,
-              fontWeight:
-                  isBold ? FontWeight.w900 : FontWeight.w700,
-              color: isBold
-                  ? AppColors.primary
-                  : AppColors.textDark,
-            ),
-          ),
-          Text(
-            unit,
+            title,
             style: const TextStyle(
-              fontSize: 7,
+              fontSize: 6,
               fontWeight: FontWeight.bold,
               color: AppColors.textGrey,
+            ),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              "${val % 1 == 0 ? val.toInt() : val.toStringAsFixed(2)} $unit",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: isHeader ? AppColors.primary : AppColors.textDark,
+              ),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _TextVal extends StatelessWidget {
-  final double value;
-  final String unit;
-  final bool isBold;
-
-  const _TextVal({
-    required this.value,
-    required this.unit,
-    required this.isBold,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          value.toInt().toString(),
-          style: TextStyle(
-            fontSize: isBold ? 11 : 10,
-            fontWeight:
-                isBold ? FontWeight.w900 : FontWeight.w700,
-            color: isBold
-                ? AppColors.primary
-                : AppColors.textDark,
+  Widget _buildColPanen(double luas, double ton) {
+    return Expanded(
+      flex: 3,
+      child: Column(
+        children: [
+          const Text(
+            "PANEN (HA/TON)",
+            style: TextStyle(
+              fontSize: 6,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textGrey,
+            ),
           ),
-        ),
-        const SizedBox(width: 2),
-        Text(
-          unit,
-          style: const TextStyle(
-            fontSize: 7,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textGrey,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              "${luas % 1 == 0 ? luas.toInt() : luas.toStringAsFixed(2)} Ha / ${ton % 1 == 0 ? ton.toInt() : ton.toStringAsFixed(2)} Ton",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: isHeader ? AppColors.primary : AppColors.textDark,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
