@@ -57,6 +57,7 @@ func main() {
 		api.GET("/dashboard/filters/jenis-komoditi", controllers.GetJenisKomoditiFilter)
 		api.GET("/dashboard/filters/komoditi", controllers.GetKomoditiByJenisFilter)
 		api.GET("/dashboard/map-potensi", controllers.GetDashboardMapPotensi)
+		api.GET("/dashboard/wilayah-distribution", controllers.GetWilayahDistribution)
 
 		// A. ADMIN ONLY
 		admin := api.Group("/admin")

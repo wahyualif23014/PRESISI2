@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AdminService {
 
-  final String baseUrl = 'http://10.16.15.158:8080'; 
+  final String baseUrl = 'http://192.168.1.26:8080'; 
   final _storage = const FlutterSecureStorage();
 
   // ===============================

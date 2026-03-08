@@ -55,15 +55,31 @@ func GetDashboardData(c *gin.Context) {
 	}
 
 	// Totals (Potensi)
+	// Totals (Potensi)
 	var totals struct {
 		Area  float64
 		Count int64
 	}
 
 	dbPotensi := baseQuery.Session(&gorm.Session{})
-	dbPotensi.Where("statuslahan IN ('1', '2', '3', '4')").
-		Select("COALESCE(SUM(luaslahan), 0) as area, COUNT(DISTINCT idlahan) as count").
-		Scan(&totals)
+
+	err := initializers.DB.
+		Model(&models.Lahan{}).
+		Where("deletestatus = ?", "2").
+		Where("statuslahan IN ?", []string{"1", "2", "3", "4"}).
+		Select(`
+		COALESCE(SUM(luaslahan),0) as area,
+		COUNT(idlahan) as count
+	`).
+		Scan(&totals).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
 
 	var response models.DashboardDataResponse
 	response.ActiveFilterLabel = "TOTAL POTENSI LAHAN"
@@ -89,6 +105,8 @@ func GetDashboardData(c *gin.Context) {
 	// Quarterly chart
 	response.QuarterlyData = getQuarterlySummary(baseQuery.Session(&gorm.Session{}), idKomoditi)
 
+	response.PanenStatus = getPanenStatusSummary(baseQuery.Session(&gorm.Session{}))
+
 	// Resapan
 	response.ResapanYearly = getResapanSummary(baseQuery.Session(&gorm.Session{}), idKomoditi)
 
@@ -96,10 +114,13 @@ func GetDashboardData(c *gin.Context) {
 	response.MapPotensi = getMapPotensiSummary(baseQuery.Session(&gorm.Session{}))
 
 	// Distribusi Wilayah (tetap)
-	var admin models.DistributionModel
-	admin.Label = "DISTRIBUSI WILAYAH"
-	initializers.DB.Table("wilayah").Select("SUM(CASE WHEN CHAR_LENGTH(kode) > 8 THEN 1 ELSE 0 END)").Scan(&admin.Total)
-	response.Distribution = append(response.Distribution, admin)
+	// Distribusi Wilayah Baru
+	response.WilayahDistribution = getWilayahDistribution(
+		baseQuery.Session(&gorm.Session{}),
+		"", // idTingkat jika ada filter
+		idKomoditi,
+		jenisKomoditi,
+	)
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": response})
 }
@@ -129,12 +150,26 @@ func getLahanLabel(id int) string {
 
 // Agregasi untuk Tabel Master (Lahan)
 func getSummaryData(db *gorm.DB, title string, color string, statusFilter []string) models.LahanSummaryModel {
-	var totalArea float64
-	var items []models.LahanDetailItem
 
-	rows, err := db.Where("statuslahan IN ?", statusFilter).
-		Select("idjenislahan, COALESCE(SUM(luaslahan), 0) as area, COUNT(DISTINCT idlahan) as count").
-		Group("idjenislahan").Rows()
+	type result struct {
+		IDJenis int     `gorm:"column:idjenislahan"`
+		Area    float64 `gorm:"column:area"`
+		Count   int64   `gorm:"column:count"`
+	}
+
+	var results []result
+
+	err := db.
+		Where("lahan.deletestatus = ?", "2").
+		Where("lahan.statuslahan IN ?", statusFilter).
+		Select(`
+        lahan.idjenislahan,
+        COALESCE(SUM(lahan.luaslahan),0) as area,
+        COUNT(lahan.idlahan) as count
+    `).
+		Group("lahan.idjenislahan").
+		Scan(&results).Error
+
 	if err != nil {
 		return models.LahanSummaryModel{
 			Title:           title,
@@ -143,20 +178,19 @@ func getSummaryData(db *gorm.DB, title string, color string, statusFilter []stri
 			Items:           []models.LahanDetailItem{},
 		}
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var id int
-		var area float64
-		var count int64
-		rows.Scan(&id, &area, &count)
+	var items []models.LahanDetailItem
+	var totalArea float64
+
+	for _, r := range results {
 
 		items = append(items, models.LahanDetailItem{
-			Label: getLahanLabel(id),
-			Value: area,
-			Count: count,
+			Label: getLahanLabel(r.IDJenis),
+			Value: r.Area,
+			Count: r.Count,
 		})
-		totalArea += area
+
+		totalArea += r.Area
 	}
 
 	return models.LahanSummaryModel{
@@ -168,28 +202,62 @@ func getSummaryData(db *gorm.DB, title string, color string, statusFilter []stri
 }
 
 // Agregasi untuk Tabel Transaksi (Tanam & Panen)
-func getTransactionSummary(db *gorm.DB, title, color, table, col, dateCol, tglMulai, tglSelesai string) models.LahanSummaryModel {
-	var totalArea float64
-	var items []models.LahanDetailItem
+func getTransactionSummary(
+	db *gorm.DB,
+	title string,
+	color string,
+	table string,
+	col string,
+	dateCol string,
+	tglMulai string,
+	tglSelesai string,
+) models.LahanSummaryModel {
 
-	query := db.Table(table).
-		Select("lahan.idjenislahan, COALESCE(SUM("+table+"."+col+"), 0) as area, COUNT(DISTINCT lahan.idlahan) as count").
-		Joins("JOIN lahan ON lahan.idlahan = "+table+".idlahan").
-		Where(table+".deletestatus = ?", "2")
+	type result struct {
+		IDJenis int     `gorm:"column:idjenislahan"`
+		Area    float64 `gorm:"column:area"`
+		Count   int64   `gorm:"column:count"`
+	}
 
-	if table == "panen" {
+	var results []result
+	var query *gorm.DB
+
+	if table == "tanam" {
+
+		query = db.Table("tanam").
+			Select(`
+				lahan.idjenislahan,
+				COALESCE(SUM(tanam.luastanam),0) as area,
+				COUNT(lahan.idlahan) as count
+			`).
+			Joins("JOIN lahan ON lahan.idlahan = tanam.idlahan").
+			Where("tanam.deletestatus = ?", "2")
+
+		if tglMulai != "" && tglSelesai != "" {
+			query = query.Where("tanam."+dateCol+" BETWEEN ? AND ?", tglMulai, tglSelesai)
+		}
+
+	} else if table == "panen" {
+
 		query = db.Table("panen").
-			Select("lahan.idjenislahan, COALESCE(SUM(panen.luaspanen), 0) as area, COUNT(DISTINCT lahan.idlahan) as count").
+			Select(`
+				lahan.idjenislahan,
+				COALESCE(SUM(panen.luaspanen),0) as area,
+				COUNT(lahan.idlahan) as count
+			`).
 			Joins("JOIN tanam ON tanam.idtanam = panen.idtanam").
 			Joins("JOIN lahan ON lahan.idlahan = tanam.idlahan").
 			Where("panen.deletestatus = ?", "2")
+
+		if tglMulai != "" && tglSelesai != "" {
+			query = query.Where("panen."+dateCol+" BETWEEN ? AND ?", tglMulai, tglSelesai)
+		}
 	}
 
-	if tglMulai != "" && tglSelesai != "" {
-		query = query.Where(table+"."+dateCol+" BETWEEN ? AND ?", tglMulai, tglSelesai)
-	}
+	err := query.
+		Group("lahan.idjenislahan").
+		Scan(&results).Error
 
-	rows, err := query.Group("lahan.idjenislahan").Rows()
 	if err != nil {
 		return models.LahanSummaryModel{
 			Title:           title,
@@ -198,20 +266,19 @@ func getTransactionSummary(db *gorm.DB, title, color, table, col, dateCol, tglMu
 			Items:           []models.LahanDetailItem{},
 		}
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var id int
-		var area float64
-		var count int64
-		rows.Scan(&id, &area, &count)
+	var items []models.LahanDetailItem
+	var totalArea float64
+
+	for _, r := range results {
 
 		items = append(items, models.LahanDetailItem{
-			Label: getLahanLabel(id),
-			Value: area,
-			Count: count,
+			Label: getLahanLabel(r.IDJenis),
+			Value: r.Area,
+			Count: r.Count,
 		})
-		totalArea += area
+
+		totalArea += r.Area
 	}
 
 	return models.LahanSummaryModel{
@@ -224,115 +291,144 @@ func getTransactionSummary(db *gorm.DB, title, color, table, col, dateCol, tglMu
 
 // Helper untuk Agregasi Grafik Pertumbuhan (Trend Panen Bulanan)
 func getHarvestGrowthSummary(db *gorm.DB, idKomoditi string, jenisKomoditi string) models.HarvestSummaryModel {
+
 	currentYear := time.Now().Year()
 
 	type komRow struct {
 		ID   string `gorm:"column:idkomoditi"`
 		Nama string `gorm:"column:namakomoditi"`
 	}
+
 	var koms []komRow
 
-	komQ := initializers.DB.Session(&gorm.Session{}).
-		Table("komoditi").
+	komQ := initializers.DB.Table("komoditi").
 		Select("idkomoditi, namakomoditi").
 		Where("deletestatus = ?", "2")
 
 	if jenisKomoditi != "" {
 		komQ = komQ.Where("UPPER(jeniskomoditi) = ?", strings.ToUpper(jenisKomoditi))
 	}
+
 	if idKomoditi != "" {
 		komQ = komQ.Where("idkomoditi = ?", idKomoditi)
 	}
 
 	komQ.Order("idkomoditi ASC").Scan(&koms)
 
-	colors := []string{"#34D399", "#FBBF24", "#60A5FA", "#F87171", "#A78BFA"}
-	catMap := make(map[string]*models.HarvestCategory)
+	colors := []string{
+		"#34D399",
+		"#FBBF24",
+		"#60A5FA",
+		"#F87171",
+		"#A78BFA",
+	}
+
+	catMap := map[string]*models.HarvestCategory{}
 	colorIdx := 0
 
 	for _, k := range koms {
-		c := &models.HarvestCategory{
-			ID:    k.ID,
-			Label: k.Nama,
-			Color: colors[colorIdx%len(colors)],
-		}
-		colorIdx++
 
-		for m := 1; m <= 12; m++ {
-			c.DataPoints = append(c.DataPoints, models.HarvestPoint{
-				Month: m,
+		points := make([]models.HarvestPoint, 12)
+
+		for i := 0; i < 12; i++ {
+			points[i] = models.HarvestPoint{
+				Month: i + 1,
 				Year:  currentYear,
 				Value: 0,
-			})
+			}
 		}
-		catMap[k.ID] = c
+
+		catMap[k.ID] = &models.HarvestCategory{
+			ID:         k.ID,
+			Label:      k.Nama,
+			Color:      colors[colorIdx%len(colors)],
+			DataPoints: points,
+		}
+
+		colorIdx++
 	}
 
 	type aggRow struct {
-		Month      int     `gorm:"column:m"`
-		Year       int     `gorm:"column:y"`
-		IDKomoditi string  `gorm:"column:idk"`
-		TotalLuas  float64 `gorm:"column:total"`
+		Month        int     `gorm:"column:month"`
+		Year         int     `gorm:"column:year"`
+		IDKomoditi   string  `gorm:"column:idkomoditi"`
+		NamaKomoditi string  `gorm:"column:namakomoditi"`
+		TotalLuas    float64 `gorm:"column:total_luas"`
 	}
+
 	var aggs []aggRow
 
 	q := db.Table("panen").
 		Select(`
-			MONTH(panen.tglpanen) as m,
-			YEAR(panen.tglpanen) as y,
-			komoditi.idkomoditi as idk,
-			SUM(panen.luaspanen) as total
+			MONTH(panen.tglpanen) as month,
+			YEAR(panen.tglpanen) as year,
+			komoditi.idkomoditi as idkomoditi,
+			komoditi.namakomoditi as namakomoditi,
+			SUM(panen.luaspanen) as total_luas
 		`).
 		Joins("JOIN tanam ON tanam.idtanam = panen.idtanam").
 		Joins("JOIN lahan ON lahan.idlahan = tanam.idlahan").
 		Joins("JOIN komoditi ON komoditi.idkomoditi = lahan.idkomoditi").
-		Where("panen.deletestatus = ? AND YEAR(panen.tglpanen) = ?", "2", currentYear)
+		Where("panen.deletestatus = ?", "2").
+		Where("YEAR(panen.tglpanen) = ?", currentYear)
 
 	if idKomoditi != "" {
 		q = q.Where("komoditi.idkomoditi = ?", idKomoditi)
 	}
+
 	if jenisKomoditi != "" {
 		q = q.Where("UPPER(komoditi.jeniskomoditi) = ?", strings.ToUpper(jenisKomoditi))
 	}
 
-	q.Group("y, m, idk").Order("y ASC, m ASC").Scan(&aggs)
+	q.Group("komoditi.idkomoditi, komoditi.namakomoditi, year, month").
+		Order("year ASC, month ASC").
+		Scan(&aggs)
 
 	var totalOverall float64
+
 	for _, a := range aggs {
+
 		cat, ok := catMap[a.IDKomoditi]
+
 		if !ok {
-			cat = &models.HarvestCategory{
-				ID:    a.IDKomoditi,
-				Label: a.IDKomoditi,
-				Color: colors[colorIdx%len(colors)],
-			}
-			colorIdx++
-			for m := 1; m <= 12; m++ {
-				cat.DataPoints = append(cat.DataPoints, models.HarvestPoint{
-					Month: m,
+
+			points := make([]models.HarvestPoint, 12)
+
+			for i := 0; i < 12; i++ {
+				points[i] = models.HarvestPoint{
+					Month: i + 1,
 					Year:  currentYear,
 					Value: 0,
-				})
+				}
 			}
+
+			label := a.NamaKomoditi
+			if label == "" {
+				label = a.IDKomoditi
+			}
+
+			cat = &models.HarvestCategory{
+				ID:         a.IDKomoditi,
+				Label:      label,
+				Color:      colors[colorIdx%len(colors)],
+				DataPoints: points,
+			}
+
 			catMap[a.IDKomoditi] = cat
+			colorIdx++
 		}
 
 		if a.Month >= 1 && a.Month <= 12 {
 			cat.DataPoints[a.Month-1].Value = a.TotalLuas
 		}
+
 		totalOverall += a.TotalLuas
 	}
 
-	var categories []models.HarvestCategory
-	for _, k := range koms {
-		if c, ok := catMap[k.ID]; ok {
-			categories = append(categories, *c)
-		}
-	}
-	if len(categories) == 0 {
-		for _, c := range catMap {
-			categories = append(categories, *c)
-		}
+	categories := make([]models.HarvestCategory, 0, len(catMap))
+
+	for _, c := range catMap {
+		categories = append(categories, *c)
 	}
 
 	return models.HarvestSummaryModel{
@@ -344,58 +440,80 @@ func getHarvestGrowthSummary(db *gorm.DB, idKomoditi string, jenisKomoditi strin
 
 // Helper untuk Agregasi Kwartal (Q1 - Q4)
 func getQuarterlySummary(db *gorm.DB, idKomoditi string) []models.QuarterlyItemModel {
+
 	currentYear := time.Now().Year()
+
+	type row struct {
+		Quarter int     `gorm:"column:quarter"`
+		Label   string  `gorm:"column:label"`
+		Total   float64 `gorm:"column:total"`
+	}
+
+	var rows []row
+
+	query := db.Table("(?) as q", db.Raw(`
+
+    SELECT
+        QUARTER(t.tgltanam) as quarter,
+        'Lahan Tanam' as label,
+        SUM(t.luastanam) as total
+    FROM tanam t
+    JOIN lahan l ON l.idlahan = t.idlahan
+    WHERE t.deletestatus='2'
+    AND YEAR(t.tgltanam)=?
+    GROUP BY QUARTER(t.tgltanam)
+
+    UNION ALL
+
+    SELECT
+        QUARTER(p.tglpanen) as quarter,
+        'Lahan Panen' as label,
+        SUM(p.luaspanen) as total
+    FROM panen p
+    JOIN tanam t ON t.idtanam = p.idtanam
+    JOIN lahan l ON l.idlahan = t.idlahan
+    WHERE p.deletestatus='2'
+    AND YEAR(p.tglpanen)=?
+    GROUP BY QUARTER(p.tglpanen)
+
+`, currentYear, currentYear))
+
+	if idKomoditi != "" {
+		query = query.Where("l.idkomoditi = ?", idKomoditi)
+	}
+
+	err := query.Scan(&rows).Error
+	if err != nil {
+		return []models.QuarterlyItemModel{}
+	}
+
+	mapTanam := map[int]float64{}
+	mapPanen := map[int]float64{}
+
+	for _, r := range rows {
+
+		if r.Label == "Lahan Tanam" {
+			mapTanam[r.Quarter] += r.Total
+		}
+
+		if r.Label == "Lahan Panen" {
+			mapPanen[r.Quarter] += r.Total
+		}
+	}
+
 	quarterLabels := []string{"KW1", "KW2", "KW3", "KW4"}
+
 	var items []models.QuarterlyItemModel
 
-	var resTanam []struct {
-		Q     int
-		Total float64
-	}
-	qTanam := db.Table("tanam").
-		Select("QUARTER(tgltanam) as q, SUM(luastanam) as total").
-		Joins("JOIN lahan ON lahan.idlahan = tanam.idlahan").
-		Where("tanam.deletestatus = ? AND YEAR(tgltanam) = ?", "2", currentYear)
-
-	if idKomoditi != "" {
-		qTanam = qTanam.Where("lahan.idkomoditi = ?", idKomoditi)
-	}
-
-	qTanam.Group("q").Scan(&resTanam)
-
-	var resPanen []struct {
-		Q     int
-		Total float64
-	}
-	qPanen := db.Table("panen").
-		Select("QUARTER(tglpanen) as q, SUM(luaspanen) as total").
-		Joins("JOIN tanam ON tanam.idtanam = panen.idtanam").
-		Joins("JOIN lahan ON lahan.idlahan = tanam.idlahan").
-		Where("panen.deletestatus = ? AND YEAR(tglpanen) = ?", "2", currentYear)
-
-	if idKomoditi != "" {
-		qPanen = qPanen.Where("lahan.idkomoditi = ?", idKomoditi)
-	}
-
-	qPanen.Group("q").Scan(&resPanen)
-
-	mapTanam := map[int]float64{1: 0, 2: 0, 3: 0, 4: 0}
-	mapPanen := map[int]float64{1: 0, 2: 0, 3: 0, 4: 0}
-
-	for _, v := range resTanam {
-		mapTanam[v.Q] = v.Total
-	}
-	for _, v := range resPanen {
-		mapPanen[v.Q] = v.Total
-	}
-
 	for i := 1; i <= 4; i++ {
+
 		items = append(items, models.QuarterlyItemModel{
 			Label:  "Lahan Tanam",
 			Value:  mapTanam[i],
 			Unit:   "HA",
 			Period: quarterLabels[i-1],
 		})
+
 		items = append(items, models.QuarterlyItemModel{
 			Label:  "Lahan Panen",
 			Value:  mapPanen[i],
@@ -406,6 +524,8 @@ func getQuarterlySummary(db *gorm.DB, idKomoditi string) []models.QuarterlyItemM
 
 	return items
 }
+
+// resapan
 
 func getResapanSummary(db *gorm.DB, idKomoditi string) models.ResapanModel {
 	var results []struct {
@@ -489,11 +609,64 @@ func GetKomoditiByJenisFilter(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": out})
 }
 
-// ==============================
+// panen status
+func getPanenStatusSummary(db *gorm.DB) []models.SummaryCardModel {
+
+	currentYear := time.Now().Year()
+
+	type row struct {
+		Status int
+		Total  float64
+	}
+
+	var rows []row
+
+	db.Table("panen").
+		Select("statuspanen as status, SUM(luaspanen) as total").
+		Where("deletestatus = ?", "2").
+		Where("YEAR(tglpanen) = ?", currentYear).
+		Group("statuspanen").
+		Scan(&rows)
+
+	result := map[int]float64{
+		1: 0,
+		2: 0,
+		3: 0,
+		4: 0,
+	}
+
+	for _, r := range rows {
+		result[r.Status] = r.Total
+	}
+
+	return []models.SummaryCardModel{
+		{
+			Label: "TOTAL PANEN NORMAL TAHUN " + fmt.Sprint(currentYear),
+			Value: result[1],
+			Unit:  "HA",
+		},
+		{
+			Label: "TOTAL GAGAL PANEN TAHUN " + fmt.Sprint(currentYear),
+			Value: result[2],
+			Unit:  "HA",
+		},
+		{
+			Label: "TOTAL PANEN DINI TAHUN " + fmt.Sprint(currentYear),
+			Value: result[3],
+			Unit:  "HA",
+		},
+		{
+			Label: "TOTAL PANEN TEBASAN TAHUN " + fmt.Sprint(currentYear),
+			Value: result[4],
+			Unit:  "HA",
+		},
+	}
+}
+
 // MAP POTENSI ENDPOINT (optional terpisah dari /dashboard)
-// ==============================
 
 func GetDashboardMapPotensi(c *gin.Context) {
+
 	resor := c.Query("resor")
 	sektor := c.Query("sektor")
 	idJenis := c.Query("id_jenis_lahan")
@@ -502,38 +675,9 @@ func GetDashboardMapPotensi(c *gin.Context) {
 
 	baseQuery := initializers.DB.Model(&models.Lahan{})
 
-	// Filter Wilayah
-	if sektor != "" {
-		sName := strings.ReplaceAll(strings.ToUpper(sektor), "POLSEK ", "")
-		baseQuery = baseQuery.
-			Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = SUBSTR(lahan.idwilayah, 1, 8)").
-			Where("UPPER(w_kec.nama) LIKE ?", "%"+sName+"%")
-	} else if resor != "" {
-		rName := strings.ReplaceAll(strings.ToUpper(resor), "POLRES ", "")
-		baseQuery = baseQuery.
-			Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah, 1, 5)").
-			Where("UPPER(w_kab.nama) LIKE ?", "%"+rName+"%")
-	}
-
-	// Filter Jenis Lahan
-	if idJenis != "" {
-		baseQuery = baseQuery.Where("lahan.idjenislahan = ?", idJenis)
-	}
-
-	// Filter Jenis Komoditi (subquery IN)
-	if jenisKomoditi != "" {
-		sub := initializers.DB.
-			Table("komoditi").
-			Select("idkomoditi").
-			Where("deletestatus = ? AND UPPER(jeniskomoditi) = ?", "2", strings.ToUpper(jenisKomoditi))
-
-		baseQuery = baseQuery.Where("lahan.idkomoditi IN (?)", sub)
-	}
-
-	// Filter Komoditi spesifik
-	if idKomoditi != "" {
-		baseQuery = baseQuery.Where("lahan.idkomoditi = ?", idKomoditi)
-	}
+	baseQuery = applyWilayahFilter(baseQuery, resor, sektor)
+	baseQuery = applyJenisLahanFilter(baseQuery, idJenis)
+	baseQuery = applyKomoditiFilter(baseQuery, idKomoditi, jenisKomoditi)
 
 	data := getMapPotensiSummary(baseQuery.Session(&gorm.Session{}))
 
@@ -543,9 +687,73 @@ func GetDashboardMapPotensi(c *gin.Context) {
 	})
 }
 
-// ==============================
-// HELPER: MAP POTENSI SUMMARY (INI YANG BIKIN ERROR KALAU TIDAK ADA)
-// ==============================
+func applyWilayahFilter(db *gorm.DB, resor string, sektor string) *gorm.DB {
+
+	if sektor != "" {
+
+		sName := strings.ReplaceAll(strings.ToUpper(sektor), "POLSEK ", "")
+
+		var kode string
+
+		initializers.DB.
+			Table("wilayah").
+			Select("kode").
+			Where("UPPER(nama) LIKE ?", "%"+sName+"%").
+			Where("CHAR_LENGTH(kode) = 8").
+			Limit(1).
+			Scan(&kode)
+
+		if kode != "" {
+			db = db.Where("lahan.idwilayah LIKE ?", kode+"%")
+		}
+
+	} else if resor != "" {
+
+		rName := strings.ReplaceAll(strings.ToUpper(resor), "POLRES ", "")
+
+		var kode string
+
+		initializers.DB.
+			Table("wilayah").
+			Select("kode").
+			Where("UPPER(nama) LIKE ?", "%"+rName+"%").
+			Where("CHAR_LENGTH(kode) = 5").
+			Limit(1).
+			Scan(&kode)
+
+		if kode != "" {
+			db = db.Where("lahan.idwilayah LIKE ?", kode+"%")
+		}
+	}
+
+	return db
+}
+func applyKomoditiFilter(db *gorm.DB, idKomoditi string, jenisKomoditi string) *gorm.DB {
+
+	if idKomoditi != "" {
+		db = db.Where("lahan.idkomoditi = ?", idKomoditi)
+	}
+
+	if jenisKomoditi != "" {
+
+		db = db.Joins(`
+			JOIN komoditi k 
+			ON k.idkomoditi = lahan.idkomoditi
+		`).
+			Where("k.deletestatus = '2'").
+			Where("UPPER(k.jeniskomoditi) = ?", strings.ToUpper(jenisKomoditi))
+	}
+
+	return db
+}
+func applyJenisLahanFilter(db *gorm.DB, idJenis string) *gorm.DB {
+
+	if idJenis != "" {
+		db = db.Where("lahan.idjenislahan = ?", idJenis)
+	}
+
+	return db
+}
 
 func getMapPotensiSummary(db *gorm.DB) models.MapPotensiModel {
 	// ✅ sesuai DB kamu
@@ -554,10 +762,6 @@ func getMapPotensiSummary(db *gorm.DB) models.MapPotensiModel {
 
 	// ✅ jangan kebesaran biar tidak overload (mobile map juga berat render 5000 marker)
 	const DEFAULT_LIMIT = 2000
-
-	// ✅ bounding box Jawa Timur (perkiraan)
-	// lat: -8.9 s/d -6.3, lng: 111.0 s/d 114.9
-	// Kalau kamu mau nonaktifkan, tinggal hapus 2 Where bbox ini.
 	const JATIM_MIN_LAT = -8.9
 	const JATIM_MAX_LAT = -6.3
 	const JATIM_MIN_LNG = 111.0
@@ -583,8 +787,8 @@ func getMapPotensiSummary(db *gorm.DB) models.MapPotensiModel {
 	q := db.Session(&gorm.Session{}).
 		Select(`
 			lahan.idlahan as idlahan,
-			` + LAT_COL + ` as lat,
-			` + LNG_COL + ` as lng,
+			`+LAT_COL+` as lat,
+			`+LNG_COL+` as lng,
 			COALESCE(lahan.luaslahan, 0) as luaslahan,
 			lahan.statuslahan as statuslahan,
 			lahan.idjenislahan as idjenislahan,
@@ -597,13 +801,13 @@ func getMapPotensiSummary(db *gorm.DB) models.MapPotensiModel {
 		Joins(`LEFT JOIN komoditi ON komoditi.idkomoditi = lahan.idkomoditi AND komoditi.deletestatus = '2'`).
 		Joins(`LEFT JOIN wilayah w ON w.kode = lahan.idwilayah`).
 		Where(`lahan.statuslahan IN ('1','2','3','4')`).
-		Where(LAT_COL + " IS NOT NULL AND " + LNG_COL + " IS NOT NULL").
-		Where(LAT_COL + " <> 0 AND " + LNG_COL + " <> 0").
-		Where(LAT_COL + " BETWEEN -90 AND 90").
-		Where(LNG_COL + " BETWEEN -180 AND 180").
+		Where(LAT_COL+" IS NOT NULL AND "+LNG_COL+" IS NOT NULL").
+		Where(LAT_COL+" <> 0 AND "+LNG_COL+" <> 0").
+		Where(LAT_COL+" BETWEEN -90 AND 90").
+		Where(LNG_COL+" BETWEEN -180 AND 180").
 		// ✅ batasi area Jatim biar tidak kebanyakan data (hapus kalau tidak mau)
-		Where(LAT_COL + " BETWEEN ? AND ?", JATIM_MIN_LAT, JATIM_MAX_LAT).
-		Where(LNG_COL + " BETWEEN ? AND ?", JATIM_MIN_LNG, JATIM_MAX_LNG).
+		Where(LAT_COL+" BETWEEN ? AND ?", JATIM_MIN_LAT, JATIM_MAX_LAT).
+		Where(LNG_COL+" BETWEEN ? AND ?", JATIM_MIN_LNG, JATIM_MAX_LNG).
 		Order("lahan.idlahan DESC").
 		Limit(DEFAULT_LIMIT)
 
@@ -634,4 +838,63 @@ func getMapPotensiSummary(db *gorm.DB) models.MapPotensiModel {
 		TotalPoints: int64(len(out)),
 		Points:      out,
 	}
+}
+
+func getWilayahDistribution(db *gorm.DB, idTingkat string, idKomoditi string, jenisKomoditi string) []models.WilayahDistributionModel {
+
+	var results []models.WilayahDistributionModel
+
+	subTanam := db.Table("tanam").
+		Select("idlahan, SUM(luastanam) as total_tanam").
+		Where("deletestatus = ?", "2").
+		Group("idlahan")
+
+	query := db.Table("tingkat tw").
+		Select(`
+			tw.nama as nama_wilayah,
+			COUNT(l.idlahan) as total_titik,
+			COALESCE(SUM(l.luaslahan),0) as total_luas_potensi,
+			COALESCE(SUM(t.total_tanam),0) as total_luas_tanam
+		`).
+		Joins("LEFT JOIN lahan l ON tw.kode = l.idtingkat AND l.deletestatus='2'").
+		Joins("LEFT JOIN (?) t ON l.idlahan = t.idlahan", subTanam)
+
+	if idTingkat != "" {
+		query = query.Where("tw.kode LIKE ?", idTingkat+"%")
+	}
+
+	if idKomoditi != "" {
+		query = query.Where("l.idkomoditi = ?", idKomoditi)
+	}
+
+	if jenisKomoditi != "" {
+		query = query.
+			Joins("JOIN komoditi k ON k.idkomoditi = l.idkomoditi").
+			Where("k.deletestatus = '2'").
+			Where("UPPER(k.jeniskomoditi) = ?", strings.ToUpper(jenisKomoditi))
+	}
+
+	query.Group("tw.kode, tw.nama").
+		Order("total_luas_potensi DESC").
+		Scan(&results)
+
+	return results
+}
+func GetWilayahDistribution(c *gin.Context) {
+
+    idTingkat := c.Query("resor")
+    idKomoditi := c.Query("id_komoditi")
+    jenisKomoditi := c.Query("jenis_komoditi")
+
+    data := getWilayahDistribution(
+        initializers.DB.Session(&gorm.Session{}),
+        idTingkat,
+        idKomoditi,
+        jenisKomoditi,
+    )
+
+    c.JSON(http.StatusOK, gin.H{
+        "status": "success",
+        "data": data,
+    })
 }

@@ -5,19 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-// --- IMPORT PROVIDER ---
 import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/providers/dashboard_provider.dart';
 
-// --- IMPORT WIDGETS & MODELS ---
 import 'widgets/dashboard_header.dart';
-import 'widgets/ringkasan_aset.dart'; // File berisi LahanStatCard & CardLayoutType
+import 'widgets/ringkasan_aset.dart';
 import 'widgets/carousel.dart';
-import 'widgets/total_summary_section.dart';
+import 'widgets/panenStatus.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/data_kwartal.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/distribution_card.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/grafik_pertumbuhan.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/presentation/widgets/resapan_card.dart';
+
 import '../data/model/carousel_item_model.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -28,14 +27,14 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // Track expanded states for each card
   final Map<int, bool> _expandedStates = {};
 
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().fetchDashboard();
+      context.read<DashboardProvider>().refreshAllData();
     });
   }
 
@@ -79,7 +78,7 @@ class _DashboardPageState extends State<DashboardPage> {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // A. HEADER SECTION
+                /// HEADER
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -90,7 +89,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
 
-                // B. CAROUSEL SECTION
+                /// CAROUSEL
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -101,103 +100,128 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
 
-                // C. LAHAN STATS SECTION - VERTICAL EXPANDABLE
+                /// TOTAL LAHAN
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 25, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle("Total Lahan"),
-                        const SizedBox(height: 16),
-                        if (data.lahanData.isNotEmpty)
-                          _buildLahanStatsSection(data.lahanData),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // D. GRAFIK PERTUMBUHAN
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle("Grafik Pertumbuhan"),
-                        const SizedBox(height: 12),
-                        if (data.harvestData != null)
-                          GrafikChartCard(data: data.harvestData!),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // E. DATA KWARTAL
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle("Data Kwartal"),
-                        const SizedBox(height: 12),
-                        if (data.quarterlyData.isNotEmpty)
-                          QuarterlyStatsSection(items: data.quarterlyData),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // F. RINGKASAN KESELURUHAN
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle("Total Keseluruhan"),
-                        const SizedBox(height: 12),
-                        TotalSummarySection(items: data.summaryData),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // G. PETA PENYEBARAN
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle("Peta Penyebaran Potensi Lahan"),
-                        const SizedBox(height: 12),
-                        const PotensiMapSection(),
-
-                        const SizedBox(height: 16),
-
-                        if (data.distributionData.isNotEmpty)
-                          _buildDistributionSection(data.distributionData),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // H. TOTAL RESAPAN
-                if (data.resapanData != null)
-                  SliverToBoxAdapter(
+                  child: DashboardSection(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 60),
+                      padding: const EdgeInsets.fromLTRB(20, 25, 20, 25),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionTitle(
-                            "Total Resapan Per Tahun ${data.resapanData!.year}",
-                          ),
-                          const SizedBox(height: 12),
-                          ResapanCard(data: data.resapanData!),
+                          _buildSectionTitle("Total Lahan"),
+                          const SizedBox(height: 16),
+                          if (data.lahanData.isNotEmpty)
+                            _buildLahanStatsSection(data.lahanData),
                         ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// GRAFIK
+                SliverToBoxAdapter(
+                  child: DashboardSection(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle("Grafik Pertumbuhan"),
+                          const SizedBox(height: 12),
+                          if (data.harvestData != null)
+                            GrafikChartCard(data: data.harvestData!),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// DATA KWARTAL
+                SliverToBoxAdapter(
+                  child: DashboardSection(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle("Data Kwartal"),
+                          const SizedBox(height: 12),
+                          if (data.quarterlyData.isNotEmpty)
+                            QuarterlyStatsSection(items: data.quarterlyData),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// TOTAL KESELURUHAN
+                SliverToBoxAdapter(
+                  child: DashboardSection(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle("Panen Status"),
+                          const SizedBox(height: 12),
+                          const PanenStatusSection(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// MAP
+                SliverToBoxAdapter(
+                  child: DashboardSection(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle("Peta Penyebaran Potensi Lahan"),
+                          const SizedBox(height: 12),
+
+                          const PotensiMapSection(),
+
+                          const SizedBox(height: 20),
+
+                          Consumer<DashboardProvider>(
+                            builder: (context, prov, _) {
+                              if (prov.isWilayahLoading) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(20),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+
+                              return _buildDistributionSection();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                /// RESAPAN
+                if (data.resapanData != null)
+                  SliverToBoxAdapter(
+                    child: DashboardSection(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 60),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionTitle(
+                              "Total Resapan Per Tahun ${data.resapanData!.year}",
+                            ),
+                            const SizedBox(height: 12),
+                            ResapanCard(data: data.resapanData!),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -209,30 +233,23 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ==================== LAHAN STATS SECTION ====================
+  /// ================= LAHAN SECTION =================
 
   Widget _buildLahanStatsSection(List<dynamic> lahanData) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Desktop/Tablet: Grid layout with expandable cards
     if (screenWidth > 900) {
       return _buildDesktopLayout(lahanData);
-    }
-    // Tablet: 2 column grid
-    else if (screenWidth > 600) {
+    } else if (screenWidth > 600) {
       return _buildTabletLayout(lahanData);
-    }
-    // Mobile: Vertical stack
-    else {
+    } else {
       return _buildMobileLayout(lahanData);
     }
   }
 
-  /// DESKTOP: >900px - 2 column grid, first card spans full width
   Widget _buildDesktopLayout(List<dynamic> lahanData) {
     return Column(
       children: [
-        // Featured Card (Full width)
         LahanStatCard(
           key: const ValueKey('featured'),
           data: lahanData[0],
@@ -242,10 +259,7 @@ class _DashboardPageState extends State<DashboardPage> {
           previewItemCount: 4,
           onTap: () => _onCardTap(lahanData[0]),
         ),
-
         const SizedBox(height: 16),
-
-        // Grid for remaining cards
         if (lahanData.length > 1)
           GridView.builder(
             shrinkWrap: true,
@@ -273,7 +287,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// TABLET: 600-900px - 2 column grid
   Widget _buildTabletLayout(List<dynamic> lahanData) {
     return GridView.builder(
       shrinkWrap: true,
@@ -299,7 +312,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// MOBILE: <600px - Vertical stack with expandable cards
   Widget _buildMobileLayout(List<dynamic> lahanData) {
     return ListView.separated(
       shrinkWrap: true,
@@ -321,38 +333,18 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ==================== DISTRIBUTION SECTION ====================
-
-  Widget _buildDistributionSection(List<dynamic> distributionData) {
+  Widget _buildDistributionSection() {
     final screenWidth = MediaQuery.of(context).size.width;
 
     if (screenWidth > 600) {
-      return Row(
-        children: [
-          Expanded(child: DistributionCard(data: distributionData[0])),
-          if (distributionData.length > 1) ...[
-            const SizedBox(width: 16),
-            Expanded(child: DistributionCard(data: distributionData[1])),
-          ],
-        ],
-      );
+      return const Row(children: [Expanded(child: DistributionCard())]);
     } else {
-      return Column(
-        children: [
-          DistributionCard(data: distributionData[0]),
-          if (distributionData.length > 1) ...[
-            const SizedBox(height: 12),
-            DistributionCard(data: distributionData[1]),
-          ],
-        ],
-      );
+      return const Column(children: [DistributionCard()]);
     }
   }
 
   void _onCardTap(dynamic data) {
     HapticFeedback.lightImpact();
-    // TODO: Navigate to detail page
-    // Navigator.push(context, MaterialPageRoute(...));
   }
 
   Widget _buildSectionTitle(String title) {
@@ -365,4 +357,45 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
+}
+
+/// ================= GRID BACKGROUND =================
+
+class DashboardSection extends StatelessWidget {
+  final Widget child;
+
+  const DashboardSection({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: CustomPaint(painter: _DashboardGridPainter())),
+        child,
+      ],
+    );
+  }
+}
+
+class _DashboardGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const spacing = 40.0;
+
+    final paint =
+        Paint()
+          ..color = const Color(0xFFE2E8F0)
+          ..strokeWidth = 0.4;
+
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
