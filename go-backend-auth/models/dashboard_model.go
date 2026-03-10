@@ -11,6 +11,9 @@ type DashboardDataResponse struct {
 
 	// ✅ BARU: peta penyebaran potensi lahan
 	MapPotensi MapPotensiModel `json:"map_potensi"`
+
+	PanenStatus         []SummaryCardModel         `json:"panen_status"`
+	WilayahDistribution []WilayahDistributionModel `json:"wilayah_distribution"`
 }
 
 type MapPotensiModel struct {
@@ -102,6 +105,17 @@ type ResapanModel struct {
 }
 
 type ResapanItem struct {
+	Label string  `json:"label"`
+	Value float64 `json:"value"`
+}
+type resapanQuery struct {
+	Bulog     float64 `gorm:"column:bulog"`
+	Pakan     float64 `gorm:"column:pakan"`
+	Tengkulak float64 `gorm:"column:tengkulak"`
+	Konsumsi  float64 `gorm:"column:konsumsi"`
+}
+
+type WilayahDistributionModel struct {
 	Label string  `json:"label"`
 	Value float64 `json:"value"`
 }

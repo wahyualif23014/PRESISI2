@@ -51,6 +51,8 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   flutter_map_marker_cluster: ^1.4.0
+  flutter_map_heatmap: ^0.0.8
+  flutter_map_geojson: ^1.0.2
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -88,6 +90,7 @@ flutter:
   assets:
     - assets/image/background.png
     - assets/image/logo.png
+    - assets/geo/jatim.geojson
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

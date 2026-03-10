@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart'; 
 import '../../router/route_names.dart';
 import '../provider/auth_provider.dart';
-import 'register_screen.dart';
+// import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -71,12 +71,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _navigateToRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-    );
-  }
+  // void _navigateToRegister() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(builder: (context) => const RegisterScreen()),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -150,14 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               isFilled: true,
                             ),
                             const SizedBox(height: 15),
-                            _LoginButton(
-                              text: "Register",
-                              isLoading: false,
-                              onPressed: auth.isLoading ? null : _navigateToRegister,
-                              color: _primaryGold,
-                              textColor: _primaryGold,
-                              isFilled: false,
-                            ),
+                            // _LoginButton(
+                            //   text: "Register",
+                            //   isLoading: false,
+                            //   onPressed: auth.isLoading ? null : _navigateToRegister,
+                            //   color: _primaryGold,
+                            //   textColor: _primaryGold,
+                            //   isFilled: false,
+                            // ),
                           ],
                         );
                       },

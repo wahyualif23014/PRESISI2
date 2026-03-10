@@ -27,27 +27,63 @@ class PersonelCard extends StatelessWidget {
     this.onTap,
   });
 
+  /// ✅ PERBAIKAN: Sanitize dan format ke +62 dengan benar
   String? _sanitizePhoneNumber(String? phone) {
     if (phone == null || phone.isEmpty) return null;
+    
+    // Hapus semua karakter non-digit kecuali +
     String sanitized = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Jika dimulai dengan 0, ganti dengan +62
     if (sanitized.startsWith('0')) {
       sanitized = '+62${sanitized.substring(1)}';
-    } else if (sanitized.startsWith('62') && !sanitized.startsWith('+')) {
+    } 
+    // Jika dimulai dengan 62 tanpa +, tambahkan +
+    else if (sanitized.startsWith('62') && !sanitized.startsWith('+')) {
       sanitized = '+$sanitized';
-    } else if (!sanitized.startsWith('+')) {
-      sanitized = '+$sanitized';
+    } 
+    // Jika tidak dimulai dengan +, tambahkan +62
+    else if (!sanitized.startsWith('+')) {
+      sanitized = '+62$sanitized';
     }
-    if (sanitized.length < 8 || sanitized.length > 15) return null;
+    
+    // Validasi panjang nomor (minimal 10 digit setelah +62)
+    String digitsOnly = sanitized.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) return null;
+    
     return sanitized;
   }
 
+  /// ✅ PERBAIKAN: Format untuk tampilan UI (+62 812-3456-7890)
+  String _formatPhoneForDisplay(String phone) {
+    String digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('62')) {
+      digits = digits.substring(2);
+    }
+    
+    if (digits.length >= 10) {
+      return '+62 ${digits.substring(0, 3)}-${digits.substring(3, 7)}-${digits.substring(7)}';
+    }
+    return phone;
+  }
+
+  /// ✅ PERBAIKAN: Format untuk WhatsApp (hapus + dan spasi)
+  String _formatForWhatsApp(String phone) {
+    // WhatsApp butuh format: 628123456789 (tanpa +, tanpa spasi, tanpa -)
+    return phone.replaceAll(RegExp(r'[^\d]'), '');
+  }
+
   Future<void> _launchWhatsApp(BuildContext context, String phone) async {
+    final waNumber = _formatForWhatsApp(phone); // ✅ Gunakan format tanpa +
     final message = Uri.encodeComponent(
       "Halo ${personel.namaLengkap}, saya ingin menghubungi terkait tugas di ${personel.tingkatDetail?.nama ?? 'Kantor'}.",
     );
-    final waNumber = phone.replaceAll('+', '');
+    
+    // ✅ PERBAIKAN: Hapus spasi di URL
     final Uri url = Uri.parse("https://wa.me/$waNumber?text=$message");
+    
     debugPrint('Launching WhatsApp: $url');
+    
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
@@ -134,6 +170,7 @@ class PersonelCard extends StatelessWidget {
       builder: (sheetContext) => _ContactBottomSheet(
         name: personel.namaLengkap,
         phone: sanitized,
+        displayPhone: _formatPhoneForDisplay(sanitized), // ✅ Format tampilan
         onCall: () async {
           Navigator.pop(sheetContext);
           await Future.delayed(const Duration(milliseconds: 200));
@@ -158,7 +195,7 @@ class PersonelCard extends StatelessWidget {
         onCopy: () {
           Clipboard.setData(ClipboardData(text: sanitized));
           Navigator.pop(sheetContext);
-          _showSuccess(context, 'Nomor disalin: $sanitized');
+          _showSuccess(context, 'Nomor disalin: ${_formatPhoneForDisplay(sanitized)}');
         },
       ),
     );
@@ -170,7 +207,11 @@ class PersonelCard extends StatelessWidget {
     final String jabatanName = personel.jabatanDetail?.namaJabatan ?? "-";
     final String? sanitizedPhone = _sanitizePhoneNumber(personel.noTelp);
     final bool hasPhone = sanitizedPhone != null;
-    final String displayPhone = hasPhone ? sanitizedPhone : "Belum terdaftar";
+    
+    // ✅ Format tampilan dengan +62
+    final String displayPhone = hasPhone 
+        ? _formatPhoneForDisplay(sanitizedPhone) 
+        : "Belum terdaftar";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -289,11 +330,14 @@ class PersonelCard extends StatelessWidget {
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 child: Divider(height: 1, color: _borderWarm),
                               ),
-                              _InfoItem(
-                                icon: Icons.phone_outlined,
-                                label: "NOMOR TELEPON",
-                                value: displayPhone,
-                                isPhone: true,
+                              GestureDetector(
+                                onTap: () => _showContactOptions(context),
+                                child: _InfoItem(
+                                  icon: Icons.phone_outlined,
+                                  label: "NOMOR TELEPON",
+                                  value: displayPhone, // ✅ Tampilkan format +62
+                                  isPhone: true,
+                                ),
                               ),
                             ],
                           ],
@@ -307,12 +351,25 @@ class PersonelCard extends StatelessWidget {
                         children: [
                           _RoleBadge(role: personel.role),
                           if (hasPhone)
-                            Text(
-                              "Ketuk untuk menghubungi",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: _slateGrey.withOpacity(0.6),
-                                fontStyle: FontStyle.italic,
+                            GestureDetector(
+                              onTap: () => _showContactOptions(context),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.touch_app,
+                                    size: 14,
+                                    color: _forestGreen.withOpacity(0.6),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Ketuk untuk menghubungi",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: _forestGreen.withOpacity(0.6),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                         ],
@@ -423,6 +480,7 @@ class PersonelCard extends StatelessWidget {
 class _ContactBottomSheet extends StatelessWidget {
   final String name;
   final String phone;
+  final String displayPhone; // ✅ Tambahkan parameter untuk tampilan
   final VoidCallback onCall;
   final VoidCallback onSms;
   final VoidCallback onWhatsApp;
@@ -431,6 +489,7 @@ class _ContactBottomSheet extends StatelessWidget {
   const _ContactBottomSheet({
     required this.name,
     required this.phone,
+    required this.displayPhone, // ✅ Required
     required this.onCall,
     required this.onSms,
     required this.onWhatsApp,
@@ -497,11 +556,12 @@ class _ContactBottomSheet extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                phone,
+                displayPhone, // ✅ Tampilkan format +62 yang rapi
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   color: _slateGrey.withOpacity(0.8),
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
               const SizedBox(width: 8),
@@ -703,6 +763,7 @@ class _InfoItem extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: isPhone ? _forestGreen : _textPrimary,
+                  letterSpacing: isPhone ? 0.3 : 0, // ✅ Spacing untuk nomor
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

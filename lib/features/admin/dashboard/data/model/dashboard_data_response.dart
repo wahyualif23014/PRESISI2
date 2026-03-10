@@ -1,71 +1,83 @@
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/panen_status_item.dart';
+
 import 'summary_item_model.dart';
 import 'ringkasan_area_model.dart';
 import 'harvest_model.dart';
 import 'kwartal_item_model.dart';
-import 'distribution_model.dart';
 import 'resapan_model.dart';
+import 'wilayah_distribution_model.dart';
 
 class DashboardDataResponse {
   final List<SummaryItemModel> summaryData;
   final List<RingkasanAreaModel> lahanData;
   final HarvestModel? harvestData;
   final List<QuarterlyItem> quarterlyData;
-  final List<DistributionModel> distributionData;
   final ResapanModel? resapanData;
   final String activeFilterLabel;
-
-  // ✅ BARU: map potensi dari backend
   final MapPotensiModel? mapPotensi;
+  final List<PanenStatusItem> panenStatus;
+
+  // distribution chart
+  final List<WilayahDistributionModel> wilayahDistribution;
 
   DashboardDataResponse({
     required this.summaryData,
     required this.lahanData,
     this.harvestData,
     required this.quarterlyData,
-    required this.distributionData,
     this.resapanData,
     required this.activeFilterLabel,
     this.mapPotensi,
+    required this.panenStatus,
+    required this.wilayahDistribution,
   });
 
   factory DashboardDataResponse.fromJson(Map<String, dynamic> json) {
     return DashboardDataResponse(
-      summaryData: (json['summary_data'] as List? ?? [])
-          .map((x) => SummaryItemModel.fromJson(x))
+      summaryData: (json['summary_data'] as List<dynamic>? ?? [])
+          .map((e) => SummaryItemModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      lahanData: (json['lahan_data'] as List? ?? [])
-          .map((x) => RingkasanAreaModel.fromJson(x))
+
+      lahanData: (json['lahan_data'] as List<dynamic>? ?? [])
+          .map((e) => RingkasanAreaModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
+
       harvestData: json['harvest_data'] != null
-          ? HarvestModel.fromJson(json['harvest_data'])
+          ? HarvestModel.fromJson(
+              Map<String, dynamic>.from(json['harvest_data']))
           : null,
-      quarterlyData: (json['quarterly_data'] as List? ?? [])
-          .map((x) => QuarterlyItem.fromJson(x))
+
+      quarterlyData: (json['quarterly_data'] as List<dynamic>? ?? [])
+          .map((e) => QuarterlyItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      distributionData: (json['distribution_data'] as List? ?? [])
-          .map((x) => DistributionModel.fromJson(x))
-          .toList(),
+
       resapanData: json['resapan_data'] != null
-          ? ResapanModel.fromJson(json['resapan_data'])
+          ? ResapanModel.fromJson(Map<String, dynamic>.from(json['resapan_data']))
           : null,
-      activeFilterLabel: json['active_filter_label'] ?? "",
+
+      activeFilterLabel: (json['active_filter_label'] ?? "").toString(),
+
       mapPotensi: json['map_potensi'] != null
-          ? MapPotensiModel.fromJson(
-              Map<String, dynamic>.from(json['map_potensi']),
-            )
+          ? MapPotensiModel.fromJson(Map<String, dynamic>.from(json['map_potensi']))
           : null,
+
+      panenStatus: (json['panen_status'] as List<dynamic>? ?? [])
+          .map((e) => PanenStatusItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+
+      wilayahDistribution: (json['wilayah_distribution'] as List<dynamic>? ?? [])
+          .map((e) => WilayahDistributionModel.fromJson(
+                Map<String, dynamic>.from(e),
+              ))
+          .toList(),
     );
   }
 }
-
 class MapPotensiModel {
   final int totalPoints;
   final List<MapPotensiItem> points;
 
-  MapPotensiModel({
-    required this.totalPoints,
-    required this.points,
-  });
+  MapPotensiModel({required this.totalPoints, required this.points});
 
   factory MapPotensiModel.fromJson(Map<String, dynamic> json) {
     return MapPotensiModel(

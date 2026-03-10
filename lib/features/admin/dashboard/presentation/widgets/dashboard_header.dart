@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-
-// Import Model (Pastikan path benar)
 import '../../data/model/dashboard_header_model.dart';
 
 class DashboardHeader extends StatefulWidget {
@@ -27,10 +25,9 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   }
 
   void _fetchData() {
-    // Simulasi Logic Greeting yang Friendly
     final hour = DateTime.now().hour;
     String greeting = "Semangat Pagi";
-    
+
     if (hour >= 11 && hour < 15) {
       greeting = "Selamat Siang";
     } else if (hour >= 15 && hour < 18) {
@@ -44,8 +41,8 @@ class _DashboardHeaderState extends State<DashboardHeader> {
         userName: widget.userName,
         userRole: widget.userRole,
         greetingText: greeting,
-        greetingIcon: Icons.emoji_people_rounded, // Icon placeholder
-        formattedDate: '', // Tidak dipakai
+        greetingIcon: Icons.emoji_people_rounded,
+        formattedDate: '',
       );
     });
   }
@@ -56,63 +53,68 @@ class _DashboardHeaderState extends State<DashboardHeader> {
 
     return Container(
       width: double.infinity,
-      // Padding dibuat lebih tipis (vertical 16)
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        // Gradient Gelap (Kontras dengan BG Putih)
         gradient: const LinearGradient(
           colors: [
-            Color(0xFF1E293B), // Slate 800
-            Color(0xFF334155), // Slate 700
+            Color(0xFF0F172A),
+            Color(0xFF1E293B),
+            Color(0xFF334155),
           ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16), // Radius sudut lebih kecil (clean)
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.05),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E293B).withOpacity(0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF020617).withOpacity(0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // KIRI: Greeting & Nama User
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min, // Agar tinggi fit content
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    Text(
-                      _headerData!.greetingText,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF94A3B8), // Slate 400 (Abu muda)
+                    Flexible(
+                      child: Text(
+                        _headerData!.greetingText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFFCBD5F5),
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
                     const Icon(
-                      Icons.waving_hand_rounded, // Icon tangan melambai
-                      size: 14,
-                      color: Color(0xFFF59E0B), // Amber (Emas)
+                      Icons.waving_hand_rounded,
+                      size: 16,
+                      color: Color(0xFFFBBF24),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   widget.userName,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white, // Teks putih di atas gelap
-                    letterSpacing: 0.3,
+                    color: Colors.white,
+                    letterSpacing: 0.4,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -121,36 +123,43 @@ class _DashboardHeaderState extends State<DashboardHeader> {
             ),
           ),
 
-          // KANAN: Badge Role (Polda Jatim)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1), // Transparan putih
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
+          const SizedBox(width: 12),
+
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B).withOpacity(0.6),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFF4ADE80).withOpacity(0.4),
+                  width: 1,
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.verified_user_outlined, 
-                  size: 14, 
-                  color: Color(0xFF4ADE80), // Hijau Neon
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  widget.userRole.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.verified_user_rounded,
+                    size: 15,
+                    color: Color(0xFF4ADE80),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      widget.userRole.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFE2E8F0),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
