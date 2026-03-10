@@ -516,18 +516,18 @@ func getQuarterlySummary(db *gorm.DB, idKomoditi string) []models.QuarterlyItemM
 	currentYear := time.Now().Year()
 
 	type row struct {
-		Quarter int     `gorm:"column:quarter"`
-		Label   string  `gorm:"column:label"`
-		Total   float64 `gorm:"column:total"`
+		Quarter int
+		Label   string
+		Total   float64
 	}
 
 	var rows []row
 
-	rawSQL := `
-	SELECT
-		QUARTER(t.tgltanam) as quarter,
-		'Lahan Tanam' as label,
-		SUM(t.luastanam) as total
+	query := `
+	SELECT 
+		QUARTER(t.tgltanam) quarter,
+		'Lahan Tanam' label,
+		SUM(t.luastanam) total
 	FROM tanam t
 	JOIN lahan l ON l.idlahan = t.idlahan
 	WHERE t.deletestatus='2'
@@ -535,39 +535,32 @@ func getQuarterlySummary(db *gorm.DB, idKomoditi string) []models.QuarterlyItemM
 	`
 
 	if idKomoditi != "" {
-		rawSQL += " AND l.idkomoditi = ? "
+		query += " AND l.idkomoditi=? "
 	}
 
-	rawSQL += `
+	query += `
 	GROUP BY QUARTER(t.tgltanam)
 
 	UNION ALL
 
-	SELECT
-		QUARTER(p.tglpanen) as quarter,
-		'Lahan Panen' as label,
-		SUM(p.luaspanen) as total
+	SELECT 
+		QUARTER(p.tglpanen) quarter,
+		'Lahan Panen' label,
+		SUM(p.luaspanen) total
 	FROM panen p
-	JOIN tanam t ON t.idtanam = p.idtanam
-	JOIN lahan l ON l.idlahan = t.idlahan
+	JOIN tanam t ON t.idtanam=p.idtanam
+	JOIN lahan l ON l.idlahan=t.idlahan
 	WHERE p.deletestatus='2'
 	AND YEAR(p.tglpanen)=?
 	`
 
 	if idKomoditi != "" {
-		rawSQL += " AND l.idkomoditi = ? "
+		query += " AND l.idkomoditi=? "
 	}
 
-	rawSQL += `
-	GROUP BY QUARTER(p.tglpanen)
-	`
+	query += " GROUP BY QUARTER(p.tglpanen)"
 
 	var args []interface{}
-	args = append(args, currentYear)
-
-	if idKomoditi != "" {
-		args = append(args, idKomoditi)
-	}
 
 	args = append(args, currentYear)
 
@@ -575,47 +568,54 @@ func getQuarterlySummary(db *gorm.DB, idKomoditi string) []models.QuarterlyItemM
 		args = append(args, idKomoditi)
 	}
 
-	err := db.Raw(rawSQL, args...).Scan(&rows).Error
-	if err != nil {
-		return []models.QuarterlyItemModel{}
+	args = append(args, currentYear)
+
+	if idKomoditi != "" {
+		args = append(args, idKomoditi)
 	}
 
-	mapTanam := map[int]float64{}
-	mapPanen := map[int]float64{}
+	db.Raw(query, args...).Scan(&rows)
+
+	tanam := map[int]float64{}
+	panen := map[int]float64{}
 
 	for _, r := range rows {
 
-		if r.Label == "Lahan Tanam" {
-			mapTanam[r.Quarter] += r.Total
-		}
+		switch r.Label {
 
-		if r.Label == "Lahan Panen" {
-			mapPanen[r.Quarter] += r.Total
+		case "Lahan Tanam":
+			tanam[r.Quarter] += r.Total
+
+		case "Lahan Panen":
+			panen[r.Quarter] += r.Total
 		}
 	}
 
-	quarterLabels := []string{"KW1", "KW2", "KW3", "KW4"}
+	quarters := []string{"KW1", "KW2", "KW3", "KW4"}
 
-	var items []models.QuarterlyItemModel
+	var result []models.QuarterlyItemModel
 
 	for i := 1; i <= 4; i++ {
 
-		items = append(items, models.QuarterlyItemModel{
+		result = append(result, models.QuarterlyItemModel{
 			Label:  "Lahan Tanam",
-			Value:  mapTanam[i],
+			Value:  tanam[i],
 			Unit:   "HA",
-			Period: quarterLabels[i-1],
-		})
-
-		items = append(items, models.QuarterlyItemModel{
-			Label:  "Lahan Panen",
-			Value:  mapPanen[i],
-			Unit:   "HA",
-			Period: quarterLabels[i-1],
+			Period: quarters[i-1],
 		})
 	}
 
-	return items
+	for i := 1; i <= 4; i++ {
+
+		result = append(result, models.QuarterlyItemModel{
+			Label:  "Lahan Panen",
+			Value:  panen[i],
+			Unit:   "HA",
+			Period: quarters[i-1],
+		})
+	}
+
+	return result
 }
 
 // resapan

@@ -333,44 +333,59 @@ func DeletePotensiLahan(c *gin.Context) {
 }
 
 func GetSummaryLahan(c *gin.Context) {
+
 	type SummaryCategory struct {
 		Title string  `json:"title"`
 		Area  float64 `json:"area"`
 		Count int64   `json:"count"`
 	}
+
 	var totals struct {
 		TotalArea float64 `gorm:"column:total_area"`
 		TotalLoc  int64   `gorm:"column:total_loc"`
 	}
 
-	dbFilter := "idjenislahan IS NOT NULL AND statuslahan = '1'"
+	dbFilter := `
+		deletestatus = '2'
+		AND statuslahan = '1'
+		AND idjenislahan IS NOT NULL
+	`
 
 	initializers.DB.Table("lahan").
 		Where(dbFilter).
-		Select("COALESCE(SUM(luaslahan),0) as total_area, COUNT(DISTINCT idjenislahan) as total_loc").
+		Select(`
+			COALESCE(SUM(luaslahan),0) as total_area,
+			COUNT(idlahan) as total_loc
+		`).
 		Scan(&totals)
 
 	var categories []SummaryCategory
+
 	rows, err := initializers.DB.Table("lahan").
 		Where(dbFilter).
 		Select(`
-		idjenislahan,
-		COALESCE(SUM(luaslahan),0) as area,
-		COUNT(idlahan) as count
-	`).
+			idjenislahan,
+			COALESCE(SUM(luaslahan),0) as area,
+			COUNT(idlahan) as count
+		`).
 		Group("idjenislahan").
 		Order("idjenislahan ASC").
 		Rows()
 
 	if err == nil {
+
 		defer rows.Close()
+
 		for rows.Next() {
+
 			var id int
 			var area float64
 			var count int64
+
 			rows.Scan(&id, &area, &count)
 
 			title := "LAHAN LAINNYA"
+
 			switch id {
 			case 1:
 				title = "PRODUKTIF (POKTAN BINAAN POLRI)"
@@ -389,6 +404,7 @@ func GetSummaryLahan(c *gin.Context) {
 			case 8:
 				title = "HUTAN (PERHUTANI/INHUTANI)"
 			}
+
 			categories = append(categories, SummaryCategory{
 				Title: title,
 				Area:  area,
@@ -408,23 +424,69 @@ func GetSummaryLahan(c *gin.Context) {
 }
 
 func GetNoPotentialLahan(c *gin.Context) {
+
 	var master struct {
 		Kab  int64
 		Kec  int64
 		Desa int64
 	}
-	initializers.DB.Table("wilayah").Select("SUM(CASE WHEN CHAR_LENGTH(kode) = 5 THEN 1 ELSE 0 END) as kab, SUM(CASE WHEN CHAR_LENGTH(kode) = 8 THEN 1 ELSE 0 END) as kec, SUM(CASE WHEN CHAR_LENGTH(kode) > 8 THEN 1 ELSE 0 END) as desa").Scan(&master)
+
+	// Hitung total wilayah master
+	initializers.DB.Table("wilayah").
+		Select(`
+			COUNT(CASE WHEN LENGTH(kode) = 5 THEN 1 END) as kab,
+			COUNT(CASE WHEN LENGTH(kode) = 8 THEN 1 END) as kec,
+			COUNT(CASE WHEN LENGTH(kode) > 8 THEN 1 END) as desa
+		`).
+		Scan(&master)
 
 	var isi struct {
 		Kab  int64
 		Kec  int64
 		Desa int64
 	}
-	dbFilter := "idwilayah IS NOT NULL AND statuslahan IN ('1', '2', '3', '4')"
-	initializers.DB.Table("lahan").Where(dbFilter).Select("COUNT(DISTINCT SUBSTR(idwilayah, 1, 5)) as kab, COUNT(DISTINCT SUBSTR(idwilayah, 1, 8)) as kec, COUNT(DISTINCT idwilayah) as desa").Scan(&isi)
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"total_empty_polres": master.Kab - isi.Kab, "details": gin.H{"polsek": master.Kec - isi.Kec, "kab_kota": master.Kab - isi.Kab, "kecamatan": master.Kec - isi.Kec, "kel_desa": master.Desa - isi.Desa}}})
+	// Hitung wilayah yang memiliki lahan (hanya wilayah valid)
+	initializers.DB.Table("lahan l").
+		Joins("JOIN wilayah w ON w.kode = LEFT(l.idwilayah,5)").
+		Where(`
+			l.idwilayah IS NOT NULL
+			AND l.deletestatus = '2'
+			AND l.statuslahan IN ('1','2','3','4')
+		`).
+		Select(`
+			COUNT(DISTINCT LEFT(l.idwilayah,5)) as kab,
+			COUNT(DISTINCT LEFT(l.idwilayah,8)) as kec,
+			COUNT(DISTINCT l.idwilayah) as desa
+		`).
+		Scan(&isi)
 
+	emptyKab := master.Kab - isi.Kab
+	emptyKec := master.Kec - isi.Kec
+	emptyDesa := master.Desa - isi.Desa
+
+	if emptyKab < 0 {
+		emptyKab = 0
+	}
+	if emptyKec < 0 {
+		emptyKec = 0
+	}
+	if emptyDesa < 0 {
+		emptyDesa = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"total_empty_polres": emptyKab,
+			"details": gin.H{
+				"kab_kota":  emptyKab,
+				"kecamatan": emptyKec,
+				"kel_desa":  emptyDesa,
+				"polsek":    emptyKec,
+			},
+		},
+	})
 }
 
 func ValidatePotensiLahan(c *gin.Context) {
