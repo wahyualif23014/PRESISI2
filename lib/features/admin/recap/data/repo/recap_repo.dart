@@ -18,7 +18,6 @@ class RecapRepo {
     return token ?? '';
   }
 
-  // 1. AMBIL OPSI FILTER DARI BACKEND
   Future<Map<String, List<String>>> getFilterOptions({String? polres}) async {
     try {
       final token = await _getToken();
@@ -49,7 +48,6 @@ class RecapRepo {
     return {'polres': [], 'polsek': [], 'jenis_lahan': [], 'komoditi': []};
   }
 
-  // 2. GET DATA DENGAN PARAMETER FILTER
   Future<List<RecapModel>> getRecapData({Map<String, String>? filters}) async {
     try {
       final token = await _getToken();
@@ -68,7 +66,7 @@ class RecapRepo {
         final List<dynamic> data = body['data'] ?? [];
         return data.map((json) => RecapModel.fromJson(json)).toList();
       } else if (response.statusCode == 401) {
-        throw Exception("Sesi habis (401). Silakan Login ulang.");
+        throw Exception("Sesi habis. Silakan Login ulang.");
       } else {
         throw Exception("HTTP ${response.statusCode}");
       }
@@ -77,20 +75,23 @@ class RecapRepo {
     }
   }
 
-  // 3. DOWNLOAD EXCEL DENGAN FILTER AKTIF
   Future<String?> downloadExcel({Map<String, String>? filters}) async {
     try {
       final token = await _getToken();
       final dio = Dio();
       dio.options.headers['Authorization'] = 'Bearer $token';
 
-      Directory? directory =
-          Platform.isAndroid
-              ? Directory('/storage/emulated/0/Download')
-              : await getApplicationDocumentsDirectory();
-
-      if (Platform.isAndroid && !await directory.exists()) {
-        directory = await getExternalStorageDirectory();
+      // Gunakan path provider untuk folder yang lebih kompatibel
+      Directory? directory;
+      if (Platform.isAndroid) {
+        // Path folder Download publik
+        directory = Directory('/storage/emulated/0/Download');
+        // Cek izin akses folder
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
       }
 
       final String savePath =
@@ -102,8 +103,14 @@ class RecapRepo {
         queryParameters: filters,
       );
 
-      return response.statusCode == 200 ? savePath : null;
+      if (response.statusCode == 200) {
+        // PENTING: Untuk Android 11+, file seringkali tertahan di cache
+        // Gunakan package 'open_filex' agar user bisa langsung membuka setelah download
+        return savePath;
+      }
+      return null;
     } catch (e) {
+      debugPrint("Gagal simpan file: $e");
       return null;
     }
   }

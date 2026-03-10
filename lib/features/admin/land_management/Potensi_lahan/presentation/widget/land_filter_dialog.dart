@@ -19,10 +19,10 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
   final LandPotentialService _service = LandPotentialService();
   bool _isLoading = true;
 
-  List<String> _listPolres = [];
-  List<String> _listPolsek = [];
+  // List sekarang menampung Map (Nama & Kode) untuk Wilayah
+  List<Map<String, dynamic>> _listPolres = [];
+  List<Map<String, dynamic>> _listPolsek = [];
 
-  // Diperbarui agar sinkron dengan urutan ID di database (1-8)
   final List<String> _listJenis = [
     "PRODUKTIF (POKTAN BINAAN POLRI)",
     "HUTAN (PERHUTANAN SOSIAL)",
@@ -44,25 +44,27 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
   }
 
   Future<void> _loadInitial() async {
-    final data = await _service.fetchFilterOptions();
+    // Mengambil data awal Polres
+    final data = await _service.fetchDynamicWilayah();
     setState(() {
-      _listPolres = List<String>.from(data['polres'] ?? []);
+      _listPolres = data;
       _isLoading = false;
     });
   }
 
-  Future<void> _loadPolsek(String? polres) async {
-    if (polres == null) return;
+  Future<void> _loadPolsek(String? polresName) async {
+    if (polresName == null) return;
 
     setState(() {
       _isLoading = true;
       _selPolsek = null;
     });
 
-    final data = await _service.fetchFilterOptions(polres: polres);
+    // Mengambil data Polsek berdasarkan nama Polres
+    final data = await _service.fetchDynamicWilayah(polres: polresName);
 
     setState(() {
-      _listPolsek = List<String>.from(data['polsek'] ?? []);
+      _listPolsek = data;
       _isLoading = false;
     });
   }
@@ -108,12 +110,13 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
               // Dropdown Kepolisian Resor
               _listPolres.isEmpty
                   ? _buildEmptyState("Data Polres tidak ada")
-                  : _buildDrop(
+                  : _buildDropWilayah(
                     label: "Kepolisian Resor",
                     icon: Icons.account_balance,
-                    items: _listPolres.toSet().toList(),
-                    value: _listPolres.contains(_selPolres) ? _selPolres : null,
+                    items: _listPolres,
+                    value: _selPolres,
                     onChanged: (v) {
+                      if (v == null) return;
                       setState(() {
                         _selPolres = v;
                         _selPolsek = null;
@@ -127,22 +130,22 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
               // Dropdown Kepolisian Sektor
               _selPolres != null && _listPolsek.isEmpty
                   ? _buildEmptyState("Data Polsek tidak ada")
-                  : _buildDrop(
+                  : _buildDropWilayah(
                     label: "Kepolisian Sektor",
                     icon: Icons.location_city,
-                    items: _listPolsek.toSet().toList(),
-                    value: _listPolsek.contains(_selPolsek) ? _selPolsek : null,
+                    items: _listPolsek,
+                    value: _selPolsek,
                     onChanged: (v) => setState(() => _selPolsek = v),
                     enabled: _selPolres != null,
                   ),
               const SizedBox(height: 16),
 
-              // Dropdown Jenis Lahan
-              _buildDrop(
+              // Dropdown Jenis Lahan (Tetap List String)
+              _buildDropSimple(
                 label: "Jenis Lahan",
                 icon: Icons.landscape,
-                items: _listJenis.toSet().toList(),
-                value: _listJenis.contains(_selJenis) ? _selJenis : null,
+                items: _listJenis,
+                value: _selJenis,
                 onChanged: (v) => setState(() => _selJenis = v),
               ),
             ],
@@ -239,10 +242,11 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
     );
   }
 
-  Widget _buildDrop({
+  // Dropdown untuk Wilayah (Map: Nama & Kode)
+  Widget _buildDropWilayah({
     required String label,
     required IconData icon,
-    required List<String> items,
+    required List<Map<String, dynamic>> items,
     required String? value,
     required Function(String?) onChanged,
     bool enabled = true,
@@ -260,52 +264,92 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          value: items.any((e) => e['nama'] == value) ? value : null,
           isExpanded: true,
           hint: Text(
             "Pilih ${label.split(' ').last}",
             style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
           ),
           items:
-              items
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(e, style: const TextStyle(fontSize: 14)),
-                    ),
-                  )
-                  .toList(),
+              items.map((e) {
+                return DropdownMenuItem<String>(
+                  value: e['nama'].toString(),
+                  child: Text(
+                    e['nama'].toString(),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                );
+              }).toList(),
           onChanged: enabled ? onChanged : null,
-          decoration: InputDecoration(
-            prefixIcon: Icon(
-              icon,
-              size: 20,
-              color: enabled ? const Color(0xFF0097B2) : Colors.grey,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-            filled: !enabled,
-            fillColor: Colors.grey.shade50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF0097B2),
-                width: 1.5,
-              ),
-            ),
-          ),
+          decoration: _inputDecoration(icon, enabled),
         ),
       ],
+    );
+  }
+
+  // Dropdown untuk Jenis Lahan (List String)
+  Widget _buildDropSimple({
+    required String label,
+    required IconData icon,
+    required List<String> items,
+    required String? value,
+    required Function(String?) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: items.contains(value) ? value : null,
+          isExpanded: true,
+          hint: Text(
+            "Pilih ${label.split(' ').last}",
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+          ),
+          items:
+              items.map((e) {
+                return DropdownMenuItem<String>(
+                  value: e,
+                  child: Text(e, style: const TextStyle(fontSize: 14)),
+                );
+              }).toList(),
+          onChanged: onChanged,
+          decoration: _inputDecoration(icon, true),
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration(IconData icon, bool enabled) {
+    return InputDecoration(
+      prefixIcon: Icon(
+        icon,
+        size: 20,
+        color: enabled ? const Color(0xFF0097B2) : Colors.grey,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      filled: !enabled,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF0097B2), width: 1.5),
+      ),
     );
   }
 }

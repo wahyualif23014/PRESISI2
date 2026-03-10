@@ -2,19 +2,29 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-// Pastikan path ini benar dan file kelola_mode.dart memiliki class LandManagementSummaryModel
 import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
   final String baseUrl = "http://192.168.100.195:8080/api/kelola-lahan";
   final _storage = const FlutterSecureStorage();
 
+  // Mendapatkan token JWT dari storage lokal
   Future<String> _getToken() async {
     String? token = await _storage.read(key: 'jwt_token');
     return token ?? '';
   }
 
+  // Helper untuk membuat header HTTP dengan otentikasi
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
   // 1. GET FILTER OPTIONS
+  // Mengambil daftar Polres, Polsek, Jenis Lahan, dan Komoditas untuk dropdown filter
   Future<Map<String, dynamic>> getFilterOptions({
     String? polres,
     String? polsek,
@@ -28,13 +38,9 @@ class LandManagementRepository {
     }
 
     try {
-      final token = await _getToken();
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: await _getHeaders(),
       );
 
       if (response.statusCode == 200) {
@@ -55,20 +61,18 @@ class LandManagementRepository {
   }
 
   // 2. GET SUMMARY STATS
+  // Mengambil data ringkasan total luas potensi, tanam, panen, dan serapan
   Future<LandManagementSummaryModel> getSummaryStats() async {
-    final token = await _getToken();
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/summary'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: await _getHeaders(),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return LandManagementSummaryModel.fromJson(data);
+        // Memastikan parsing menggunakan data ['data'] jika API membungkusnya
+        return LandManagementSummaryModel.fromJson(data['data'] ?? data);
       } else {
         return _emptySummary();
       }
@@ -78,23 +82,23 @@ class LandManagementRepository {
     }
   }
 
-  // Helper untuk data kosong agar tidak menulis ulang
+  // Helper untuk data kosong agar UI tidak error saat gagal fetch
   LandManagementSummaryModel _emptySummary() {
     return LandManagementSummaryModel(
-      totalPotensiLahan: 0,
-      totalTanamLahan: 0,
-      totalPanenLahanHa: 0,
-      totalPanenLahanTon: 0,
-      totalSerapanTon: 0,
+      totalPotensiLahan: 0.0,
+      totalTanamLahan: 0.0,
+      totalPanenLahanHa: 0.0,
+      totalPanenLahanTon: 0.0,
+      totalSerapanTon: 0.0,
     );
   }
 
   // 3. GET LIST DATA
+  // Mengambil daftar pengelolaan lahan berdasarkan keyword pencarian dan filter aktif
   Future<List<LandManagementItemModel>> getLandManagementList({
     String keyword = "",
     Map<String, String>? filters,
   }) async {
-    final token = await _getToken();
     String url = '$baseUrl?search=${Uri.encodeComponent(keyword)}';
 
     if (filters != null) {
@@ -116,10 +120,7 @@ class LandManagementRepository {
     try {
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: await _getHeaders(),
       );
 
       if (response.statusCode == 200) {
@@ -135,12 +136,12 @@ class LandManagementRepository {
   }
 
   // 4. DELETE DATA
+  // Menghapus data lahan berdasarkan ID
   Future<bool> deleteLahan(String id) async {
-    final token = await _getToken();
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/$id'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: await _getHeaders(),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -150,17 +151,16 @@ class LandManagementRepository {
   }
 
   // 5. UPDATE DATA TANAM
+  // Memperbarui data tanam (tanggal tanam, bibit, dll) untuk lahan tertentu
   Future<bool> updateTanam(String idLahan, Map<String, dynamic> data) async {
-    final token = await _getToken();
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/$idLahan/tanam'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: await _getHeaders(),
         body: jsonEncode(data),
       );
+
+      // Menganggap berhasil jika status 200 OK
       return response.statusCode == 200;
     } catch (e) {
       debugPrint("Error update tanam: $e");

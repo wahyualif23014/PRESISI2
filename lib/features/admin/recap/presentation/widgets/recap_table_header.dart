@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
 class RecapTableHeader extends StatelessWidget {
-  const RecapTableHeader({Key? key}) : super(key: key);
+  const RecapTableHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        
-        // Memberikan bayangan halus agar header terlihat terpisah dari list
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -19,15 +17,13 @@ class RecapTableHeader extends StatelessWidget {
           ),
         ],
         border: const Border(
-          bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
       ),
       child: Row(
         children: const [
-          // Nama Wilayah (Polres/Polsek/Desa)
-          Expanded(flex: 3, child: Text("WILAYAH", style: _headerStyle)),
-
-          // Potensi Lahan
+          SizedBox(width: 32),
+          Expanded(flex: 4, child: Text("WILAYAH", style: _headerStyle)),
           Expanded(
             flex: 2,
             child: Text(
@@ -36,8 +32,6 @@ class RecapTableHeader extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-
-          // Luas Tanam
           Expanded(
             flex: 2,
             child: Text(
@@ -46,18 +40,14 @@ class RecapTableHeader extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-
-          // Data Panen (Gabungan Luas & Tonase)
           Expanded(
-            flex: 3,
+            flex: 2,
             child: Text(
               "PANEN",
               style: _headerStyle,
               textAlign: TextAlign.center,
             ),
           ),
-
-          // Serapan / Distribusi
           Expanded(
             flex: 2,
             child: Text(
@@ -72,10 +62,9 @@ class RecapTableHeader extends StatelessWidget {
   }
 }
 
-// Gaya teks header yang ringkas dan tegas
 const TextStyle _headerStyle = TextStyle(
   fontSize: 10,
   fontWeight: FontWeight.w800,
-  color: Color(0xFF666666),
+  color: Color(0xFF64748B),
   letterSpacing: 0.5,
 );

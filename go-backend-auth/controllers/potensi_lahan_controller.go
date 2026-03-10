@@ -16,7 +16,6 @@ import (
 )
 
 func GetImageFromDB(c *gin.Context) {
-
 	rawFilename := c.Param("filename")
 	filename, err := url.QueryUnescape(rawFilename)
 	if err != nil {
@@ -116,11 +115,9 @@ func GetPotensiLahan(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": daftarLahan})
-
 }
 
 func ToggleValidation(c *gin.Context) {
-	// 1. Ambil ID Lahan dari Body JSON (bukan dari URL)
 	var body struct {
 		IDLahan int `json:"id_lahan"`
 	}
@@ -135,7 +132,6 @@ func ToggleValidation(c *gin.Context) {
 		return
 	}
 
-	// 2. Ambil Validator ID dari Middleware JWT
 	var validatorID int
 	if userID, exists := c.Get("user_id"); exists {
 		switch v := userID.(type) {
@@ -148,7 +144,6 @@ func ToggleValidation(c *gin.Context) {
 		}
 	}
 
-	// 3. Cek Status Lahan Saat Ini
 	var currentStatus string
 	err := initializers.DB.Table("lahan").Where("idlahan = ?", body.IDLahan).Select("statuslahan").Row().Scan(&currentStatus)
 	if err != nil {
@@ -156,22 +151,18 @@ func ToggleValidation(c *gin.Context) {
 		return
 	}
 
-	// 4. Siapkan Data Update Berdasarkan Status Saat Ini
 	updates := map[string]interface{}{}
 
 	if currentStatus == "2" {
-		// Jika sudah validasi, batalkan validasi (kembali ke 1)
-		updates["validoleh"] = 0 // Sesuaikan dengan standar kolom database milikmu (0 atau nil)
+		updates["validoleh"] = 0
 		updates["tglvalid"] = nil
 		updates["statuslahan"] = "1"
 	} else {
-		// Jika belum validasi, lakukan validasi (ubah ke 2)
 		updates["validoleh"] = validatorID
 		updates["tglvalid"] = time.Now().Format("2006-01-02 15:04:05")
 		updates["statuslahan"] = "2"
 	}
 
-	// 5. Eksekusi Update dan Tangani Error Database
 	result := initializers.DB.Table("lahan").Where("idlahan = ?", body.IDLahan).Updates(updates)
 
 	if result.Error != nil {
@@ -184,7 +175,6 @@ func ToggleValidation(c *gin.Context) {
 		return
 	}
 
-	// 6. Balas Sukses
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Status validasi berhasil diperbarui",
@@ -192,45 +182,92 @@ func ToggleValidation(c *gin.Context) {
 }
 
 func GetFilterOptions(c *gin.Context) {
-	var rawPolres []string
-	var rawPolsek []string
 	polresParam := c.Query("polres")
+	polsekParam := c.Query("polsek")
 
-	initializers.DB.Table("lahan").
-		Select("DISTINCT w_kab.nama").
-		Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah, 1, 5)").
-		Where("w_kab.nama IS NOT NULL").
-		Order("w_kab.nama ASC").
-		Pluck("w_kab.nama", &rawPolres)
+	type WilayahData struct {
+		Nama string `json:"nama"`
+		Kode string `json:"kode"`
+	}
 
-	var listPolres []string
+	var rawPolres []WilayahData
+	initializers.DB.Table("wilayah").
+		Select("nama, kode").
+		Where("CHAR_LENGTH(kode) = 5").
+		Order("nama ASC").
+		Scan(&rawPolres)
+
+	var listPolres []map[string]interface{}
 	for _, v := range rawPolres {
-		name := strings.ToUpper(v)
+		name := strings.ToUpper(v.Nama)
 		name = strings.ReplaceAll(name, "KABUPATEN", "")
 		name = strings.ReplaceAll(name, "KOTA", "")
 		name = strings.TrimSpace(name)
-		listPolres = append(listPolres, fmt.Sprintf("POLRES %s", name))
+		listPolres = append(listPolres, map[string]interface{}{
+			"nama": fmt.Sprintf("POLRES %s", name),
+			"kode": v.Kode,
+		})
 	}
 
-	queryPolsek := initializers.DB.Table("lahan").
-		Select("DISTINCT w_kec.nama").
-		Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = SUBSTR(lahan.idwilayah, 1, 8)").
-		Where("w_kec.nama IS NOT NULL")
+	var listPolsek []map[string]interface{}
+	var listDesa []map[string]interface{}
+	var kabKode string
 
 	if polresParam != "" {
 		dbParam := strings.ToUpper(polresParam)
 		dbParam = strings.ReplaceAll(dbParam, "POLRES", "")
 		dbParam = strings.TrimSpace(dbParam)
-		queryPolsek = queryPolsek.
-			Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah, 1, 5)").
-			Where("UPPER(w_kab.nama) LIKE ?", "%"+dbParam+"%")
+
+		initializers.DB.Table("wilayah").
+			Select("kode").
+			Where("CHAR_LENGTH(kode) = 5 AND UPPER(nama) LIKE ?", "%"+dbParam+"%").
+			Limit(1).
+			Pluck("kode", &kabKode)
 	}
 
-	queryPolsek.Order("w_kec.nama ASC").Pluck("w_kec.nama", &rawPolsek)
+	if kabKode != "" {
+		var rawPolsek []WilayahData
+		initializers.DB.Table("wilayah").
+			Select("nama, kode").
+			Where("CHAR_LENGTH(kode) = 8 AND kode LIKE ?", kabKode+".%").
+			Order("nama ASC").
+			Scan(&rawPolsek)
 
-	var listPolsek []string
-	for _, v := range rawPolsek {
-		listPolsek = append(listPolsek, fmt.Sprintf("POLSEK %s", strings.ToUpper(v)))
+		for _, v := range rawPolsek {
+			listPolsek = append(listPolsek, map[string]interface{}{
+				"nama": fmt.Sprintf("POLSEK %s", strings.ToUpper(v.Nama)),
+				"kode": v.Kode,
+			})
+		}
+	}
+
+	var kecKode string
+	if polsekParam != "" && kabKode != "" {
+		dbParam := strings.ToUpper(polsekParam)
+		dbParam = strings.ReplaceAll(dbParam, "POLSEK", "")
+		dbParam = strings.TrimSpace(dbParam)
+
+		initializers.DB.Table("wilayah").
+			Select("kode").
+			Where("CHAR_LENGTH(kode) = 8 AND kode LIKE ? AND UPPER(nama) LIKE ?", kabKode+".%", "%"+dbParam+"%").
+			Limit(1).
+			Pluck("kode", &kecKode)
+	}
+
+	if kecKode != "" {
+		var rawDesa []WilayahData
+		initializers.DB.Table("wilayah").
+			Select("nama, kode").
+			Where("CHAR_LENGTH(kode) > 8 AND kode LIKE ?", kecKode+".%").
+			Order("nama ASC").
+			Scan(&rawDesa)
+
+		for _, v := range rawDesa {
+			listDesa = append(listDesa, map[string]interface{}{
+				"nama": strings.ToUpper(v.Nama),
+				"kode": v.Kode,
+			})
+		}
 	}
 
 	var listJenis []string
@@ -263,15 +300,22 @@ func GetFilterOptions(c *gin.Context) {
 		}
 	}
 
+	var listKomoditi []map[string]interface{}
+	initializers.DB.Table("komoditi").
+		Select("idkomoditi AS id, jeniskomoditi AS jenis, namakomoditi AS nama").
+		Order("jeniskomoditi ASC, namakomoditi ASC").
+		Find(&listKomoditi)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"data": gin.H{
 			"polres":      listPolres,
 			"polsek":      listPolsek,
+			"desa":        listDesa,
 			"jenis_lahan": listJenis,
+			"komoditi":    listKomoditi,
 		},
 	})
-
 }
 
 func CreatePotensiLahan(c *gin.Context) {
@@ -280,8 +324,32 @@ func CreatePotensiLahan(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
+
+	now := time.Now().Format("2006-01-02 15:04:05")
 	input.DateTransaction = time.Now()
-	if err := initializers.DB.Table("lahan").Create(&input).Error; err != nil {
+	input.TglEdit = now
+
+	// Perbaikan Error 1364: idanggota otomatis diisi dengan ID user (EditOleh)
+	input.IDAnggota = input.EditOleh
+	if input.IDAnggota == "" {
+		input.IDAnggota = "0"
+	}
+
+	db := initializers.DB.Table("lahan")
+
+	var omitFields []string
+	if input.TglValid == "" || input.TglValid == "-" {
+		omitFields = append(omitFields, "tglvalid")
+	}
+	if input.ValidOleh == "" || input.ValidOleh == "0" || input.ValidOleh == "-" {
+		omitFields = append(omitFields, "validoleh")
+	}
+
+	if len(omitFields) > 0 {
+		db = db.Omit(omitFields...)
+	}
+
+	if err := db.Create(&input).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
 		return
 	}
@@ -296,9 +364,16 @@ func UpdatePotensiLahan(c *gin.Context) {
 		return
 	}
 
+	// Sinkronisasi idanggota dengan editoleh saat update
+	idAnggota := input.EditOleh
+	if idAnggota == "" {
+		idAnggota = "0"
+	}
+
 	updates := map[string]interface{}{
 		"idwilayah":    input.IDWilayah,
 		"idjenislahan": input.IDJenisLahan,
+		"idkomoditi":   input.IDKomoditi,
 		"alamat":       input.AlamatLahan,
 		"luaslahan":    input.LuasLahan,
 		"poktan":       input.JumlahPoktan,
@@ -313,6 +388,8 @@ func UpdatePotensiLahan(c *gin.Context) {
 		"longi":        input.Longitude,
 		"dokumentasi":  input.Foto,
 		"tgledit":      time.Now().Format("2006-01-02 15:04:05"),
+		"editoleh":     input.EditOleh,
+		"idanggota":    idAnggota,
 	}
 
 	if err := initializers.DB.Table("lahan").Where("idlahan = ?", id).Updates(updates).Error; err != nil {
@@ -320,7 +397,6 @@ func UpdatePotensiLahan(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil diperbarui"})
-
 }
 
 func DeletePotensiLahan(c *gin.Context) {
@@ -424,7 +500,6 @@ func GetNoPotentialLahan(c *gin.Context) {
 	initializers.DB.Table("lahan").Where(dbFilter).Select("COUNT(DISTINCT SUBSTR(idwilayah, 1, 5)) as kab, COUNT(DISTINCT SUBSTR(idwilayah, 1, 8)) as kec, COUNT(DISTINCT idwilayah) as desa").Scan(&isi)
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": gin.H{"total_empty_polres": master.Kab - isi.Kab, "details": gin.H{"polsek": master.Kec - isi.Kec, "kab_kota": master.Kab - isi.Kab, "kecamatan": master.Kec - isi.Kec, "kel_desa": master.Desa - isi.Desa}}})
-
 }
 
 func ValidatePotensiLahan(c *gin.Context) {
@@ -439,29 +514,16 @@ func ValidatePotensiLahan(c *gin.Context) {
 
 	var validatorID int
 
-	// Mengambil data user dari context Gin
 	if val, exists := c.Get("user"); exists {
-		// Karena val berisi objek, kita coba akses field ID-nya.
-		// Sesuaikan nama field 'ID' atau 'Idanggota' dengan struct models.User milikmu.
-		// Berdasarkan log: 3283 adalah ID user kamu.
-
-		// Kita gunakan pendekatan interface untuk mengambil ID dari struct
 		if user, ok := val.(models.User); ok {
-			validatorID = int(user.ID) // Atau user.Idanggota sesuai modelmu
+			validatorID = int(user.ID)
 		} else {
-			// Jika casting struct gagal, kita coba cara alternatif (map atau manual)
-			fmt.Printf("Data user ditemukan tapi tipe data berbeda: %T\n", val)
-
-			// Berdasarkan logmu, ID ada di posisi pertama (3283).
-			// Kita coba paksa ambil ID-nya jika middleware menyimpan sebagai ID langsung
 			if id, ok := val.(int); ok {
 				validatorID = id
 			}
 		}
 	}
 
-	// Jika validatorID masih 0, kita coba ambil 3283 secara manual dari log untuk tes sementara
-	// Tapi sebaiknya pastikan casting model.User di atas sudah benar.
 	if validatorID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"status":  "error",
@@ -488,7 +550,6 @@ func ValidatePotensiLahan(c *gin.Context) {
 		updates["statuslahan"] = "2"
 	}
 
-	// Debug untuk melihat query asli di terminal
 	result := initializers.DB.Debug().Table("lahan").Where("idlahan = ?", body.IDLahan).Updates(updates)
 
 	if result.Error != nil {
