@@ -108,10 +108,14 @@ type ResapanItem struct {
 	Label string  `json:"label"`
 	Value float64 `json:"value"`
 }
+type resapanQuery struct {
+	Bulog     float64 `gorm:"column:bulog"`
+	Pakan     float64 `gorm:"column:pakan"`
+	Tengkulak float64 `gorm:"column:tengkulak"`
+	Konsumsi  float64 `gorm:"column:konsumsi"`
+}
 
 type WilayahDistributionModel struct {
-	NamaWilayah      string  `db:"nama_wilayah" json:"nama_wilayah"`
-	TotalTitik       int64   `db:"total_titik" json:"total_titik"`
-	TotalLuasPotensi float64 `db:"total_luas_potensi" json:"total_luas_potensi"`
-	TotalLuasTanam   float64 `db:"total_luas_tanam" json:"total_luas_tanam"`
+	Label string  `json:"label"`
+	Value float64 `json:"value"`
 }

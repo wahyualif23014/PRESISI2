@@ -1,3 +1,4 @@
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/wilayah_distribution_model.dart' show WilayahDistributionModel;
 import 'package:flutter/material.dart';
 
 import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/dashboard_data_response.dart';
@@ -144,8 +145,9 @@ class DashboardProvider with ChangeNotifier {
 
     if (_selectedJenisKomoditi != null) {
       try {
-        _komoditiList =
-            await _service.getKomoditiByJenis(_selectedJenisKomoditi!);
+        _komoditiList = await _service.getKomoditiByJenis(
+          _selectedJenisKomoditi!,
+        );
       } catch (e) {
         debugPrint("selectJenisKomoditi error: $e");
       }
@@ -179,10 +181,7 @@ class DashboardProvider with ChangeNotifier {
   // REFRESH ALL DATA
   // =====================================================
 
-  Future<void> refreshAllData({
-    String? tglMulai,
-    String? tglSelesai,
-  }) async {
+  Future<void> refreshAllData({String? tglMulai, String? tglSelesai}) async {
     await Future.wait([
       fetchDashboard(
         resor: _selectedResor,
@@ -313,6 +312,8 @@ class DashboardProvider with ChangeNotifier {
   // =====================================================
 
   Future<void> fetchWilayahDistribution() async {
+    if (_isWilayahLoading) return;
+
     _isWilayahLoading = true;
     _wilayahError = '';
 
@@ -328,13 +329,16 @@ class DashboardProvider with ChangeNotifier {
       );
 
       _wilayahDistribution = result;
-    } catch (e) {
+    } catch (e, stack) {
       _wilayahError = 'Gagal mendapatkan data wilayah';
-      debugPrint("Wilayah Distribution Provider Error: $e");
-    }
+      _wilayahDistribution = [];
 
-    _isWilayahLoading = false;
-    notifyListeners();
+      debugPrint("Wilayah Distribution Provider Error: $e");
+      debugPrintStack(stackTrace: stack);
+    } finally {
+      _isWilayahLoading = false;
+      notifyListeners();
+    }
   }
 
   // =====================================================

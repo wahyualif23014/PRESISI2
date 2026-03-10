@@ -46,22 +46,19 @@ class _DistributionCardState extends State<DistributionCard>
 
     final wilayah = provider.wilayahDistribution;
 
-    final int totalTitik =
-        wilayah.fold(0, (sum, e) => sum + e.totalTitik);
-
-    final double totalPotensi =
-        wilayah.fold(0.0, (sum, e) => sum + e.totalLuasPotensi);
+    final double totalValue =
+        wilayah.fold(0.0, (sum, e) => sum + e.value);
 
     final proportions = wilayah.map((e) {
-      if (totalPotensi == 0) return 0.0;
-      return e.totalLuasPotensi / totalPotensi;
+      if (totalValue == 0) return 0.0;
+      return e.value / totalValue;
     }).toList();
 
     final chartColors = [
       const Color(0xFF22C55E),
+      const Color(0xFFEF4444),
       const Color(0xFF3B82F6),
       const Color(0xFFF59E0B),
-      const Color(0xFFEF4444),
       const Color(0xFF8B5CF6),
       const Color(0xFF06B6D4),
     ];
@@ -88,7 +85,7 @@ class _DistributionCardState extends State<DistributionCard>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  "DISTRIBUSI WILAYAH",
+                  "PENGELOLAAN LAHAN POLSEK",
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -96,6 +93,7 @@ class _DistributionCardState extends State<DistributionCard>
                     letterSpacing: 0.5,
                   ),
                 ),
+
                 const SizedBox(height: 16),
 
                 if (wilayah.isEmpty)
@@ -113,19 +111,74 @@ class _DistributionCardState extends State<DistributionCard>
                   Row(
                     children: [
                       Expanded(
-                        child: FittedBox(
-                          alignment: Alignment.centerLeft,
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            "$totalTitik",
-                            style: const TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF1E293B),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              totalValue.toInt().toString(),
+                              style: const TextStyle(
+                                fontSize: 42,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1E293B),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              "POLSEK",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey,
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            ...List.generate(
+                              wilayah.length,
+                              (index) {
+                                final item = wilayah[index];
+
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: chartColors[
+                                              index % chartColors.length],
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          item.label,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        item.value.toInt().toString(),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
+
                       const SizedBox(width: 16),
 
                       AnimatedBuilder(

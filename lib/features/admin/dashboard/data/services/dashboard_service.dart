@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/wilayah_distribution_model.dart' show WilayahDistributionModel;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -25,7 +26,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String apiBaseUrl = "http://192.168.1.26:8080/api";
+  final String apiBaseUrl = "http://10.16.14.46:8080/api";
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();
