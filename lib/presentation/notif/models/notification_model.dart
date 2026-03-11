@@ -1,13 +1,23 @@
 class NotificationModel {
+  final int id;
   final String title;
   final String body;
   final String time;
-  final int badgeCount; // Untuk angka '2' di logo
-  // COBAAAA
+
   NotificationModel({
+    required this.id,
     required this.title,
     required this.body,
     required this.time,
-    required this.badgeCount,
   });
+
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    return NotificationModel(
+      // Menggunakan default value jika null agar aplikasi tidak crash
+      id: json['id'] ?? 0,
+      title: json['title'] ?? 'Tanpa Judul',
+      body: json['body'] ?? 'Tanpa Keterangan',
+      time: json['time'] ?? '',
+    );
+  }
 }

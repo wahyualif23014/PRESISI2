@@ -116,7 +116,6 @@ func GetPotensiLahan(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "data": daftarLahan})
-
 }
 
 func ToggleValidation(c *gin.Context) {
@@ -354,10 +353,10 @@ func GetSummaryLahan(c *gin.Context) {
 	rows, err := initializers.DB.Table("lahan").
 		Where(dbFilter).
 		Select(`
-		idjenislahan,
-		COALESCE(SUM(luaslahan),0) as area,
-		COUNT(idlahan) as count
-	`).
+        idjenislahan,
+        COALESCE(SUM(luaslahan),0) as area,
+        COUNT(idlahan) as count
+    `).
 		Group("idjenislahan").
 		Order("idjenislahan ASC").
 		Rows()
@@ -439,29 +438,17 @@ func ValidatePotensiLahan(c *gin.Context) {
 
 	var validatorID int
 
-	// Mengambil data user dari context Gin
 	if val, exists := c.Get("user"); exists {
-		// Karena val berisi objek, kita coba akses field ID-nya.
-		// Sesuaikan nama field 'ID' atau 'Idanggota' dengan struct models.User milikmu.
-		// Berdasarkan log: 3283 adalah ID user kamu.
-
-		// Kita gunakan pendekatan interface untuk mengambil ID dari struct
 		if user, ok := val.(models.User); ok {
-			validatorID = int(user.ID) // Atau user.Idanggota sesuai modelmu
+			validatorID = int(user.ID)
 		} else {
-			// Jika casting struct gagal, kita coba cara alternatif (map atau manual)
 			fmt.Printf("Data user ditemukan tapi tipe data berbeda: %T\n", val)
-
-			// Berdasarkan logmu, ID ada di posisi pertama (3283).
-			// Kita coba paksa ambil ID-nya jika middleware menyimpan sebagai ID langsung
 			if id, ok := val.(int); ok {
 				validatorID = id
 			}
 		}
 	}
 
-	// Jika validatorID masih 0, kita coba ambil 3283 secara manual dari log untuk tes sementara
-	// Tapi sebaiknya pastikan casting model.User di atas sudah benar.
 	if validatorID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"status":  "error",
@@ -488,7 +475,6 @@ func ValidatePotensiLahan(c *gin.Context) {
 		updates["statuslahan"] = "2"
 	}
 
-	// Debug untuk melihat query asli di terminal
 	result := initializers.DB.Debug().Table("lahan").Where("idlahan = ?", body.IDLahan).Updates(updates)
 
 	if result.Error != nil {
@@ -507,4 +493,86 @@ func UnvalidatePotensiLahan(c *gin.Context) {
 	updates := map[string]interface{}{"validoleh": nil, "tglvalid": nil, "statuslahan": "1"}
 	initializers.DB.Table("lahan").Where("idlahan = ?", id).Select("validoleh", "tglvalid", "statuslahan").Updates(updates)
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Validasi berhasil dibatalkan"})
+}
+
+// ==========================================
+// ENDPOINT NOTIFIKASI
+// ==========================================
+
+func GetPendingPotensiCount(c *gin.Context) {
+	var count int64
+
+	// PERBAIKAN: Menggunakan statuslahan = '1' agar sesuai dengan database Anda
+	err := initializers.DB.Model(&models.PotensiLahan{}).
+		Where("statuslahan = ?", "1").
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{
+			"status":  "error",
+			"message": "Gagal menghitung data potensi lahan pending",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"count": count,
+		},
+	})
+}
+
+func GetNotificationList(c *gin.Context) {
+	var lahanList []models.PotensiLahan
+
+	err := initializers.DB.Table("lahan").
+		Where("statuslahan IN ('1', '2')").
+		Order("idlahan DESC").
+		Limit(20).
+		Find(&lahanList).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Gagal mengambil data"})
+		return
+	}
+
+	var notifications []map[string]interface{}
+
+	for _, lahan := range lahanList {
+		var title, body, timeStr string
+		var badgeCount int
+
+		if lahan.StatusLahan == "1" {
+			title = "Menunggu Validasi"
+			body = "Lahan di " + lahan.AlamatLahan + " menunggu validasi."
+			timeStr = lahan.TglEdit
+			badgeCount = 1
+		} else if lahan.StatusLahan == "2" {
+			title = "Validasi Selesai"
+			body = "Data lahan di " + lahan.AlamatLahan + " telah divalidasi."
+			timeStr = lahan.TglValid
+			badgeCount = 0
+		}
+
+		if timeStr == "" {
+			timeStr = "Baru saja"
+		}
+
+		notifications = append(notifications, map[string]interface{}{
+			"title":      title,
+			"body":       body,
+			"time":       timeStr,
+			"badgeCount": badgeCount,
+		})
+	}
+
+	if notifications == nil {
+		notifications = make([]map[string]interface{}, 0)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   notifications,
+	})
 }

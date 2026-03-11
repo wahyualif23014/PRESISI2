@@ -1,17 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- PERMISSIONS -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
         android:label="sdmapp"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"
         android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="true"> <activity
+        android:usesCleartextTraffic="true"> 
+        
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
@@ -37,39 +40,32 @@
             android:value="2" />
     </application>
     
-    <!-- QUERIES - Package Visibility untuk URL Launcher -->
     <queries>
-        <!-- Text Processing -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
         
-        <!-- WhatsApp / Browser (https) -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
         
-        <!-- Telepon (tel:) -->
         <intent>
             <action android:name="android.intent.action.DIAL" />
             <data android:scheme="tel" />
         </intent>
         
-        <!-- SMS (sms:) -->
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="sms" />
         </intent>
         
-        <!-- Email (mailto:) - bonus -->
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
         </intent>
         
-        <!-- WhatsApp Package Specific (Optional tapi direkomendasikan) -->
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
     </queries>

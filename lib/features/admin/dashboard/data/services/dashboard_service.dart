@@ -22,7 +22,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String baseUrl = "http://192.168.100.195:8080/api/dashboard";
+  final String baseUrl = "http://192.168.43.201:8080/api";
   final _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();
 

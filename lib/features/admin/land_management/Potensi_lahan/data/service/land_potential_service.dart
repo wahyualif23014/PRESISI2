@@ -8,7 +8,7 @@ import '../model/land_summary_model.dart';
 import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
-  final String baseUrl = "http://192.168.100.195:8080/api/potensi-lahan";
+  final String baseUrl = "http://192.168.43.201:8080/api/potensi-lahan";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {

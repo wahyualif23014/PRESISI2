@@ -17,6 +17,11 @@ import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/r
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/providers/jabatan_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
 
+//  TAMBAHAN IMPORT UNTUK NOTIFIKASI LOKAL 
+import 'package:KETAHANANPANGAN/presentation/notif/services/local_notif_service.dart';
+import 'package:KETAHANANPANGAN/presentation/notif/providers/notification_provider.dart';
+
+
 Future<void> main() async {
   // 1. Pastikan binding engine Flutter sudah siap
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +46,10 @@ Future<void> main() async {
         // Feature Providers (Unified)
         // Cukup panggil satu DashboardProvider untuk Admin, Operator, dan View
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        
+        // 👇 TAMBAHAN PENDAFTARAN PROVIDER NOTIFIKASI 👇
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        // 👆 👆 👆
         
         ChangeNotifierProvider(create: (_) => PersonelProvider()),
         ChangeNotifierProvider(create: (_) => UnitProvider()),

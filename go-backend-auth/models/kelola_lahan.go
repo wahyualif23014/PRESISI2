@@ -1,5 +1,11 @@
 package models
 
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
+
 type KelolaLahanSummary struct {
 	TotalPotensiLahan  float64 `json:"total_potensi"`
 	TotalTanamLahan    float64 `json:"total_tanam"`
@@ -47,4 +53,14 @@ type KelolaLahanItem struct {
 	EstAkhirPanen    string  `json:"est_akhir_panen"`
 	DokumenPendukung string  `json:"dokumen_pendukung"`
 	KeteranganTanam  string  `json:"keterangan_tanam"`
+}
+
+type KelolaLahan struct {
+	gorm.Model
+	// ... field Anda yang sudah ada sebelumnya (PolisiPenggerak, Alamat, dll) ...
+
+	// Tambahan field untuk fitur Validasi
+	StatusValidasi  string     `gorm:"type:varchar(50);default:'BELUM TERVALIDASI'"`
+	DivalidasiOleh  string     `gorm:"type:varchar(100)"` // Menyimpan nama atau pangkat personel
+	TanggalValidasi *time.Time // Menggunakan pointer (*) agar nilainya bisa NULL di database jika belum divalidasi
 }

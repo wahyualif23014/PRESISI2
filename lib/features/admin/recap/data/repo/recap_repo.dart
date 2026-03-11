@@ -8,7 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../model/recap_model.dart';
 
 class RecapRepo {
-  final String baseUrl = "http://192.168.100.195:8080/api/rekapitulasi";
+  final String baseUrl = "http://192.168.43.201:8080/api/rekapitulasi";
   final String filterUrl =
       "http://192.168.100.195:8080/api/riwayat-lahan/filter-options";
   final _storage = const FlutterSecureStorage();

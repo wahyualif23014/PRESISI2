@@ -4,6 +4,10 @@ import 'package:KETAHANANPANGAN/shared/widgets/CustomBottomNavBar.dart';
 import 'package:provider/provider.dart';
 import 'widgets/admin_top_bar.dart';
 
+// 👇 TAMBAHAN IMPORT UNTUK MESIN NOTIFIKASI 👇
+import 'package:KETAHANANPANGAN/presentation/notif/providers/notification_provider.dart';
+// 👆 👆 👆
+
 // --- PALET WARNA EARTHY & ORGANIC ---
 const Color _forestGreen = Color(0xFF2D4F1E);
 const Color _warmBeige = Color(0xFFF5E6CC);
@@ -12,13 +16,30 @@ const Color _slateGrey = Color(0xFF4A4A4A);
 const Color _bgWarm = Color(0xFFFDF8F3);
 const Color _borderWarm = Color(0xFFE8DDD0);
 
-class MainLayout extends StatelessWidget {
+// MENGUBAH MENJADI STATEFUL WIDGET AGAR BISA MENGGUNAKAN INITSTATE
+class MainLayout extends StatefulWidget {
   final Widget child;
 
   const MainLayout({super.key, required this.child});
 
+  @override
+  State<MainLayout> createState() => _MainLayoutState();
+}
+
+class _MainLayoutState extends State<MainLayout> {
   static const double _bottomNavHeight = 80.0;
   static const double _topBarHeight = 70.0;
+
+  // 👇 INI DIA PELATUK RAHASIANYA 👇
+  @override
+  void initState() {
+    super.initState();
+    // Menyalakan mesin notifikasi secara otomatis setelah halaman selesai dimuat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().startPolling();
+    });
+  }
+  // 
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +63,7 @@ class MainLayout extends StatelessWidget {
             Expanded(
               child: Container(
                 color: _bgWarm,
-                child: child,
+                child: widget.child, // Menggunakan widget.child karena sekarang di dalam State
               ),
             ),
           ],

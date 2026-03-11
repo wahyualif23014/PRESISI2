@@ -24,7 +24,6 @@ type PotensiLahan struct {
 
 	// Permintaan 1: Keterangan ambil dari ketcp
 	Keterangan string `gorm:"column:ketcp" json:"keterangan"`
-	// KeteranganLain memetakan ke kolom keterangan
 
 	// Permintaan 2: Jumlah Poktan ambil dari kolom poktan
 	JumlahPoktan int `gorm:"column:poktan" json:"jumlah_poktan"`
@@ -37,7 +36,6 @@ type PotensiLahan struct {
 
 	// --- STATISTIK ---
 	JumlahPetani int `gorm:"column:jmlsantri" json:"jumlah_petani"`
-	// Keterangan memetakan ke kolom ketcp
 
 	KeteranganLain string `gorm:"column:keterangan" json:"keterangan_lain"`
 	Latitude       string `gorm:"column:lat" json:"latitude"`
@@ -46,7 +44,7 @@ type PotensiLahan struct {
 	Foto        string `gorm:"column:dokumentasi" json:"foto_lahan"`
 	StatusLahan string `gorm:"column:statuslahan" json:"status_validasi"`
 
-	// --- AUDIT TRAIL (Permintaan 3: editoleh & tgledit) ---
+	// --- AUDIT TRAIL ---
 	EditOleh        string    `gorm:"column:editoleh" json:"editoleh"` // ID Anggota
 	TglEdit         string    `gorm:"column:tgledit" json:"tgl_edit"`  // Waktu Edit
 	ValidOleh       string    `gorm:"column:validoleh" json:"validoleh"`

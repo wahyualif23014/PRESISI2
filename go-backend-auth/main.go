@@ -80,6 +80,7 @@ func main() {
 			admin.POST("/categories/delete", controllers.DeleteCategory)
 			admin.POST("/commodity/update", controllers.UpdateCommodity)
 			admin.POST("/commodity/delete-item", controllers.DeleteCommodityItem)
+			admin.GET("/potensi-lahan/pending-count", controllers.GetPendingPotensiCount)
 		}
 
 		// B. POTENSI LAHAN
@@ -89,6 +90,10 @@ func main() {
 			potensi.GET("/summary", controllers.GetSummaryLahan)
 			potensi.GET("/no-potential", controllers.GetNoPotentialLahan)
 			potensi.GET("/filter-options", controllers.GetFilterOptions)
+
+			// 👇 INI 2 BARIS BARU YANG WAJIB DITAMBAHKAN 👇
+			potensi.GET("/pending-count", controllers.GetPendingPotensiCount)
+			potensi.GET("/notifications", controllers.GetNotificationList)
 
 			// Validation endpoints
 			potensi.PUT("/validate-toggle/:id", controllers.ToggleValidation)
@@ -135,6 +140,15 @@ func main() {
 			view.GET("/jabatan", controllers.GetJabatan)
 			view.GET("/tingkat", controllers.GetTingkat)
 			view.GET("/wilayah", controllers.GetWilayah)
+		}
+
+		// G. NOTIFIKASI
+		// Inisialisasi NotificationController dengan DB
+		notificationController := controllers.NewNotificationController(initializers.DB)
+		notifications := api.Group("/notifications")
+		{
+			notifications.GET("/", notificationController.GetMyNotifications)
+			notifications.GET("/unread-count", notificationController.GetPendingCount)
 		}
 	}
 

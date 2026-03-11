@@ -24,12 +24,16 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
   List<String> _listPolsek = [];
   List<String> _listJenisLahan = [];
   List<String> _listKomoditas = [];
+  // 👇 TAMBAHAN: List Status Validasi
+  final List<String> _listStatus = ["TERVALIDASI", "BELUM TERVALIDASI"];
 
   // Nilai Terpilih
   String? _selectedPolres;
   String? _selectedPolsek;
   String? _selectedJenisLahan;
   String? _selectedKomoditas;
+  // 👇 TAMBAHAN: Nilai Terpilih Status
+  String? _selectedStatus;
 
   @override
   void initState() {
@@ -229,6 +233,17 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                         : (val) => setState(() => _selectedKomoditas = val),
                 icon: Icons.grass,
               ),
+              const SizedBox(height: 16),
+
+              // 👇 5. TAMBAHAN: STATUS VALIDASI (PENTING UNTUK FITUR VALIDASI)
+              _buildDropdown(
+                label: "Status Validasi",
+                hint: "Semua Status",
+                value: _selectedStatus,
+                items: _listStatus,
+                onChanged: (val) => setState(() => _selectedStatus = val),
+                icon: Icons.verified_user,
+              ),
               const SizedBox(height: 32),
 
               // ACTION BUTTONS
@@ -262,6 +277,8 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                           'polsek': _selectedPolsek ?? '',
                           'jenis_lahan': _selectedJenisLahan ?? '',
                           'komoditas': _selectedKomoditas ?? '',
+                          // 👇 TAMBAHAN: Kirim status ke backend
+                          'status': _selectedStatus ?? '', 
                         });
                         Navigator.pop(context);
                       },
