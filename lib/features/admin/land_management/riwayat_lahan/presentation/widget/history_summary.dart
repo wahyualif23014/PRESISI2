@@ -1,18 +1,16 @@
+import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart' show LandHistoryProvider;
 import 'package:flutter/material.dart';
-import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart';
+import 'package:provider/provider.dart';
 
 class HistorySummary extends StatefulWidget {
-  final LandHistorySummaryModel? data;
-  final bool isLoading;
-
-  const HistorySummary({super.key, required this.data, this.isLoading = false});
+  const HistorySummary({super.key});
 
   @override
   State<HistorySummary> createState() => _HistorySummaryState();
 }
 
 class _HistorySummaryState extends State<HistorySummary> {
-  // State untuk mengontrol expand/collapse tiap kategori
+
   bool _isPotensiExpanded = false;
   bool _isTanamExpanded = false;
   bool _isPanenExpanded = false;
@@ -29,79 +27,82 @@ class _HistorySummaryState extends State<HistorySummary> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isLoading) return _buildLoading();
 
-    if (widget.data == null) return const SizedBox();
+    final provider = context.watch<LandHistoryProvider>();
+    final summary = provider.summary;
+
+    if (provider.isLoading) {
+      return _buildLoading();
+    }
 
     return Column(
       children: [
-        // 1. KATEGORI DETAIL POTENSI LAHAN
+
+        // ================= POTENSI =================
+
         _buildCategoryCard(
           title:
-              "Total Potensi Lahan ${_formatNumber(widget.data!.totalPotensiLahan)} HA",
+              "Total Potensi Lahan ${_formatNumber(summary.totalPotensiLahan)} HA",
           isExpanded: _isPotensiExpanded,
           onTap: () => setState(() => _isPotensiExpanded = !_isPotensiExpanded),
-          locationCount: "5130", // Ganti dinamis jika ada di model
+          locationCount: "-", // backend belum kirim lokasi
           details: [
-            {'title': 'MILIK POLRI', 'area': 8.13, 'count': 11},
-            {'title': 'POKTAN BINAAN POLRI', 'area': 33578.51, 'count': 971},
             {
-              'title': 'MASYARAKAT BINAAN POLRI',
-              'area': 27290.38,
-              'count': 584,
-            },
-            {'title': 'TUMPANG SARI', 'area': 208.94, 'count': 42},
-            {'title': 'PERHUTANAN SOSIAL', 'area': 19802.41, 'count': 208},
-            {'title': 'PERHUTANI/INHUTANI', 'area': 10627.53, 'count': 131},
-            {'title': 'PESANTREN', 'area': 134.50, 'count': 62},
-            {'title': 'LBS', 'area': 50537.24, 'count': 3088},
-            {'title': 'LAINNYA', 'area': 106.02, 'count': 33},
+              "title": "TOTAL POTENSI",
+              "area": summary.totalPotensiLahan,
+              "count": "-"
+            }
           ],
         ),
 
-        // 2. KATEGORI DETAIL TANAM LAHAN
+        // ================= TANAM =================
+
         _buildCategoryCard(
           title:
-              "Total Tanam Lahan ${_formatNumber(widget.data!.totalTanamLahan)} HA",
+              "Total Tanam Lahan ${_formatNumber(summary.totalTanamLahan)} HA",
           isExpanded: _isTanamExpanded,
           onTap: () => setState(() => _isTanamExpanded = !_isTanamExpanded),
-          locationCount: "0",
+          locationCount: "-",
           details: [
-            {'title': 'MILIK POLRI', 'area': 0.0, 'count': 0},
-            {'title': 'POKTAN BINAAN POLRI', 'area': 0.0, 'count': 0},
-            {'title': 'MASYARAKAT BINAAN POLRI', 'area': 0.0, 'count': 0},
+            {
+              "title": "TOTAL TANAM",
+              "area": summary.totalTanamLahan,
+              "count": "-"
+            }
           ],
         ),
 
-        // 3. KATEGORI DETAIL PANEN LAHAN
+        // ================= PANEN =================
+
         _buildCategoryCard(
           title:
-              "Total Panen Lahan ${_formatNumber(widget.data!.totalPanenLahanHa)} HA",
+              "Total Panen Lahan ${_formatNumber(summary.totalPanenLahanHa)} HA",
           isExpanded: _isPanenExpanded,
           onTap: () => setState(() => _isPanenExpanded = !_isPanenExpanded),
-          locationCount: "0",
+          locationCount: "-",
           details: [
             {
-              'title': 'HASIL PANEN',
-              'area': widget.data!.totalPanenLahanTon,
-              'count': 0,
-            },
+              "title": "HASIL PANEN (TON)",
+              "area": summary.totalPanenLahanTon,
+              "count": "-"
+            }
           ],
         ),
 
-        // 4. KATEGORI DETAIL SERAPAN
+        // ================= SERAPAN =================
+
         _buildCategoryCard(
           title:
-              "Total Serapan ${_formatNumber(widget.data!.totalSerapanTon)} TON",
+              "Total Serapan ${_formatNumber(summary.totalSerapanTon)} TON",
           isExpanded: _isSerapanExpanded,
           onTap: () => setState(() => _isSerapanExpanded = !_isSerapanExpanded),
-          locationCount: "0",
+          locationCount: "-",
           details: [
             {
-              'title': 'TOTAL SERAPAN',
-              'area': widget.data!.totalSerapanTon,
-              'count': 0,
-            },
+              "title": "TOTAL SERAPAN",
+              "area": summary.totalSerapanTon,
+              "count": "-"
+            }
           ],
         ),
       ],
@@ -115,8 +116,9 @@ class _HistorySummaryState extends State<HistorySummary> {
     required String locationCount,
     required List<Map<String, dynamic>> details,
   }) {
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -124,6 +126,7 @@ class _HistorySummaryState extends State<HistorySummary> {
       ),
       child: Column(
         children: [
+
           InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
@@ -131,8 +134,10 @@ class _HistorySummaryState extends State<HistorySummary> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
+
                   _buildIconInfo(),
                   const SizedBox(width: 12),
+
                   Expanded(
                     child: Text(
                       title,
@@ -142,6 +147,7 @@ class _HistorySummaryState extends State<HistorySummary> {
                       ),
                     ),
                   ),
+
                   Icon(
                     isExpanded
                         ? Icons.keyboard_arrow_up
@@ -151,10 +157,13 @@ class _HistorySummaryState extends State<HistorySummary> {
               ),
             ),
           ),
+
           if (isExpanded)
             Column(
               children: [
+
                 const Divider(height: 1, thickness: 1, color: Colors.black),
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(8),
@@ -168,13 +177,16 @@ class _HistorySummaryState extends State<HistorySummary> {
                     ),
                   ),
                 ),
+
                 const Divider(height: 1, thickness: 1, color: Colors.black),
+
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Wrap(
                     runSpacing: 16,
                     spacing: 8,
-                    children: details.map((cat) => _buildCatItem(cat)).toList(),
+                    children:
+                        details.map((cat) => _buildCatItem(cat)).toList(),
                   ),
                 ),
               ],
@@ -185,48 +197,65 @@ class _HistorySummaryState extends State<HistorySummary> {
   }
 
   Widget _buildCatItem(Map<String, dynamic> cat) {
+
+    final area = cat['area'] is double
+        ? cat['area']
+        : double.tryParse(cat['area'].toString()) ?? 0;
+
     return SizedBox(
       width: (MediaQuery.of(context).size.width - 64) / 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
           Text(
-            cat['title'],
+            cat['title'].toString(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+
           Text(
-            "${_formatNumber(cat['area'])} HA / ${cat['count']} Lokasi",
-            style: const TextStyle(fontSize: 11, color: Color(0xFF00838F)),
+            "${_formatNumber(area)}",
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF00838F),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildIconInfo() => Container(
-    width: 32,
-    height: 32,
-    decoration: const BoxDecoration(
-      color: Color(0xFF9E9D24),
-      shape: BoxShape.circle,
-    ),
-    child: const Center(
-      child: Text(
-        "i",
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
+  Widget _buildIconInfo() {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: const BoxDecoration(
+        color: Color(0xFF9E9D24),
+        shape: BoxShape.circle,
+      ),
+      child: const Center(
+        child: Text(
+          "i",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
-  Widget _buildLoading() => Container(
-    height: 60,
-    alignment: Alignment.center,
-    child: const CircularProgressIndicator(color: Colors.black),
-  );
+  Widget _buildLoading() {
+    return Container(
+      height: 60,
+      alignment: Alignment.center,
+      child: const CircularProgressIndicator(color: Colors.black),
+    );
+  }
 }

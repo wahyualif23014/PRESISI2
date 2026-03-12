@@ -54,21 +54,20 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => FilterLahanDialog(
-            onApply: (filters) {
-              setState(() {
-                _activeFilters = filters;
-              });
-              _fetchData();
-            },
-            onReset: () {
-              setState(() {
-                _activeFilters = null;
-              });
-              _fetchData();
-            },
-          ),
+      builder: (context) => FilterLahanDialog(
+        onApply: (filters) {
+          setState(() {
+            _activeFilters = filters;
+          });
+          _fetchData();
+        },
+        onReset: () {
+          setState(() {
+            _activeFilters = null;
+          });
+          _fetchData();
+        },
+      ),
     );
   }
 

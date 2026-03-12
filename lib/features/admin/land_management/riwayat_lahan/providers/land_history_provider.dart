@@ -1,108 +1,141 @@
-// import 'package:flutter/material.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart'
+    show LandHistoryItemModel, LandHistorySummaryModel;
+import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/repos/lahan_history_repos.dart'
+    show LandHistoryRepository;
+import 'package:flutter/foundation.dart';
 
-// // MODELS & REPO
-// import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart';
-// import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/repos/lahan_history_repos.dart';
+class LandHistoryProvider extends ChangeNotifier {
+  final LandHistoryRepository _repository = LandHistoryRepository();
 
-// class LandHistoryProvider with ChangeNotifier {
-//   final LandHistoryRepository _repo = LandHistoryRepository();
+  // ==============================
+  // STATE
+  // ==============================
 
-//   // --- STATE ---
-//   LandHistorySummaryModel? _summaryData;
-//   List<LandHistoryItemModel> _allData = []; // Data mentah dari API/Repo
-//   List<LandHistoryItemModel> _displayData = []; // Data yang ditampilkan (hasil filter)
-  
-//   Map<String, List<LandHistoryItemModel>> _groupedData = {}; // Data Grouping untuk UI
-  
-//   bool _isLoading = false;
-//   String? _errorMessage;
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
 
-//   // --- GETTERS ---
-//   LandHistorySummaryModel? get summaryData => _summaryData;
-//   Map<String, List<LandHistoryItemModel>> get groupedData => _groupedData;
-//   bool get isLoading => _isLoading;
-//   String? get errorMessage => _errorMessage;
-//   bool get isEmpty => _displayData.isEmpty;
+  LandHistorySummaryModel _summary = LandHistorySummaryModel(
+    totalPotensiLahan: 0,
+    totalTanamLahan: 0,
+    totalPanenLahanHa: 0,
+    totalPanenLahanTon: 0,
+    totalSerapanTon: 0,
+  );
 
-//   // --- ACTIONS ---
+  LandHistorySummaryModel get summary => _summary;
 
-//   // 1. Fetch Data (Concurrent)
-//   Future<void> fetchHistory() async {
-//     _isLoading = true;
-//     _errorMessage = null;
-//     notifyListeners();
+  List<LandHistoryItemModel> _historyList = [];
+  List<LandHistoryItemModel> get historyList => _historyList;
 
-//     try {
-//       // Optimasi: Fetch Summary & List bersamaan
-//       final results = await Future.wait([
-//         _repo.getSummaryStats(),
-//         _repo.getHistoryList(),
-//       ]);
+  Map<String, List<String>> _filterOptions = {
+    "polres": [],
+    "polsek": [],
+    "jenis_lahan": [],
+    "komoditi": [],
+  };
 
-//       _summaryData = results[0] as LandHistorySummaryModel;
-//       _allData = results[1] as List<LandHistoryItemModel>;
-//       _displayData = List.from(_allData);
+  Map<String, List<String>> get filterOptions => _filterOptions;
 
-//       // Proses grouping awal
-//       _groupData();
-      
-//       _isLoading = false;
-//       notifyListeners();
-//     } catch (e) {
-//       debugPrint("Error loading history: $e");
-//       _errorMessage = e.toString();
-//       _isLoading = false;
-//       notifyListeners();
-//     }
-//   }
+  Map<String, String> _activeFilters = {};
+  Map<String, String> get activeFilters => _activeFilters;
 
-//   // 2. Search Logic
-//   void search(String query) {
-//     if (query.isEmpty) {
-//       _displayData = List.from(_allData);
-//     } else {
-//       final lowerQuery = query.toLowerCase();
-//       _displayData = _allData.where((item) {
-//         return item.polisiPenggerak.toLowerCase().contains(lowerQuery) ||
-//                item.penanggungJawab.toLowerCase().contains(lowerQuery) ||
-//                item.regionGroup.toLowerCase().contains(lowerQuery);
-//       }).toList();
-//     }
-//     // Update Grouping setelah filter
-//     _groupData(); 
-//     notifyListeners();
-//   }
+  String _searchKeyword = "";
 
-//   // 3. Filter Logic (Dari Dialog)
-//   void applyFilter(String keyword, List<String> categories) {
-//     if (keyword.isEmpty && categories.isEmpty) {
-//       _displayData = List.from(_allData);
-//     } else {
-//        _displayData = _allData.where((item) {
-//          bool matchKeyword = true;
-//          if (keyword.isNotEmpty) {
-//            matchKeyword = item.polisiPenggerak.contains(keyword);
-//          }
-//          return matchKeyword;
-//        }).toList();
-//     }
-//     _groupData();
-//     notifyListeners();
-//   }
+  // ==============================
+  // SET SEARCH
+  // ==============================
 
-//   void resetFilter() {
-//     _displayData = List.from(_allData);
-//     _groupData();
-//     notifyListeners();
-//   }
+  void setSearch(String keyword) {
+    _searchKeyword = keyword;
+    fetchHistory();
+  }
 
-//   // --- INTERNAL HELPERS ---
+  // ==============================
+  // SET FILTER
+  // ==============================
 
-//   // Pure Function untuk grouping data berdasarkan Region
-//   void _groupData() {
-//     _groupedData = {};
-//     for (var item in _displayData) {
-//       _groupedData.putIfAbsent(item.regionGroup, () => []).add(item);
-//     }
-//   }
-// }
+  void setFilter(String key, String value) {
+    if (value.isEmpty) {
+      _activeFilters.remove(key);
+    } else {
+      _activeFilters[key] = value;
+    }
+    fetchHistory();
+  }
+
+  void clearFilters() {
+    _activeFilters.clear();
+    fetchHistory();
+  }
+
+  // ==============================
+  // FETCH SUMMARY
+  // ==============================
+
+  Future<void> fetchSummary() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final result = await _repository.getSummaryStats();
+      _summary = result;
+    } catch (e) {
+      debugPrint("Provider Summary Error: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ==============================
+  // FETCH FILTER OPTIONS
+  // ==============================
+
+  Future<void> fetchFilterOptions({String? polres}) async {
+    try {
+      final result = await _repository.getFilterOptions(polres: polres);
+      _filterOptions = result;
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Provider Filter Error: $e");
+    }
+  }
+
+  // ==============================
+  // FETCH HISTORY LIST
+  // ==============================
+
+  Future<void> fetchHistory() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final result = await _repository.getHistoryList(
+        keyword: _searchKeyword,
+        filters: _activeFilters,
+      );
+
+      _historyList = result;
+    } catch (e) {
+      debugPrint("Provider History Error: $e");
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // ==============================
+  // INITIAL LOAD
+  // ==============================
+
+  Future<void> initialize() async {
+    _isLoading = true;
+    notifyListeners();
+
+    await Future.wait([fetchSummary(), fetchFilterOptions(), fetchHistory()]);
+
+    _isLoading = false;
+    notifyListeners();
+  }
+}

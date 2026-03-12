@@ -15,11 +15,15 @@ class LandHistorySummaryModel {
 
   factory LandHistorySummaryModel.fromJson(Map<String, dynamic> json) {
     return LandHistorySummaryModel(
-      totalPotensiLahan: (json['total_potensi'] as num).toDouble(),
-      totalTanamLahan: (json['total_tanam'] as num).toDouble(),
-      totalPanenLahanHa: (json['total_panen_ha'] as num).toDouble(),
-      totalPanenLahanTon: (json['total_panen_ton'] as num).toDouble(),
-      totalSerapanTon: (json['total_serapan'] as num).toDouble(),
+      totalPotensiLahan: (json["total_potensi"] as num?)?.toDouble() ?? 0,
+
+      totalTanamLahan: (json["total_tanam"] as num?)?.toDouble() ?? 0,
+
+      totalPanenLahanHa: (json["total_panen_ha"] as num?)?.toDouble() ?? 0,
+
+      totalPanenLahanTon: (json["total_panen_ton"] as num?)?.toDouble() ?? 0,
+
+      totalSerapanTon: (json["total_serapan"] as num?)?.toDouble() ?? 0,
     );
   }
 }

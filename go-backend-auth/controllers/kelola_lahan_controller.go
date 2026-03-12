@@ -174,7 +174,7 @@ func GetKelolaList(c *gin.Context) {
 			END as jenis_lahan_name,
 			COALESCE(lahan.keterangan, '-') as keterangan,
 			COALESCE(lahan.ketcp, '-') as keterangan_lain,
-			COALESCE(lahan.poktan, '-') as jml_poktan,
+			COALESCE(lahan.poktan, 0) as jml_poktan,
 			COALESCE(lahan.jmlsantri, 0) as jml_petani,
 			COALESCE(CONCAT(k.jeniskomoditi, ' - ', k.namakomoditi), '-') as komoditi_name,
 			COALESCE(lahan.alamat, '-') as alamat_lahan,
