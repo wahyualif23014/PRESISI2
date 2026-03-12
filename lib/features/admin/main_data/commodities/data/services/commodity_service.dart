@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/commodity_category_model.dart';
 import '../models/commodity_model.dart';
 
-// Class Wrapper untuk hasil fetch (List + Total)
 class CategoryFetchResult {
   final List<CommodityCategoryModel> categories;
   final int totalItems;
@@ -14,14 +13,13 @@ class CategoryFetchResult {
 
 class CommodityService {
   static const String baseUrl = "http://192.168.100.195:8080/api/admin";
+  final _storage = const FlutterSecureStorage();
 
-  // PERBAIKAN: Menggunakan key 'jwt_token' agar sinkron dengan AuthProvider
   Future<String> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token') ?? '';
+    String? token = await _storage.read(key: 'jwt_token');
+    return token ?? '';
   }
 
-  // 1. Fetch Categories & Total Items (Path: /api/admin/categories)
   Future<CategoryFetchResult> fetchCategoriesData() async {
     final token = await _getToken();
     try {
@@ -36,7 +34,8 @@ class CommodityService {
         final int tItems = body['total_items'] ?? 0;
 
         return CategoryFetchResult(
-          categories: data.map((e) => CommodityCategoryModel.fromJson(e)).toList(),
+          categories:
+              data.map((e) => CommodityCategoryModel.fromJson(e)).toList(),
           totalItems: tItems,
         );
       }
@@ -47,7 +46,6 @@ class CommodityService {
     }
   }
 
-  // 2. Add Commodity (Path: /api/admin/categories)
   Future<bool> addCommodity(String categoryId, String name) async {
     final token = await _getToken();
     try {
@@ -65,7 +63,6 @@ class CommodityService {
     }
   }
 
-  // 3. Delete Category (Path: /api/admin/categories/delete)
   Future<bool> deleteCategory(String kindName) async {
     final token = await _getToken();
     try {
@@ -83,11 +80,12 @@ class CommodityService {
     }
   }
 
-  // 4. Fetch Detail Items (Path: /api/admin/commodities)
   Future<List<CommodityModel>> fetchCommoditiesByKind(String kind) async {
     final token = await _getToken();
     try {
-      final uri = Uri.parse('$baseUrl/commodities').replace(queryParameters: {'kind': kind});
+      final uri = Uri.parse(
+        '$baseUrl/commodities',
+      ).replace(queryParameters: {'kind': kind});
       final response = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
@@ -105,7 +103,6 @@ class CommodityService {
     }
   }
 
-  // 5. Update Commodity (Path: /api/admin/commodity/update)
   Future<bool> updateCommodity(String id, String newName) async {
     final token = await _getToken();
     try {

@@ -19,7 +19,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
   final LandPotentialService _service = LandPotentialService();
   bool _isLoading = true;
 
-  // List sekarang menampung Map (Nama & Kode) untuk Wilayah
   List<Map<String, dynamic>> _listPolres = [];
   List<Map<String, dynamic>> _listPolsek = [];
 
@@ -35,7 +34,9 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
     "LAHAN LAINNYA",
   ];
 
-  String? _selPolres, _selPolsek, _selJenis;
+  final List<String> _listValidasi = ["Sudah Divalidasi", "Belum Divalidasi"];
+
+  String? _selPolres, _selPolsek, _selJenis, _selValidasi;
 
   @override
   void initState() {
@@ -44,7 +45,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
   }
 
   Future<void> _loadInitial() async {
-    // Mengambil data awal Polres
     final data = await _service.fetchDynamicWilayah();
     setState(() {
       _listPolres = data;
@@ -60,7 +60,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
       _selPolsek = null;
     });
 
-    // Mengambil data Polsek berdasarkan nama Polres
     final data = await _service.fetchDynamicWilayah(polres: polresName);
 
     setState(() {
@@ -107,7 +106,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                 ),
               )
             else ...[
-              // Dropdown Kepolisian Resor
               _listPolres.isEmpty
                   ? _buildEmptyState("Data Polres tidak ada")
                   : _buildDropWilayah(
@@ -127,7 +125,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                   ),
               const SizedBox(height: 16),
 
-              // Dropdown Kepolisian Sektor
               _selPolres != null && _listPolsek.isEmpty
                   ? _buildEmptyState("Data Polsek tidak ada")
                   : _buildDropWilayah(
@@ -140,13 +137,21 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                   ),
               const SizedBox(height: 16),
 
-              // Dropdown Jenis Lahan (Tetap List String)
               _buildDropSimple(
                 label: "Jenis Lahan",
                 icon: Icons.landscape,
                 items: _listJenis,
                 value: _selJenis,
                 onChanged: (v) => setState(() => _selJenis = v),
+              ),
+              const SizedBox(height: 16),
+
+              _buildDropSimple(
+                label: "Status Validasi",
+                icon: Icons.verified_user_outlined,
+                items: _listValidasi,
+                value: _selValidasi,
+                onChanged: (v) => setState(() => _selValidasi = v),
               ),
             ],
             const SizedBox(height: 32),
@@ -190,6 +195,7 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                         'polres': _selPolres ?? '',
                         'polsek': _selPolsek ?? '',
                         'jenis_lahan': _selJenis ?? '',
+                        'status_validasi': _selValidasi ?? '',
                       });
                       Navigator.pop(context);
                     },
@@ -242,7 +248,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
     );
   }
 
-  // Dropdown untuk Wilayah (Map: Nama & Kode)
   Widget _buildDropWilayah({
     required String label,
     required IconData icon,
@@ -287,7 +292,6 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
     );
   }
 
-  // Dropdown untuk Jenis Lahan (List String)
   Widget _buildDropSimple({
     required String label,
     required IconData icon,

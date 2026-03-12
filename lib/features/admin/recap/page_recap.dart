@@ -29,13 +29,11 @@ class _PageRecapState extends State<PageRecap> {
     super.dispose();
   }
 
-  /// Menangani proses unduh file Excel
   void _handleDownloadExcel(String selection) async {
     if (_isDownloading) return;
 
     setState(() => _isDownloading = true);
 
-    // 1. Tampilkan dialog loading transparan
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -53,14 +51,11 @@ class _PageRecapState extends State<PageRecap> {
 
       if (!mounted) return;
 
-      // 2. Tutup dialog loading dengan aman menggunakan rootNavigator
       Navigator.of(context, rootNavigator: true).pop();
 
       if (path != null) {
         final String fileName = path.split('/').last;
 
-        // 3. Gunakan addPostFrameCallback agar pembukaan dialog sukses
-        // tidak bentrok dengan penutupan dialog loading
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             PrintSuccessDialog.show(context, fileName: fileName);
@@ -104,34 +99,18 @@ class _PageRecapState extends State<PageRecap> {
       body: Column(
         children: [
           const SizedBox(height: 16),
-          // 1. Bagian Header (Search, Filter, Download)
           ListenableBuilder(
             listenable: _controller,
             builder: (context, _) {
-              final List<Map<String, String>> polresOptions =
-                  _controller.groupedData.keys.map((name) {
-                    final firstItem = _controller.groupedData[name]?.first;
-                    return {
-                      'id': firstItem?.id.substring(0, 5) ?? '',
-                      'name': name,
-                    };
-                  }).toList();
-
               return RecapHeaderSection(
                 onSearchChanged: _controller.onSearch,
                 onFilterTap: _showFilterDialog,
                 onDownloadExcel: _handleDownloadExcel,
-                polresOptions: polresOptions,
               );
             },
           ),
-
           const SizedBox(height: 16),
-
-          // 2. Header Tabel (Judul Kolom)
           const RecapTableHeader(),
-
-          // 3. Area Konten (List Data)
           Expanded(
             child: ListenableBuilder(
               listenable: _controller,

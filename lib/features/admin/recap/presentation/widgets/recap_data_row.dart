@@ -38,18 +38,18 @@ class RecapPage extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: AppColors.primary,
-      child: ListView(
+      child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 16),
-          ...polresGroups.entries.map((entry) {
-            return RecapPolresSection(
-              polresName: entry.key,
-              itemsInPolres: entry.value,
-            );
-          }),
-          const SizedBox(height: 100),
-        ],
+        padding: const EdgeInsets.only(top: 16, bottom: 100),
+        itemCount: polresGroups.length,
+        itemBuilder: (context, index) {
+          final polresName = polresGroups.keys.elementAt(index);
+          final items = polresGroups[polresName]!;
+          return RecapPolresSection(
+            polresName: polresName,
+            itemsInPolres: items,
+          );
+        },
       ),
     );
   }
@@ -74,73 +74,81 @@ class _RecapPolresSectionState extends State<RecapPolresSection> {
 
   @override
   Widget build(BuildContext context) {
+    // Memfilter hanya data desa (id > 8 karakter)
     final desaOnly =
         widget.itemsInPolres.where((e) => e.id.length > 8).toList();
-    final Map<String, List<RecapModel>> grouped = {};
 
+    // Mengelompokkan desa berdasarkan polsek (menggunakan 8 karakter pertama ID)
+    final Map<String, List<RecapModel>> groupedByPolsek = {};
     for (var item in desaOnly) {
       if (item.id.length < 8) continue;
       final key = item.id.substring(0, 8);
-      grouped.putIfAbsent(key, () => []);
-      grouped[key]!.add(item);
+      groupedByPolsek.putIfAbsent(key, () => []);
+      groupedByPolsek[key]!.add(item);
     }
 
-    final sortedKeys = grouped.keys.toList()..sort();
+    final sortedPolsekKeys = groupedByPolsek.keys.toList()..sort();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            offset: const Offset(0, 8),
-            blurRadius: 24,
-          ),
-        ],
-        border: Border.all(color: AppColors.border),
-      ),
+      margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. HEADER POLRES
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.accent.withOpacity(0.3),
-                borderRadius: BorderRadius.vertical(
-                  top: const Radius.circular(24),
-                  bottom: Radius.circular(_isExpanded ? 0 : 24),
-                ),
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.shade300),
               ),
-              child: _DataRowLayout(
-                label: _formatName(widget.polresName),
-                tag: "POLRES",
-                potensi: _sum(desaOnly, (m) => m.potensiLahan),
-                tanam: _sum(desaOnly, (m) => m.tanamLahan),
-                panenLuas: _sum(desaOnly, (m) => m.panenLuas),
-                panenTon: _sum(desaOnly, (m) => m.panenTon),
-                serapan: _sum(desaOnly, (m) => m.serapan),
-                isHeader: true,
+              child: Row(
+                children: [
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_down
+                        : Icons.keyboard_arrow_right,
+                    color: Colors.orange.shade900,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _DataRowLayout(
+                      label: _formatName(widget.polresName),
+                      tag: "POLRES",
+                      potensi: _sum(desaOnly, (m) => m.potensiLahan),
+                      tanam: _sum(desaOnly, (m) => m.tanamLahan),
+                      panenLuas: _sum(desaOnly, (m) => m.panenLuas),
+                      panenTon: _sum(desaOnly, (m) => m.panenTon),
+                      serapan: _sum(desaOnly, (m) => m.serapan),
+                      isHeader: true,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+
+          // 2. LIST POLSEK (Hanya tampil jika di-expand)
           if (_isExpanded)
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: sortedKeys.length,
-              itemBuilder: (context, index) {
-                final key = sortedKeys[index];
-                final items = grouped[key]!;
-                return RecapPolsekSection(
-                  polsekName: items.first.namaPolsek ?? "-",
-                  polsekId: key,
-                  itemsInPolsek: items,
-                );
-              },
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 12),
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: sortedPolsekKeys.length,
+                itemBuilder: (context, index) {
+                  final key = sortedPolsekKeys[index];
+                  final items = groupedByPolsek[key]!;
+                  return RecapPolsekSection(
+                    polsekName:
+                        items.first.namaPolsek ?? "POLSEK TIDAK DIKETAHUI",
+                    itemsInPolsek: items,
+                  );
+                },
+              ),
             ),
         ],
       ),
@@ -149,13 +157,12 @@ class _RecapPolresSectionState extends State<RecapPolresSection> {
 }
 
 class RecapPolsekSection extends StatefulWidget {
-  final String polsekName, polsekId;
+  final String polsekName;
   final List<RecapModel> itemsInPolsek;
 
   const RecapPolsekSection({
     super.key,
     required this.polsekName,
-    required this.polsekId,
     required this.itemsInPolsek,
   });
 
@@ -164,47 +171,89 @@ class RecapPolsekSection extends StatefulWidget {
 }
 
 class _RecapPolsekSectionState extends State<RecapPolsekSection> {
-  bool _isExpanded = true;
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Divider(height: 1, color: AppColors.border),
-        InkWell(
-          onTap: () => setState(() => _isExpanded = !_isExpanded),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _DataRowLayout(
-              label: widget.polsekName,
-              tag: "POLSEK",
-              potensi: _sum(widget.itemsInPolsek, (m) => m.potensiLahan),
-              tanam: _sum(widget.itemsInPolsek, (m) => m.tanamLahan),
-              panenLuas: _sum(widget.itemsInPolsek, (m) => m.panenLuas),
-              panenTon: _sum(widget.itemsInPolsek, (m) => m.panenTon),
-              serapan: _sum(widget.itemsInPolsek, (m) => m.serapan),
-              isSubHeader: true,
-              isExpanded: _isExpanded,
-            ),
-          ),
-        ),
-        if (_isExpanded)
-          ...widget.itemsInPolsek.map(
-            (desa) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: Colors.grey.shade50,
-              child: _DataRowLayout(
-                label: desa.namaWilayah,
-                tag: "DESA",
-                potensi: desa.potensiLahan,
-                tanam: desa.tanamLahan,
-                panenLuas: desa.panenLuas,
-                panenTon: desa.panenTon,
-                serapan: desa.serapan,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. HEADER POLSEK
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isExpanded
+                        ? Icons.remove_circle_outline
+                        : Icons.add_circle_outline,
+                    size: 18,
+                    color: Colors.blue.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _DataRowLayout(
+                      label: widget.polsekName,
+                      tag: "POLSEK",
+                      potensi: _sum(
+                        widget.itemsInPolsek,
+                        (m) => m.potensiLahan,
+                      ),
+                      tanam: _sum(widget.itemsInPolsek, (m) => m.tanamLahan),
+                      panenLuas: _sum(widget.itemsInPolsek, (m) => m.panenLuas),
+                      panenTon: _sum(widget.itemsInPolsek, (m) => m.panenTon),
+                      serapan: _sum(widget.itemsInPolsek, (m) => m.serapan),
+                      isSubHeader: true,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-      ],
+
+          // 2. LIST DESA (Hanya tampil jika di-expand)
+          if (_isExpanded)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 16),
+              child: Column(
+                children:
+                    widget.itemsInPolsek.map((desa) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: _DataRowLayout(
+                          label: desa.namaWilayah,
+                          tag: "DESA",
+                          potensi: desa.potensiLahan,
+                          tanam: desa.tanamLahan,
+                          panenLuas: desa.panenLuas,
+                          panenTon: desa.panenTon,
+                          serapan: desa.serapan,
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -212,7 +261,7 @@ class _RecapPolsekSectionState extends State<RecapPolsekSection> {
 class _DataRowLayout extends StatelessWidget {
   final String label, tag;
   final double potensi, tanam, panenLuas, panenTon, serapan;
-  final bool isHeader, isSubHeader, isExpanded;
+  final bool isHeader, isSubHeader;
 
   const _DataRowLayout({
     required this.label,
@@ -224,7 +273,6 @@ class _DataRowLayout extends StatelessWidget {
     required this.serapan,
     this.isHeader = false,
     this.isSubHeader = false,
-    this.isExpanded = false,
   });
 
   @override
@@ -232,6 +280,7 @@ class _DataRowLayout extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Kolom Nama Wilayah
         Expanded(
           flex: 4,
           child: Column(
@@ -252,11 +301,12 @@ class _DataRowLayout extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.visible,
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               _buildTag(tag),
             ],
           ),
         ),
+        // Kolom Data Angka
         _buildCol(potensi, "Ha", 2),
         _buildCol(tanam, "Ha", 2),
         _buildColPanen(panenLuas, panenTon, 3),
@@ -267,18 +317,18 @@ class _DataRowLayout extends StatelessWidget {
 
   Widget _buildTag(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color:
             isHeader
-                ? Colors.orange
-                : (isSubHeader ? Colors.blue : Colors.grey),
+                ? Colors.orange.shade700
+                : (isSubHeader ? Colors.blue.shade600 : Colors.grey.shade600),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 7,
+          fontSize: 8,
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
@@ -295,7 +345,7 @@ class _DataRowLayout extends StatelessWidget {
           "${val % 1 == 0 ? val.toInt() : val.toStringAsFixed(2)} $unit",
           style: TextStyle(
             fontSize: 10,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.bold,
             color: isHeader ? AppColors.primary : AppColors.textDark,
           ),
           textAlign: TextAlign.center,
@@ -310,10 +360,10 @@ class _DataRowLayout extends StatelessWidget {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          "${luas % 1 == 0 ? luas.toInt() : luas.toStringAsFixed(2)} Ha / \n${ton % 1 == 0 ? ton.toInt() : ton.toStringAsFixed(2)} Ton",
+          "${luas % 1 == 0 ? luas.toInt() : luas.toStringAsFixed(2)} Ha\n${ton % 1 == 0 ? ton.toInt() : ton.toStringAsFixed(2)} Ton",
           style: TextStyle(
             fontSize: 10,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.bold,
             color: isHeader ? AppColors.primary : AppColors.textDark,
           ),
           textAlign: TextAlign.center,

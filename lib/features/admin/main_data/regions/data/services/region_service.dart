@@ -1,21 +1,22 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/region_model.dart';
 
 class RegionService {
-  static const String _baseUrl = 'http://192.168.100.195:8080/api/admin/wilayah';
+  static const String _baseUrl =
+      'http://192.168.100.195:8080/api/admin/wilayah';
+  final _storage = const FlutterSecureStorage();
 
   Future<List<WilayahModel>> fetchRegions() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
+      final String? token = await _storage.read(key: 'jwt_token');
 
       final response = await http.get(
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'Authorization': 'Bearer ${token ?? ''}',
         },
       );
 
@@ -33,14 +34,13 @@ class RegionService {
 
   Future<bool> updateCoordinate(String kode, double lat, double lng) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('jwt_token');
+      final String? token = await _storage.read(key: 'jwt_token');
 
       final response = await http.put(
         Uri.parse('$_baseUrl/$kode'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'Authorization': 'Bearer ${token ?? ''}',
         },
         body: json.encode({"latitude": lat, "longitude": lng}),
       );

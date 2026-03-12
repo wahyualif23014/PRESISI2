@@ -24,8 +24,101 @@ type RecapResponse struct {
 	NamaPolsek   string  `json:"nama_polsek,omitempty"`
 }
 
+// Helper untuk menyusun filter query SQL dinamis
+func buildRecapFilters(c *gin.Context) (string, []interface{}) {
+	var conditions []string
+	var args []interface{}
+
+	// Filter Wilayah (PERBAIKAN: Menggunakan LIKE agar kebal terhadap perbedaan spasi)
+	polres := c.Query("polres")
+	if polres != "" {
+		kab := strings.TrimSpace(strings.TrimPrefix(polres, "POLRES "))
+		conditions = append(conditions, "UPPER(kab.nama) LIKE ?")
+		args = append(args, "%"+strings.ToUpper(kab)+"%")
+	}
+
+	polsek := c.Query("polsek")
+	if polsek != "" {
+		kec := strings.TrimSpace(strings.TrimPrefix(polsek, "POLSEK "))
+		conditions = append(conditions, "UPPER(pk.nama) LIKE ?")
+		args = append(args, "%"+strings.ToUpper(kec)+"%")
+	}
+
+	polresID := c.Query("polres_id")
+	if polresID != "" && polresID != "ALL" {
+		conditions = append(conditions, "kab.kode = ?")
+		args = append(args, polresID)
+	}
+
+	selectedIDs := c.Query("selected_ids")
+	if selectedIDs != "" {
+		ids := strings.Split(selectedIDs, ",")
+		conditions = append(conditions, "w.kode IN ?")
+		args = append(args, ids)
+	}
+
+	// Filter Kategori
+	jenisLahan := c.Query("jenis_lahan")
+	if jenisLahan != "" {
+		mapping := map[string]int{
+			"PRODUKTIF (POKTAN BINAAN POLRI)":     1,
+			"HUTAN (PERHUTANAN SOSIAL)":           2,
+			"LUAS BAKU SAWAH (LBS)":               3,
+			"PESANTREN":                           4,
+			"MILIK POLRI":                         5,
+			"PRODUKTIF (MASYARAKAT BINAAN POLRI)": 6,
+			"PRODUKTIF (TUMPANG SARI)":            7,
+			"HUTAN (PERHUTANI/INHUTANI)":          8,
+			"LAHAN TIDAK PRODUKTIF":               9,
+		}
+		if id, ok := mapping[strings.ToUpper(jenisLahan)]; ok {
+			conditions = append(conditions, "l.idjenislahan = ?")
+			args = append(args, id)
+		}
+	}
+
+	komoditi := c.Query("komoditi")
+	if komoditi != "" {
+		conditions = append(conditions, "UPPER(k.namakomoditi) LIKE ?")
+		args = append(args, "%"+strings.ToUpper(komoditi)+"%")
+	}
+
+	// Filter Waktu
+	tahun := c.Query("tahun")
+	if tahun != "" {
+		conditions = append(conditions, "YEAR(t.tgltanam) = ?")
+		args = append(args, tahun)
+	}
+
+	kuartal := c.Query("kuartal")
+	if kuartal != "" {
+		conditions = append(conditions, "QUARTER(t.tgltanam) = ?")
+		args = append(args, kuartal)
+	}
+
+	tglAwal := c.Query("tgl_awal")
+	if tglAwal != "" {
+		conditions = append(conditions, "t.tgltanam >= ?")
+		args = append(args, tglAwal)
+	}
+
+	tglAkhir := c.Query("tgl_akhir")
+	if tglAkhir != "" {
+		conditions = append(conditions, "t.tgltanam <= ?")
+		args = append(args, tglAkhir)
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = " AND " + strings.Join(conditions, " AND ")
+	}
+	return whereClause, args
+}
+
 // --- GET DATA UNTUK UI (HIERARKI) ---
 func GetRecapData(c *gin.Context) {
+	filterSQL, filterArgs := buildRecapFilters(c)
+
 	query := `
 		SELECT 
 			w.kode as id,
@@ -34,20 +127,22 @@ func GetRecapData(c *gin.Context) {
 			COALESCE(SUM(t.luastanam), 0) as tanam_lahan,
 			COALESCE(SUM(p.luaspanen), 0) as panen_luas,
 			COALESCE(SUM(p.totalpanen), 0) as panen_ton,
-			COALESCE(SUM(d.totaldistribusi), 0) as serapan,
+			COALESCE(SUM(dis.totaldistribusi), 0) as serapan,
 			'desa' as level,
 			COALESCE(pk.nama, '-') as nama_polsek
 		FROM wilayah w
 		LEFT JOIN lahan l ON l.idwilayah = w.kode
 		LEFT JOIN tanam t ON t.idlahan = l.idlahan
 		LEFT JOIN panen p ON p.idlahan = l.idlahan
-		LEFT JOIN distribusi d ON d.idlahan = l.idlahan
+		LEFT JOIN distribusi dis ON dis.idlahan = l.idlahan
 		LEFT JOIN wilayah pk ON pk.kode = SUBSTR(w.kode, 1, 8)
-		WHERE CHAR_LENGTH(w.kode) > 8
+		LEFT JOIN wilayah kab ON kab.kode = SUBSTR(w.kode, 1, 5)
+		LEFT JOIN komoditi k ON k.idkomoditi = l.idkomoditi
+		WHERE CHAR_LENGTH(w.kode) > 8 ` + filterSQL + `
 		GROUP BY w.kode, w.nama, pk.nama
 		ORDER BY w.kode ASC
 	`
-	rows, err := initializers.DB.Raw(query).Rows()
+	rows, err := initializers.DB.Raw(query, filterArgs...).Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -62,14 +157,12 @@ func GetRecapData(c *gin.Context) {
 		var r RecapResponse
 		rows.Scan(&r.ID, &r.NamaWilayah, &r.PotensiLahan, &r.TanamLahan, &r.PanenLuas, &r.PanenTon, &r.Serapan, &r.Level, &r.NamaPolsek)
 
-		// Validasi ID agar tidak panic saat slicing
 		if len(r.ID) < 8 {
 			continue
 		}
 
 		pID, sID := r.ID[:5], r.ID[:8]
 
-		// Agregasi Level Polres
 		if _, ok := polresMap[pID]; !ok {
 			var n string
 			initializers.DB.Table("wilayah").Select("nama").Where("kode = ?", pID).Scan(&n)
@@ -81,7 +174,6 @@ func GetRecapData(c *gin.Context) {
 		}
 		addSums(polresMap[pID], r)
 
-		// Agregasi Level Polsek
 		if _, ok := polsekMap[sID]; !ok {
 			polsekMap[sID] = &RecapResponse{
 				ID:          sID,
@@ -96,8 +188,6 @@ func GetRecapData(c *gin.Context) {
 
 	var finalData []RecapResponse
 
-	// Menyusun data Hierarki (Flat List untuk Frontend)
-	// Catatan: Iterasi Map di Go itu acak, jadi kita perlu sorting manual nanti
 	for pID, pData := range polresMap {
 		finalData = append(finalData, *pData)
 		for sID, sData := range polsekMap {
@@ -112,8 +202,6 @@ func GetRecapData(c *gin.Context) {
 		}
 	}
 
-	// PENTING: Sort data berdasarkan ID agar urutannya rapi (Polres -> Polsek -> Desa)
-	// Karena map di Go iterasinya random, langkah ini wajib agar report tidak berantakan
 	sort.Slice(finalData, func(i, j int) bool {
 		return finalData[i].ID < finalData[j].ID
 	})
@@ -123,6 +211,8 @@ func GetRecapData(c *gin.Context) {
 
 // --- FUNGSI EXPORT EXCEL ---
 func ExportRecapExcel(c *gin.Context) {
+	filterSQL, filterArgs := buildRecapFilters(c)
+
 	f := excelize.NewFile()
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -158,28 +248,28 @@ func ExportRecapExcel(c *gin.Context) {
 
 	queryUtama := `
 		SELECT 
-			d.kode as kode_desa, d.nama as nama_desa,
-			COALESCE(s.kode, '') as kode_polsek, COALESCE(s.nama, '-') as nama_polsek,
-			COALESCE(r.kode, '') as kode_polres, COALESCE(r.nama, '-') as nama_polres,
+			w.kode as kode_desa, w.nama as nama_desa,
+			COALESCE(pk.kode, '') as kode_polsek, COALESCE(pk.nama, '-') as nama_polsek,
+			COALESCE(kab.kode, '') as kode_polres, COALESCE(kab.nama, '-') as nama_polres,
 			COALESCE(SUM(l.luaslahan), 0) as potensi,
 			COALESCE(SUM(t.luastanam), 0) as tanam,
 			COALESCE(SUM(p.luaspanen), 0) as panen_luas,
 			COALESCE(SUM(p.totalpanen), 0) as panen_ton,
 			COALESCE(SUM(dis.totaldistribusi), 0) as serapan
-		FROM wilayah d
-		LEFT JOIN wilayah s ON s.kode = SUBSTR(d.kode, 1, 8)
-		LEFT JOIN wilayah r ON r.kode = SUBSTR(d.kode, 1, 5)
-		LEFT JOIN lahan l ON l.idwilayah = d.kode
+		FROM wilayah w
+		LEFT JOIN wilayah pk ON pk.kode = SUBSTR(w.kode, 1, 8)
+		LEFT JOIN wilayah kab ON kab.kode = SUBSTR(w.kode, 1, 5)
+		LEFT JOIN lahan l ON l.idwilayah = w.kode
+		LEFT JOIN komoditi k ON k.idkomoditi = l.idkomoditi
 		LEFT JOIN tanam t ON t.idlahan = l.idlahan
 		LEFT JOIN panen p ON p.idlahan = l.idlahan
 		LEFT JOIN distribusi dis ON dis.idlahan = l.idlahan
-		WHERE CHAR_LENGTH(d.kode) > 8
-		GROUP BY d.kode, d.nama, s.kode, s.nama, r.kode, r.nama
-		ORDER BY r.kode ASC, s.kode ASC, d.kode ASC
+		WHERE CHAR_LENGTH(w.kode) > 8 ` + filterSQL + `
+		GROUP BY w.kode, w.nama, pk.kode, pk.nama, kab.kode, kab.nama
+		ORDER BY kab.kode ASC, pk.kode ASC, w.kode ASC
 	`
-	rows, err := initializers.DB.Raw(queryUtama).Rows()
+	rows, err := initializers.DB.Raw(queryUtama, filterArgs...).Rows()
 	if err != nil {
-		fmt.Println("ERROR QUERY 1:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data database"})
 		return
 	}
@@ -362,8 +452,8 @@ func ExportRecapExcel(c *gin.Context) {
 
 	queryDetail := `
 		SELECT 
-			COALESCE(r.nama, '-') as polres, COALESCE(s.nama, '-') as polsek,
-			d.nama as alamat, r.nama as kabupaten, s.nama as kecamatan, d.nama as kelurahan,
+			COALESCE(kab.nama, '-') as polres, COALESCE(pk.nama, '-') as polsek,
+			w.nama as alamat, kab.nama as kabupaten, pk.nama as kecamatan, w.nama as kelurahan,
 			COALESCE(CAST(l.longi AS CHAR), '') as latitude,
 			COALESCE(CAST(l.lat AS CHAR), '') as longitude,
 			COALESCE(l.cp, '') as nama_polisi,
@@ -398,20 +488,20 @@ func ExportRecapExcel(c *gin.Context) {
 			COALESCE(p.totalpanen, 0) as luas_panen,
 			COALESCE(p.totalpanen, 0) as total_panen_ton,
 			COALESCE(dis.totaldistribusi, 0) as serapan
-		FROM wilayah d
-		LEFT JOIN wilayah s ON s.kode = SUBSTR(d.kode, 1, 8)
-		LEFT JOIN wilayah r ON r.kode = SUBSTR(d.kode, 1, 5)
-		LEFT JOIN lahan l ON l.idwilayah = d.kode
+		FROM wilayah w
+		LEFT JOIN wilayah pk ON pk.kode = SUBSTR(w.kode, 1, 8)
+		LEFT JOIN wilayah kab ON kab.kode = SUBSTR(w.kode, 1, 5)
+		LEFT JOIN lahan l ON l.idwilayah = w.kode
 		LEFT JOIN komoditi k ON k.idkomoditi = l.idkomoditi
 		LEFT JOIN tanam t ON t.idlahan = l.idlahan
 		LEFT JOIN panen p ON p.idlahan = l.idlahan
 		LEFT JOIN distribusi dis ON dis.idlahan = l.idlahan
-		WHERE CHAR_LENGTH(d.kode) > 8
-		ORDER BY r.kode ASC, s.kode ASC, d.kode ASC
+		WHERE CHAR_LENGTH(w.kode) > 8 ` + filterSQL + `
+		ORDER BY kab.kode ASC, pk.kode ASC, w.kode ASC
 	`
-	rowsDetail, errDetail := initializers.DB.Raw(queryDetail).Rows()
+	rowsDetail, errDetail := initializers.DB.Raw(queryDetail, filterArgs...).Rows()
 	if errDetail != nil {
-		fmt.Println("ERROR QUERY SHEET 3:", errDetail) // Cek terminal Go jika Sheet 3 kosong
+		fmt.Println("ERROR QUERY SHEET 3:", errDetail)
 	} else {
 		defer rowsDetail.Close()
 		rowIdx3 := 4

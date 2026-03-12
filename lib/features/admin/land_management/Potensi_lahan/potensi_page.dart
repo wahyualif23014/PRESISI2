@@ -19,7 +19,6 @@ class OverviewPage extends StatefulWidget {
 class _OverviewPageState extends State<OverviewPage> {
   final LandPotentialService _service = LandPotentialService();
 
-  // Key untuk mengakses fungsi fetch di dalam widget summary
   final GlobalKey<LandSummaryWidgetState> _summaryKey = GlobalKey();
   final GlobalKey<NoLandPotentialWidgetState> _noLandKey = GlobalKey();
 
@@ -37,7 +36,6 @@ class _OverviewPageState extends State<OverviewPage> {
     _fetchData();
   }
 
-  // Poin 5: Menyegarkan data statistik saat data utama berubah
   void _refreshSummaries() {
     _summaryKey.currentState?.fetchSummaryData();
     _noLandKey.currentState?.fetchData();
@@ -55,18 +53,19 @@ class _OverviewPageState extends State<OverviewPage> {
     });
 
     if (filters != null) _activeFilters = filters;
-    // Jika keyword kosong dikirim, kita tetap pakai _currentSearch yang lama kecuali direset
     if (keyword.isNotEmpty) _currentSearch = keyword;
 
     try {
       String? polresVal = _activeFilters?['polres'];
       String? polsekVal = _activeFilters?['polsek'];
-      String? statusVal = _activeFilters?['status'];
+      String? jenisLahanVal = _activeFilters?['jenis_lahan'];
+      String? statusVal = _activeFilters?['status_validasi'];
 
       final List<LandPotentialModel> data = await _service.fetchLandData(
         search: keyword.isNotEmpty ? keyword : _currentSearch,
         polres: polresVal,
         polsek: polsekVal,
+        jenisLahan: jenisLahanVal,
         status: statusVal ?? '',
         page: _currentPage,
         limit: _limitPerPage,
@@ -82,7 +81,6 @@ class _OverviewPageState extends State<OverviewPage> {
           });
         }
       } else {
-        // Pengelompokan berdasarkan Kabupaten/Resor hasil JOIN Backend
         for (var item in data) {
           String kabName = item.kabupaten.toUpperCase();
           if (!grouped.containsKey(kabName)) grouped[kabName] = [];
@@ -114,7 +112,6 @@ class _OverviewPageState extends State<OverviewPage> {
       color: Colors.white,
       child: Column(
         children: [
-          // Toolbar untuk Search, Filter, dan Tambah
           LandPotentialToolbar(
             onSearchChanged: _onSearch,
             onFilterTap: _onFilterTap,

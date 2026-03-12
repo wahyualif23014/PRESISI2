@@ -5,14 +5,12 @@ class RecapHeaderSection extends StatefulWidget {
   final Function(String) onSearchChanged;
   final VoidCallback onFilterTap;
   final Function(String selection) onDownloadExcel;
-  final List<Map<String, String>> polresOptions;
 
   const RecapHeaderSection({
     super.key,
     required this.onSearchChanged,
     required this.onFilterTap,
     required this.onDownloadExcel,
-    required this.polresOptions,
   });
 
   @override
@@ -30,7 +28,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
     super.dispose();
   }
 
-  // Menangani input pencarian dengan jeda 500ms (Debounce)
   void _onInputChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -39,7 +36,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
     setState(() {});
   }
 
-  // Menghapus teks pencarian
   void _clearSearch() {
     _searchController.clear();
     widget.onSearchChanged('');
@@ -48,7 +44,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
     FocusScope.of(context).unfocus();
   }
 
-  // Menampilkan menu pilihan download (Bottom Sheet)
   void _showDownloadMenu() {
     showModalBottomSheet(
       context: context,
@@ -73,8 +68,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 20),
-
-              // Opsi Download Semua Data
               ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: Color(0xFFFF9100),
@@ -90,40 +83,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
                   widget.onDownloadExcel("ALL");
                 },
               ),
-              const Divider(),
-
-              // Daftar Kabupaten Spesifik
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
-                child: Text(
-                  "Pilih Kabupaten Spesifik:",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: Colors.blueGrey,
-                  ),
-                ),
-              ),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: widget.polresOptions.length,
-                  itemBuilder: (context, index) {
-                    final item = widget.polresOptions[index];
-                    return ListTile(
-                      leading: const Icon(
-                        Icons.map_outlined,
-                        color: Colors.grey,
-                      ),
-                      title: Text(item['name'] ?? ""),
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onDownloadExcel(item['id'] ?? "");
-                      },
-                    );
-                  },
-                ),
-              ),
             ],
           ),
         );
@@ -137,7 +96,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
-          // Bar Pencarian
           Expanded(
             child: Container(
               height: 50,
@@ -185,16 +143,12 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Tombol Filter
           _buildActionButton(
             icon: Icons.filter_list_alt,
             color: const Color(0xFF0097B2),
             onTap: widget.onFilterTap,
           ),
           const SizedBox(width: 12),
-
-          // Tombol Download
           _buildActionButton(
             icon: Icons.download_rounded,
             color: const Color(0xFFFF9100),
@@ -205,7 +159,6 @@ class _RecapHeaderSectionState extends State<RecapHeaderSection> {
     );
   }
 
-  // Helper untuk membuat tombol aksi (Filter/Download)
   Widget _buildActionButton({
     required IconData icon,
     required Color color,

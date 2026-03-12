@@ -12,18 +12,19 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   final RecapRepo _repo = RecapRepo();
   bool _isLoading = true;
 
-  List<String> _listPolres = [],
-      _listPolsek = [],
-      _listJenis = [],
-      _listKomoditi = [];
+  List<String> _listPolres = [];
+  List<String> _listPolsek = [];
+  List<String> _listJenis = [];
+  List<String> _listKomoditi = [];
 
-  String? _selPolres,
-      _selPolsek,
-      _selJenis,
-      _selKomoditi,
-      _selYear,
-      _selQuarter;
-  DateTime? _startDate, _endDate;
+  String? _selPolres;
+  String? _selPolsek;
+  String? _selJenis;
+  String? _selKomoditi;
+  String? _selYear;
+  String? _selQuarter;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -35,9 +36,9 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
     final data = await _repo.getFilterOptions();
     if (mounted) {
       setState(() {
-        _listPolres = data['polres']!;
-        _listJenis = data['jenis_lahan']!;
-        _listKomoditi = data['komoditi']!;
+        _listPolres = data['polres'] ?? [];
+        _listJenis = data['jenis_lahan'] ?? [];
+        _listKomoditi = data['komoditi'] ?? [];
         _isLoading = false;
       });
     }
@@ -46,7 +47,9 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   void _showLockMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Silakan pilih wilayah Polres terlebih dahulu"),
+        content: Text(
+          "Pilih wilayah Polres terlebih dahulu untuk membuka Polsek",
+        ),
         backgroundColor: Colors.orange,
         duration: Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -110,8 +113,9 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                           });
                           if (v != null) {
                             _repo.getFilterOptions(polres: v).then((d) {
-                              if (mounted)
-                                setState(() => _listPolsek = d['polsek']!);
+                              if (mounted) {
+                                setState(() => _listPolsek = d['polsek'] ?? []);
+                              }
                             });
                           }
                         },
@@ -123,24 +127,22 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                         isPolresSelected,
                         (v) => setState(() => _selPolsek = v),
                       ),
-
                       const SizedBox(height: 16),
                       _buildSectionTitle("Kategori"),
                       _buildDrop(
                         "Jenis Lahan",
                         _selJenis,
                         _listJenis,
-                        isPolresSelected,
+                        true,
                         (v) => setState(() => _selJenis = v),
                       ),
                       _buildDrop(
                         "Komoditi",
                         _selKomoditi,
                         _listKomoditi,
-                        isPolresSelected,
+                        true,
                         (v) => setState(() => _selKomoditi = v),
                       ),
-
                       const SizedBox(height: 16),
                       _buildSectionTitle("Waktu"),
                       Row(
@@ -150,7 +152,7 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                               "Tahun",
                               _selYear,
                               ["2024", "2025", "2026"],
-                              isPolresSelected,
+                              true,
                               (v) => setState(() => _selYear = v),
                             ),
                           ),
@@ -160,14 +162,14 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                               "Kuartal",
                               _selQuarter,
                               ["1", "2", "3", "4"],
-                              isPolresSelected,
+                              true,
                               (v) => setState(() => _selQuarter = v),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      _buildDateRangePicker(isPolresSelected),
+                      _buildDateRangePicker(true),
                     ],
                   ],
                 ),

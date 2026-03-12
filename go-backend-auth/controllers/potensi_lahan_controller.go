@@ -54,6 +54,7 @@ func GetPotensiLahan(c *gin.Context) {
 	polres := c.Query("polres")
 	polsek := c.Query("polsek")
 	jenisLahan := c.Query("jenis_lahan")
+	statusVal := c.Query("status")
 
 	db := initializers.DB.Table("lahan").
 		Select("lahan.*, w_desa.nama AS nama_desa, w_kec.nama AS nama_kecamatan, w_kab.nama AS nama_kabupaten, p.nama AS nama_pemroses, v.nama AS nama_validator, akt.nama AS nama_poktan_asli, k.jeniskomoditi AS jenis_komoditas_nama, k.namakomoditi AS nama_komoditi_asli").
@@ -106,6 +107,14 @@ func GetPotensiLahan(c *gin.Context) {
 		}
 		if idJenis > 0 {
 			db = db.Where("lahan.idjenislahan = ?", idJenis)
+		}
+	}
+
+	if statusVal != "" {
+		if statusVal == "Sudah Divalidasi" {
+			db = db.Where("lahan.validoleh IS NOT NULL AND lahan.validoleh != '' AND lahan.validoleh != '0'")
+		} else if statusVal == "Belum Divalidasi" {
+			db = db.Where("(lahan.validoleh IS NULL OR lahan.validoleh = '' OR lahan.validoleh = '0')")
 		}
 	}
 

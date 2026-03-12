@@ -5,6 +5,7 @@ import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_list.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_summary.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/search_kelola_lahan.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/filter_lahan_dialog.dart';
 
 class KelolaLahanPage extends StatefulWidget {
   const KelolaLahanPage({super.key});
@@ -21,20 +22,20 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
   List<LandManagementItemModel> _listData = [];
   Map<String, List<LandManagementItemModel>> _groupedData = {};
   bool _isLoading = true;
+  Map<String, String>? _activeFilters;
 
   @override
   void initState() {
     super.initState();
-    _fetchData(); // Ambil data saat pertama kali buka
+    _fetchData();
   }
 
-  // FUNGSI UTAMA UNTUK REFRESH DATA
   Future<void> _fetchData({String keyword = ""}) async {
     setState(() => _isLoading = true);
 
-    // Ambil data terbaru dari repository
     final list = await _repo.getLandManagementList(
       keyword: keyword.isNotEmpty ? keyword : _searchController.text,
+      filters: _activeFilters,
     );
 
     if (mounted) {
@@ -48,6 +49,27 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
       });
       _summaryKey.currentState?.calculateSummaryFromList(list);
     }
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => FilterLahanDialog(
+            onApply: (filters) {
+              setState(() {
+                _activeFilters = filters;
+              });
+              _fetchData();
+            },
+            onReset: () {
+              setState(() {
+                _activeFilters = null;
+              });
+              _fetchData();
+            },
+          ),
+    );
   }
 
   @override
@@ -67,16 +89,15 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
                   () => _fetchData(keyword: query),
                 );
               },
-              onFilterTap: () {},
+              onFilterTap: _showFilterDialog,
             ),
           ),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () => _fetchData(), // FITUR TARIK KEBAWAH
+              onRefresh: () => _fetchData(),
               color: const Color(0xFF0097B2),
               child: ListView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(), // Wajib ada agar RefreshIndicator jalan
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.only(bottom: 100),
                 children: [
                   KelolaSummaryWidget(key: _summaryKey),
@@ -92,9 +113,7 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
                       (e) => KelolaRegionExpansionGroup(
                         title: e.key,
                         items: e.value,
-                        onRefresh:
-                            () =>
-                                _fetchData(), // Memicu refresh setelah edit sukses
+                        onRefresh: () => _fetchData(),
                       ),
                     ),
                 ],
