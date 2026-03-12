@@ -2,26 +2,21 @@ import 'package:flutter/material.dart';
 
 class PrintSuccessDialog extends StatelessWidget {
   final String fileName;
-  final VoidCallback onPrintTap;
 
-  const PrintSuccessDialog({
-    Key? key,
-    required this.fileName,
-    required this.onPrintTap,
-  }) : super(key: key);
+  const PrintSuccessDialog({Key? key, required this.fileName})
+    : super(key: key);
 
-  // Helper static method untuk memanggil dialog lebih ringkas
-  static void show(BuildContext context, {required String fileName, required VoidCallback onPrintTap}) {
+  static void show(BuildContext context, {required String fileName}) {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) {
         return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(24),
-          child: PrintSuccessDialog(
-            fileName: fileName,
-            onPrintTap: onPrintTap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
+          elevation: 8,
+          child: PrintSuccessDialog(fileName: fileName),
         );
       },
     );
@@ -30,7 +25,8 @@ class PrintSuccessDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      constraints: const BoxConstraints(maxWidth: 400),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -38,54 +34,67 @@ class PrintSuccessDialog extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 80,
-            width: 80,
-            child: Stack(
-              children: [
-                const Align(
-                  alignment: Alignment.center,
-                  child: Icon(Icons.picture_as_pdf_outlined, size: 70, color: Color(0xFF2F80ED)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  shape: BoxShape.circle,
                 ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00C853),
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.white, spreadRadius: 2)],
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF2E7D32),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Unduhan Berhasil",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A1A),
+                      ),
                     ),
-                    child: const Icon(Icons.check, size: 16, color: Colors.white),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      fileName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF757575),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            fileName,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: onPrintTap,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.verified, color: Color(0xFF00C853), size: 20),
-                SizedBox(width: 6),
-                Text(
-                  "File Berhasil Terunduh",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF2F80ED),
-                    fontWeight: FontWeight.w600,
-                  ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2F80ED),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
+              ),
+              child: const Text(
+                "Tutup Notif",
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],

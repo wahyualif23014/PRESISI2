@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 
 import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/resapan_model.dart'
     show ResapanModel;
-
 import '../model/dashboard_data_response.dart';
 
 class KomoditiOption {
@@ -27,7 +26,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String apiBaseUrl = "http://10.16.14.46:8080/api";
+  final String apiBaseUrl = "http://10.16.7.160:8080/api";
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();

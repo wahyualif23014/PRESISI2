@@ -29,6 +29,10 @@ class LandPotentialModel {
   final String latitude;
   final String longitude;
   final String namaPoktan; // Nama asli kelompok tani dari hasil JOIN
+  final String editoleh;
+  final String? kodeDesa;
+  final String? kodeKec;
+  final String? kodeKab;
 
   LandPotentialModel({
     required this.id,
@@ -61,6 +65,10 @@ class LandPotentialModel {
     required this.latitude,
     required this.longitude,
     required this.namaPoktan,
+    required this.editoleh,
+    this.kodeDesa,
+    this.kodeKec,
+    this.kodeKab,
   });
 
   factory LandPotentialModel.fromJson(Map<String, dynamic> json) {
@@ -142,16 +150,17 @@ class LandPotentialModel {
       latitude: json['latitude']?.toString() ?? '0',
       longitude: json['longitude']?.toString() ?? '0',
       namaPoktan: json['nama_poktan_asli']?.toString() ?? '-',
+      editoleh: json['editoleh']?.toString() ?? '0',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      "id_wilayah": idWilayah,
+      "id_wilayah": kodeDesa ?? idWilayah,
       "id_jenis_lahan": idJenisLahan,
       "alamat_lahan": alamatLahan,
       "luas_lahan": luasLahan,
-      "poktan": jumlahPoktan, // Mengirim kembali ke kolom poktan
+      "poktan": jumlahPoktan,
       "pic_name": picName,
       "pic_phone": picPhone,
       "police_name": policeName,
@@ -159,10 +168,11 @@ class LandPotentialModel {
       "status_validasi": statusValidasi,
       "jumlah_petani": jumlahPetani,
       "id_komoditi": idKomoditi,
-      "keterangan": keterangan, // Mengirim kembali ke kolom ketcp melalui alias
+      "keterangan": keterangan,
       "keterangan_lain": keteranganLain,
       "latitude": latitude,
       "longitude": longitude,
+      "editoleh": editoleh,
     };
   }
 }

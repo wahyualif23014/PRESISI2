@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/lahan_history_model.dart';
 
 class LandHistoryRepository {
-  final String baseUrl = "http://10.16.14.46:8080/api/riwayat-lahan";
+  final String baseUrl = "http://10.16.7.160:8080/api/riwayat-lahan";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
@@ -29,14 +29,14 @@ class LandHistoryRepository {
       );
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final Map<String, dynamic> body = jsonDecode(response.body);
+
         return LandHistorySummaryModel.fromJson(body);
       }
     } catch (e) {
       debugPrint("Error Fetch Summary: $e");
     }
 
-    // Kembalikan nilai 0 jika gagal agar UI tidak error
     return LandHistorySummaryModel(
       totalPotensiLahan: 0,
       totalTanamLahan: 0,

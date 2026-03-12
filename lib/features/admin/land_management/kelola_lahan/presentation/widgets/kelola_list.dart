@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/repos/kelola_repo.dart';
 
@@ -188,7 +189,14 @@ class KelolaItemDetailCard extends StatelessWidget {
   void _showUpdateDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => UpdateTanamDialog(item: item, onSuccess: onRefresh),
+      builder:
+          (context) => UpdateTanamDialog(
+            item: item,
+            onSuccess: () {
+              // INI PENTING: Panggil onRefresh() agar data ditarik ulang dari server
+              onRefresh();
+            },
+          ),
     );
   }
 
@@ -426,7 +434,6 @@ class KelolaItemDetailCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Mencegah overflow horizontal pada layar kecil
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Container(
@@ -498,7 +505,6 @@ class KelolaItemDetailCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        // Padding dikurangi agar tidak memakan terlalu banyak space
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Icon(icon, size: 18, color: onTap == null ? Colors.grey : color),
       ),
@@ -551,8 +557,49 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
     );
   }
 
+  Future<void> _selectDate(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
+    DateTime initialDate = DateTime.tryParse(controller.text) ?? DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFFB8C00),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        controller.text =
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null) {
+      setState(() {
+        dokumenController.text = result.files.single.name;
+      });
+    }
+  }
+
   Future<void> _handleUpdate() async {
     setState(() => isLoading = true);
+
     final data = {
       "tgl_tanam": tglTanamController.text,
       "luas_tanam": double.tryParse(luasTanamController.text) ?? 0.0,
@@ -568,11 +615,24 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
       widget.item.id,
       data,
     );
-    setState(() => isLoading = false);
 
-    if (success) {
-      Navigator.pop(context);
-      widget.onSuccess();
+    if (mounted) setState(() => isLoading = false);
+
+    if (success && mounted) {
+      Navigator.pop(context); // Tutup dialog
+
+      // JEDA 500ms: Memastikan database MySQL sudah selesai melakukan LOCK/UPDATE
+      // sebelum Flutter melakukan fetching ulang.
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) widget.onSuccess();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Data berhasil diperbarui"),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -615,6 +675,7 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
                     "Tanggal Tanam (YYYY-MM-DD)",
                     tglTanamController,
                     Icons.calendar_today,
+                    isDate: true,
                   ),
                   _buildInputField(
                     "Luas Tanam (Ha)",
@@ -640,6 +701,7 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
                           "Est. Panen Awal",
                           estAwalController,
                           Icons.date_range,
+                          isDate: true,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -648,6 +710,7 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
                           "Est. Panen Akhir",
                           estAkhirController,
                           Icons.event_available,
+                          isDate: true,
                         ),
                       ),
                     ],
@@ -656,6 +719,7 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
                     "Dokumen Pendukung",
                     dokumenController,
                     Icons.file_present,
+                    isFile: true,
                   ),
                   _buildInputField(
                     "Keterangan Lain",
@@ -728,6 +792,8 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
     IconData icon, {
     bool isNumber = false,
     int maxLines = 1,
+    bool isDate = false,
+    bool isFile = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -745,22 +811,41 @@ class _UpdateTanamDialogState extends State<UpdateTanamDialog> {
           const SizedBox(height: 6),
           TextField(
             controller: controller,
+            readOnly: isDate || isFile,
+            onTap:
+                isDate
+                    ? () => _selectDate(context, controller)
+                    : (isFile ? _pickFile : null),
             keyboardType: isNumber ? TextInputType.number : TextInputType.text,
             maxLines: maxLines,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, size: 18, color: const Color(0xFFFB8C00)),
+              suffixIcon:
+                  isFile
+                      ? const Icon(
+                        Icons.upload_file,
+                        size: 18,
+                        color: Color(0xFFFB8C00),
+                      )
+                      : (isDate
+                          ? const Icon(
+                            Icons.edit_calendar,
+                            size: 18,
+                            color: Color(0xFFFB8C00),
+                          )
+                          : null),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 10,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderSide: const BorderSide(color: Colors.grey),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderSide: const BorderSide(color: Colors.grey),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),

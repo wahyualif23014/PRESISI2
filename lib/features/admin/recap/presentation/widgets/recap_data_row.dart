@@ -15,16 +15,54 @@ double _sum(List<RecapModel> items, double Function(RecapModel) selector) {
   return items.fold(0.0, (a, b) => a + selector(b));
 }
 
+String _formatName(String name) {
+  return name
+      .replaceAll(RegExp(r'KABUPATEN|KAB\.', caseSensitive: false), '')
+      .trim();
+}
+
+class RecapPage extends StatelessWidget {
+  final List<RecapModel> allItems;
+  final Map<String, List<RecapModel>> polresGroups;
+  final Future<void> Function() onRefresh;
+
+  const RecapPage({
+    super.key,
+    required this.allItems,
+    required this.polresGroups,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: AppColors.primary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 16),
+          ...polresGroups.entries.map((entry) {
+            return RecapPolresSection(
+              polresName: entry.key,
+              itemsInPolres: entry.value,
+            );
+          }),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+}
+
 class RecapPolresSection extends StatefulWidget {
   final String polresName;
   final List<RecapModel> itemsInPolres;
-  final Function(String, bool) onToggle;
 
   const RecapPolresSection({
     super.key,
     required this.polresName,
     required this.itemsInPolres,
-    required this.onToggle,
   });
 
   @override
@@ -32,7 +70,7 @@ class RecapPolresSection extends StatefulWidget {
 }
 
 class _RecapPolresSectionState extends State<RecapPolresSection> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +86,6 @@ class _RecapPolresSectionState extends State<RecapPolresSection> {
     }
 
     final sortedKeys = grouped.keys.toList()..sort();
-    final bool isPolresSelected =
-        desaOnly.isNotEmpty && desaOnly.every((e) => e.isSelected);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
@@ -69,69 +105,26 @@ class _RecapPolresSectionState extends State<RecapPolresSection> {
         children: [
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(24),
-              bottom: Radius.circular(_isExpanded ? 0 : 24),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      _isExpanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.primary,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      widget.polresName
-                          .replaceFirst("KAB. ", "POLRES\n")
-                          .toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textDark,
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                ],
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withOpacity(0.3),
+                borderRadius: BorderRadius.vertical(
+                  top: const Radius.circular(24),
+                  bottom: Radius.circular(_isExpanded ? 0 : 24),
+                ),
               ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.3),
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(_isExpanded ? 0 : 24),
+              child: _DataRowLayout(
+                label: _formatName(widget.polresName),
+                tag: "POLRES",
+                potensi: _sum(desaOnly, (m) => m.potensiLahan),
+                tanam: _sum(desaOnly, (m) => m.tanamLahan),
+                panenLuas: _sum(desaOnly, (m) => m.panenLuas),
+                panenTon: _sum(desaOnly, (m) => m.panenTon),
+                serapan: _sum(desaOnly, (m) => m.serapan),
+                isHeader: true,
               ),
-            ),
-            child: _DataRowLayout(
-              label: widget.polresName,
-              tag: "POLRES",
-              isSelected: isPolresSelected,
-              onToggle:
-                  (val) => widget.onToggle(
-                    widget.itemsInPolres.first.id.substring(0, 5),
-                    val ?? false,
-                  ),
-              potensi: _sum(desaOnly, (m) => m.potensiLahan),
-              tanam: _sum(desaOnly, (m) => m.tanamLahan),
-              panenLuas: _sum(desaOnly, (m) => m.panenLuas),
-              panenTon: _sum(desaOnly, (m) => m.panenTon),
-              serapan: _sum(desaOnly, (m) => m.serapan),
-              isHeader: true,
             ),
           ),
           if (_isExpanded)
@@ -146,7 +139,6 @@ class _RecapPolresSectionState extends State<RecapPolresSection> {
                   polsekName: items.first.namaPolsek ?? "-",
                   polsekId: key,
                   itemsInPolsek: items,
-                  onToggle: widget.onToggle,
                 );
               },
             ),
@@ -159,14 +151,12 @@ class _RecapPolresSectionState extends State<RecapPolresSection> {
 class RecapPolsekSection extends StatefulWidget {
   final String polsekName, polsekId;
   final List<RecapModel> itemsInPolsek;
-  final Function(String, bool) onToggle;
 
   const RecapPolsekSection({
     super.key,
     required this.polsekName,
     required this.polsekId,
     required this.itemsInPolsek,
-    required this.onToggle,
   });
 
   @override
@@ -174,12 +164,10 @@ class RecapPolsekSection extends StatefulWidget {
 }
 
 class _RecapPolsekSectionState extends State<RecapPolsekSection> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
 
   @override
   Widget build(BuildContext context) {
-    final bool isSelected = widget.itemsInPolsek.every((e) => e.isSelected);
-
     return Column(
       children: [
         const Divider(height: 1, color: AppColors.border),
@@ -190,8 +178,6 @@ class _RecapPolsekSectionState extends State<RecapPolsekSection> {
             child: _DataRowLayout(
               label: widget.polsekName,
               tag: "POLSEK",
-              isSelected: isSelected,
-              onToggle: (val) => widget.onToggle(widget.polsekId, val ?? false),
               potensi: _sum(widget.itemsInPolsek, (m) => m.potensiLahan),
               tanam: _sum(widget.itemsInPolsek, (m) => m.tanamLahan),
               panenLuas: _sum(widget.itemsInPolsek, (m) => m.panenLuas),
@@ -210,8 +196,6 @@ class _RecapPolsekSectionState extends State<RecapPolsekSection> {
               child: _DataRowLayout(
                 label: desa.namaWilayah,
                 tag: "DESA",
-                isSelected: desa.isSelected,
-                onToggle: (val) => widget.onToggle(desa.id, val ?? false),
                 potensi: desa.potensiLahan,
                 tanam: desa.tanamLahan,
                 panenLuas: desa.panenLuas,
@@ -228,14 +212,11 @@ class _RecapPolsekSectionState extends State<RecapPolsekSection> {
 class _DataRowLayout extends StatelessWidget {
   final String label, tag;
   final double potensi, tanam, panenLuas, panenTon, serapan;
-  final bool isHeader, isSubHeader, isSelected, isExpanded;
-  final Function(bool?) onToggle;
+  final bool isHeader, isSubHeader, isExpanded;
 
   const _DataRowLayout({
     required this.label,
     required this.tag,
-    required this.isSelected,
-    required this.onToggle,
     required this.potensi,
     required this.tanam,
     required this.panenLuas,
@@ -249,55 +230,43 @@ class _DataRowLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 24,
-          child: Transform.scale(
-            scale: 0.8,
-            child: Checkbox(
-              value: isSelected,
-              onChanged: onToggle,
-              activeColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
         Expanded(
           flex: 4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: isHeader ? 12 : 10,
+                  fontSize: isHeader ? 13 : 11,
                   fontWeight:
                       isHeader || isSubHeader
-                          ? FontWeight.w900
-                          : FontWeight.w600,
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                   color: AppColors.textDark,
+                  height: 1.2,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
               ),
+              const SizedBox(height: 2),
               _buildTag(tag),
             ],
           ),
         ),
-        _buildCol("POTENSI", potensi, "Ha"),
-        _buildCol("TANAM", tanam, "Ha"),
-        _buildColPanen(panenLuas, panenTon),
-        _buildCol("SERAPAN", serapan, "Ton"),
+        _buildCol(potensi, "Ha", 2),
+        _buildCol(tanam, "Ha", 2),
+        _buildColPanen(panenLuas, panenTon, 3),
+        _buildCol(serapan, "Ton", 2),
       ],
     );
   }
 
   Widget _buildTag(String text) {
     return Container(
-      margin: const EdgeInsets.only(top: 2),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color:
@@ -317,60 +286,38 @@ class _DataRowLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildCol(String title, double val, String unit) {
+  Widget _buildCol(double val, String unit, int flexValue) {
     return Expanded(
-      flex: 2,
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 6,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textGrey,
-            ),
+      flex: flexValue,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          "${val % 1 == 0 ? val.toInt() : val.toStringAsFixed(2)} $unit",
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            color: isHeader ? AppColors.primary : AppColors.textDark,
           ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              "${val % 1 == 0 ? val.toInt() : val.toStringAsFixed(2)} $unit",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: isHeader ? AppColors.primary : AppColors.textDark,
-              ),
-            ),
-          ),
-        ],
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
 
-  Widget _buildColPanen(double luas, double ton) {
+  Widget _buildColPanen(double luas, double ton, int flexValue) {
     return Expanded(
-      flex: 3,
-      child: Column(
-        children: [
-          const Text(
-            "PANEN (HA/TON)",
-            style: TextStyle(
-              fontSize: 6,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textGrey,
-            ),
+      flex: flexValue,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          "${luas % 1 == 0 ? luas.toInt() : luas.toStringAsFixed(2)} Ha / \n${ton % 1 == 0 ? ton.toInt() : ton.toStringAsFixed(2)} Ton",
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            color: isHeader ? AppColors.primary : AppColors.textDark,
           ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              "${luas % 1 == 0 ? luas.toInt() : luas.toStringAsFixed(2)} Ha / ${ton % 1 == 0 ? ton.toInt() : ton.toStringAsFixed(2)} Ton",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: isHeader ? AppColors.primary : AppColors.textDark,
-              ),
-            ),
-          ),
-        ],
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart' show LandHistoryProvider;
 import 'package:KETAHANANPANGAN/shared/widgets/menu_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +48,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => RegionProvider()),
         ChangeNotifierProvider(create: (_) => JabatanProvider()),
         ChangeNotifierProvider(create: (_) => CommodityProvider()),
+        ChangeNotifierProvider(create: (_) => LandHistoryProvider()),
       ],
       child: MyApp(appRouter: appRouter),
     ),

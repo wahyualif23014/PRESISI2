@@ -10,19 +10,24 @@ class RecapController extends ChangeNotifier {
   RecapState _state = RecapState.initial;
   RecapState get state => _state;
 
-  String? _errorMessage; // Tambahkan ini
-  String? get errorMessage => _errorMessage; // Tambahkan ini
+  bool _isDownloading = false;
+  bool get isDownloading => _isDownloading;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
 
   List<RecapModel> _allData = [];
+  List<RecapModel> get allItems => _allData;
+
   Map<String, List<RecapModel>> _groupedData = {};
   Map<String, List<RecapModel>> get groupedData => _groupedData;
 
-  String _searchQuery = ""; // Tambahkan ini
+  String _searchQuery = "";
   Map<String, String> _activeFilters = {};
 
   Future<void> fetchData({Map<String, String>? filters}) async {
     _state = RecapState.loading;
-    _errorMessage = null; // Tambahkan ini
+    _errorMessage = null;
     if (filters != null) _activeFilters = filters;
     notifyListeners();
 
@@ -31,22 +36,18 @@ class RecapController extends ChangeNotifier {
       _processData();
       _state = _allData.isEmpty ? RecapState.empty : RecapState.loaded;
     } catch (e) {
-      _errorMessage = e.toString(); // Tambahkan ini
+      _errorMessage = e.toString();
       _state = RecapState.error;
     }
     notifyListeners();
   }
 
-  // Tambahkan fungsi onFilterComplex
   void onFilterComplex(Map<String, String> newFilters) {
-    if (newFilters.isEmpty) {
-      _searchQuery = "";
-    }
+    if (newFilters.isEmpty) _searchQuery = "";
     _activeFilters = newFilters;
     fetchData(filters: _activeFilters);
   }
 
-  // Tambahkan fungsi onSearch
   void onSearch(String query) {
     _searchQuery = query.toLowerCase();
     _processData();
@@ -54,9 +55,15 @@ class RecapController extends ChangeNotifier {
   }
 
   void toggleSelection(String id, bool val) {
-    for (var item in _allData) {
-      if (item.id.startsWith(id)) {
+    if (id == "ALL") {
+      for (var item in _allData) {
         item.isSelected = val;
+      }
+    } else {
+      for (var item in _allData) {
+        if (item.id.startsWith(id)) {
+          item.isSelected = val;
+        }
       }
     }
     _processData();
@@ -77,10 +84,11 @@ class RecapController extends ChangeNotifier {
         currentPolsek = item.namaWilayah;
       }
 
-      // Filter pencarian lokal
       bool matchesSearch =
           _searchQuery.isEmpty ||
-          currentPolres.toLowerCase().contains(_searchQuery);
+          currentPolres.toLowerCase().contains(_searchQuery) ||
+          currentPolsek.toLowerCase().contains(_searchQuery) ||
+          item.namaWilayah.toLowerCase().contains(_searchQuery);
 
       if (matchesSearch && currentPolres.isNotEmpty) {
         if (item.type != RecapRowType.polres) {
@@ -98,17 +106,41 @@ class RecapController extends ChangeNotifier {
     _groupedData = result;
   }
 
-  Future<String?> downloadExcel() async {
-    final selectedIds = _allData
-        .where((e) => e.isSelected && e.type == RecapRowType.desa)
-        .map((e) => e.id)
-        .join(',');
+  Future<String?> downloadExcel({String selection = "ALL"}) async {
+    if (_isDownloading) return null;
 
-    Map<String, String> exportParams = Map.from(_activeFilters);
-    if (selectedIds.isNotEmpty) {
-      exportParams['selected_ids'] = selectedIds;
+    _isDownloading = true;
+    notifyListeners();
+
+    try {
+      Map<String, String> exportParams = Map.from(_activeFilters);
+
+      if (selection != "ALL") {
+        exportParams['polres_id'] = selection;
+      } else {
+        final selectedIds = _allData
+            .where((e) => e.isSelected && e.type == RecapRowType.desa)
+            .map((e) => e.id)
+            .join(',');
+
+        if (selectedIds.isNotEmpty) {
+          exportParams['selected_ids'] = selectedIds;
+        }
+      }
+
+      return await _repo.downloadExcel(filters: exportParams);
+    } catch (e) {
+      return null;
+    } finally {
+      _isDownloading = false;
+      notifyListeners();
     }
+  }
 
-    return await _repo.downloadExcel(filters: exportParams);
+  @override
+  void dispose() {
+    _allData.clear();
+    _groupedData.clear();
+    super.dispose();
   }
 }

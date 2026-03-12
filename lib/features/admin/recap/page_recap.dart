@@ -7,7 +7,7 @@ import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_pagination_wrapper.dart';
 
 class PageRecap extends StatefulWidget {
-  const PageRecap({Key? key}) : super(key: key);
+  const PageRecap({super.key});
 
   @override
   State<PageRecap> createState() => _PageRecapState();
@@ -15,11 +15,11 @@ class PageRecap extends StatefulWidget {
 
 class _PageRecapState extends State<PageRecap> {
   final RecapController _controller = RecapController();
+  bool _isDownloading = false;
 
   @override
   void initState() {
     super.initState();
-    // Memuat data awal saat halaman pertama kali dibuka
     _controller.fetchData();
   }
 
@@ -29,64 +29,68 @@ class _PageRecapState extends State<PageRecap> {
     super.dispose();
   }
 
-  /// Menangani proses unduh file Excel dengan indikator loading
-  void _handleDownloadExcel() async {
-    // Menampilkan dialog loading
+  /// Menangani proses unduh file Excel
+  void _handleDownloadExcel(String selection) async {
+    if (_isDownloading) return;
+
+    setState(() => _isDownloading = true);
+
+    // 1. Tampilkan dialog loading transparan
     showDialog(
       context: context,
       barrierDismissible: false,
       builder:
-          (context) => const Center(
-            child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+          (context) => const PopScope(
+            canPop: false,
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+            ),
           ),
     );
 
     try {
-      final path = await _controller.downloadExcel();
+      final path = await _controller.downloadExcel(selection: selection);
 
       if (!mounted) return;
-      Navigator.pop(context); // Menutup dialog loading
+
+      // 2. Tutup dialog loading dengan aman menggunakan rootNavigator
+      Navigator.of(context, rootNavigator: true).pop();
 
       if (path != null) {
         final String fileName = path.split('/').last;
-        PrintSuccessDialog.show(
-          context,
-          fileName: fileName,
-          onPrintTap: () => Navigator.pop(context),
-        );
+
+        // 3. Gunakan addPostFrameCallback agar pembukaan dialog sukses
+        // tidak bentrok dengan penutupan dialog loading
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            PrintSuccessDialog.show(context, fileName: fileName);
+          }
+        });
       } else {
         _showErrorSnackBar("Gagal mengunduh file.");
       }
     } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      _showErrorSnackBar("Terjadi kesalahan saat mengunduh.");
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        _showErrorSnackBar("Terjadi kesalahan saat mengunduh.");
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
     }
   }
 
-  /// Menangani popup dialog filter kompleks
   void _showFilterDialog() async {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => const RecapFilterDialog(),
     );
-
     if (result != null && mounted) {
       _controller.onFilterComplex(result);
-
-      if (result.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Filter telah direset ke data awal"),
-            duration: Duration(seconds: 2),
-            backgroundColor: Color(0xFF673AB7),
-          ),
-        );
-      }
     }
   }
 
-  /// Helper untuk menampilkan pesan error
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -100,47 +104,39 @@ class _PageRecapState extends State<PageRecap> {
       body: Column(
         children: [
           const SizedBox(height: 16),
+          // 1. Bagian Header (Search, Filter, Download)
+          ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) {
+              final List<Map<String, String>> polresOptions =
+                  _controller.groupedData.keys.map((name) {
+                    final firstItem = _controller.groupedData[name]?.first;
+                    return {
+                      'id': firstItem?.id.substring(0, 5) ?? '',
+                      'name': name,
+                    };
+                  }).toList();
 
-          // 1. Header Section: Input pencarian dan tombol aksi (Filter, Download)
-          RecapHeaderSection(
-            onSearchChanged: _controller.onSearch,
-            onFilterTap: _showFilterDialog,
-            onPrintTap: _handleDownloadExcel,
+              return RecapHeaderSection(
+                onSearchChanged: _controller.onSearch,
+                onFilterTap: _showFilterDialog,
+                onDownloadExcel: _handleDownloadExcel,
+                polresOptions: polresOptions,
+              );
+            },
           ),
 
           const SizedBox(height: 16),
 
-          // 2. Table Header: Label kolom statis
-          // Sekarang kita menyertakan checkbox header jika dibutuhkan
+          // 2. Header Tabel (Judul Kolom)
           const RecapTableHeader(),
 
-          // 3. Content List: Area data yang bersifat dinamis (reactive)
+          // 3. Area Konten (List Data)
           Expanded(
             child: ListenableBuilder(
               listenable: _controller,
               builder: (context, _) {
-                switch (_controller.state) {
-                  case RecapState.loading:
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF673AB7),
-                      ),
-                    );
-
-                  case RecapState.error:
-                    return _buildErrorState();
-
-                  case RecapState.empty:
-                    return _buildEmptyState();
-
-                  case RecapState.loaded:
-                  default:
-                    // Melewatkan callback onToggle ke wrapper agar diteruskan ke row
-                    return RecapPaginationWrapper(
-                      groupedData: _controller.groupedData,
-                      onToggle: _controller.toggleSelection,
-                    );
-                }
+                return _buildBodyContent();
               },
             ),
           ),
@@ -149,58 +145,64 @@ class _PageRecapState extends State<PageRecap> {
     );
   }
 
-  /// UI saat terjadi kesalahan koneksi/error
+  Widget _buildBodyContent() {
+    switch (_controller.state) {
+      case RecapState.loading:
+        return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+        );
+      case RecapState.error:
+        return _buildErrorState();
+      case RecapState.empty:
+        return _buildEmptyState();
+      case RecapState.loaded:
+      default:
+        return RecapPaginationWrapper(
+          allItems: _controller.allItems,
+          groupedData: _controller.groupedData,
+          onToggle: _controller.toggleSelection,
+          onRefresh: _controller.fetchData,
+        );
+    }
+  }
+
   Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(_controller.errorMessage ?? "Terjadi kesalahan"),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () => _controller.fetchData(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF673AB7),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(_controller.errorMessage ?? "Terjadi kesalahan"),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _controller.fetchData(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF673AB7),
+                foregroundColor: Colors.white,
               ),
+              child: const Text("Coba Lagi"),
             ),
-            child: const Text("Coba Lagi"),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  /// UI saat data hasil filter/pencarian tidak ditemukan
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.folder_off_outlined,
-            size: 64,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            "Data Tidak Ditemukan",
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Coba ubah filter atau kata kunci pencarian kamu",
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-          ),
-        ],
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        alignment: Alignment.center,
+        child: const Text(
+          "Data Tidak Ditemukan",
+          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }

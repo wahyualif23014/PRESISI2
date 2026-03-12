@@ -50,8 +50,7 @@ class SearchKelolaLahan extends StatelessWidget {
                       color: Colors.black87,
                       size: 24,
                     ),
-
-                    // TOMBOL SILANG (Hanya muncul jika ada teks)
+                    // FITUR SILANG: Mereset teks dan memicu fetch data kosong
                     suffixIcon:
                         value.text.isNotEmpty
                             ? IconButton(
@@ -61,14 +60,11 @@ class SearchKelolaLahan extends StatelessWidget {
                                 size: 20,
                               ),
                               onPressed: () {
-                                controller.clear(); // Hapus teks di controller
-                                onChanged(
-                                  "",
-                                ); // Panggil fungsi pencarian dengan string kosong
+                                controller.clear();
+                                onChanged("");
                               },
                             )
                             : null,
-
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 9),
                   ),
