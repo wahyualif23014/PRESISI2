@@ -12,7 +12,7 @@ class CategoryFetchResult {
 }
 
 class CommodityService {
-  static const String baseUrl = "http://192.168.100.195:8080/api/admin";
+  static const String baseUrl = "http://10.107.144.231:8080/api/admin";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {

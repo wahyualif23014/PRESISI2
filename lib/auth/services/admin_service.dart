@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AdminService {
 
-  final String baseUrl = 'http://192.168.100.195:8080'; 
+  final String baseUrl = 'http://10.16.10.36:8080'; 
   final _storage = const FlutterSecureStorage();
 
   // ===============================
@@ -77,6 +77,36 @@ class AdminService {
     } catch (_) {
       throw Exception('Gagal mendaftarkan personel');
     }
+  }
+  
+  // --- FETCH LIST JABATAN (Dropdown) ---
+  Future<List<dynamic>> getJabatanList() async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/admin/jabatan/list'),
+      headers: headers
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json['data'] ?? [];
+    }
+    throw Exception('Gagal memuat list jabatan');
+  }
+
+  // --- FETCH LIST TINGKAT/UNIT (Dropdown) ---
+  Future<List<dynamic>> getTingkatList() async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/admin/tingkat/list'), 
+      headers: headers
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return json['data'] ?? [];
+    }
+    throw Exception('Gagal memuat list tingkat');
   }
 
   // ===============================

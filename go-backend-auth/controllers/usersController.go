@@ -35,21 +35,35 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(input.Password), 10)
+	// 1. Cek duplikasi username
+	var existingUser models.User
+	if err := initializers.DB.Where("username = ?", input.Username).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Username sudah terdaftar"})
+		return
+	}
 
+	// 2. Hashing password
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 10)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal enkripsi password"})
+		return
+	}
+
+	// 3. Ambil data admin dari context middleware
 	userValue, _ := c.Get("user")
 	adminUser := userValue.(models.User)
 
+	// 4. Inisialisasi model sesuai skema db_pgri
 	user := models.User{
-		NamaLengkap:     input.NamaLengkap,
+		NamaLengkap:     input.NamaLengkap, // Mapping ke kolom 'nama'
+		NoTelp:          input.NoTelp,      // Mapping ke kolom 'hp'
+		IDTugas:         input.IDTugas,     // 'kode' unit dari tingkat
 		Username:        input.Username,
-		KataSandi:       string(hash),
-		IDTugas:         input.IDTugas,
+		KataSandi:       string(hash),      // Mapping ke kolom 'password'
 		IDJabatan:       &input.JabatanID,
-		Role:            input.Role,
-		NoTelp:          input.NoTelp,
-		IDPengguna:      adminUser.ID,
-		DeleteStatus:    models.StatusActive,
+		Role:            input.Role,        // Mapping ke kolom 'statusadmin'
+		IDPengguna:      adminUser.ID,      // ID pembuat akun
+		DeleteStatus:    "2",               // Aktif
 		DateTransaction: time.Now(),
 	}
 
@@ -58,7 +72,10 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User berhasil didaftarkan", "data": user})
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "User berhasil didaftarkan",
+		"data":    user,
+	})
 }
 
 func GetUsers(c *gin.Context) {
@@ -138,4 +155,22 @@ func DeleteUser(c *gin.Context) {
 func GetProfile(c *gin.Context) {
 	user, _ := c.Get("user")
 	c.JSON(http.StatusOK, gin.H{"data": user})
+}
+
+func GetJabatanList(c *gin.Context) {
+    var jabatans []models.Jabatan
+    if err := initializers.DB.Where("deletestatus = ?", "2").Find(&jabatans).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data jabatan"})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"data": jabatans})
+}
+
+func GetTingkatList(c *gin.Context) {
+    var tingkats []models.Tingkat
+    if err := initializers.DB.Select("kode, nama").Find(&tingkats).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data unit"})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"data": tingkats})
 }

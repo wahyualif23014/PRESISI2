@@ -9,12 +9,14 @@ class UserModel {
   final UserRole role;     // Type-safe Enum
   final String? noTelp;
   final String? fotoProfil;
+  final int? idJabatan;
 
   // Detail Relasi dari Backend (GORM Preload)
   final JabatanModel? jabatanDetail;
   final UnitModel? tingkatDetail;
 
   UserModel({
+
     required this.id,
     required this.namaLengkap,
     required this.nrp,
@@ -22,15 +24,13 @@ class UserModel {
     required this.role,
     this.noTelp,
     this.fotoProfil,
+    this.idJabatan,
     this.jabatanDetail,
     this.tingkatDetail,
   });
 
   // --- GETTERS UNTUK KONSISTENSI UI ---
   
-  // Solusi Error: Mengambil ID dari objek Jabatan
-  int get idJabatan => jabatanDetail?.id ?? 0;
-
   // Solusi Error: Mengambil teks label role (Administrator, dsb)
   String get roleDisplay => role.label;
 

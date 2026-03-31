@@ -63,11 +63,16 @@ func main() {
 		admin := api.Group("/admin")
 		admin.Use(middleware.RequireRoles(models.RoleAdmin))
 		{
+			// personel
 			admin.POST("/users", controllers.CreateUser)
 			admin.GET("/users", controllers.GetUsers)
 			admin.GET("/users/:id", controllers.GetUserByID)
 			admin.PUT("/users/:id", controllers.UpdateUser)
 			admin.DELETE("/users/:id", controllers.DeleteUser)
+			admin.GET("/jabatan/list", controllers.GetJabatanList)
+			admin.GET("/tingkat/list", controllers.GetTingkatList)
+
+			// jabatan & tingkat
 			admin.POST("/jabatan", controllers.CreateJabatan)
 			admin.GET("/jabatan", controllers.GetJabatan)
 			admin.PUT("/jabatan/:id", controllers.UpdateJabatan)
@@ -75,6 +80,7 @@ func main() {
 			admin.GET("/tingkat", controllers.GetTingkat)
 			admin.PUT("/wilayah/:id", controllers.UpdateWilayah)
 			admin.GET("/wilayah", controllers.GetWilayah)
+
 			admin.GET("/categories", controllers.GetCategories)
 			admin.GET("/commodities", controllers.GetCommodities)
 			admin.POST("/categories", controllers.CreateCommodity)
