@@ -39,11 +39,11 @@ func GetKelolaFilterOptions(c *gin.Context) {
 		Pluck("CONCAT('POLRES ', UPPER(w_kab.nama))", &options.Polres)
 
 	if selectedPolres != "" {
-		namaKab := strings.TrimSpace(strings.TrimPrefix(selectedPolres, "POLRES "))
+		namaKab := strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(selectedPolres), "POLRES", ""))
 		initializers.DB.Table("lahan").
 			Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = SUBSTR(lahan.idwilayah,1,5)").
 			Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = SUBSTR(lahan.idwilayah,1,8)").
-			Where("UPPER(w_kab.nama) = ? AND w_kec.nama IS NOT NULL", namaKab).
+			Where("UPPER(w_kab.nama) LIKE ? AND w_kec.nama IS NOT NULL", "%"+namaKab+"%").
 			Distinct("CONCAT('POLSEK ', UPPER(w_kec.nama))").
 			Pluck("CONCAT('POLSEK ', UPPER(w_kec.nama))", &options.Polsek)
 	}
@@ -154,8 +154,8 @@ func GetKelolaList(c *gin.Context) {
 			COALESCE(t_latest.luastanam, 0) as luas_tanam,
 			COALESCE(CONCAT(DATE_FORMAT(t_latest.estawalpanen, '%d/%m/%Y'), ' - ', DATE_FORMAT(t_latest.estakhirpanen, '%d/%m/%Y')), '-') as est_panen,
 			COALESCE(p_latest.luaspanen, 0) as luas_panen,
-			0 as berat_panen,
-			0 as serapan,
+			COALESCE(p_latest.totalpanen, 0) as berat_panen,
+			COALESCE(d_latest.totaldistribusi, 0) as serapan,
 			lahan.validoleh IS NOT NULL as is_validated,
 			CASE WHEN lahan.validoleh IS NOT NULL THEN 'VALIDATED' ELSE 'PENDING' END as status,
 			COALESCE(CONCAT('POLRES ', UPPER(w_kab.nama)), '-') as polres_name,
@@ -184,7 +184,12 @@ func GetKelolaList(c *gin.Context) {
 			COALESCE(t_latest.bibitdigunakan, '') as jenis_bibit,
 			COALESCE(t_latest.kebutuhanbibit, 0) as kebutuhan_bibit,
 			COALESCE(t_latest.suratedit, '') as dokumen_pendukung,
-			COALESCE(t_latest.keterangan, '') as keterangan_tanam
+			COALESCE(t_latest.keterangan, '') as keterangan_tanam,
+			COALESCE(t_latest.statustanam, '1') as status_tanam,
+			COALESCE(CAST(p_latest.idpanen AS CHAR), '') as id_panen,
+			COALESCE(p_latest.statuspanen, '1') as status_panen,
+			COALESCE(CAST(d_latest.iddistribusi AS CHAR), '') as id_serapan,
+			COALESCE(d_latest.statusdistribusi, '1') as status_serapan
 		`).
 		Joins("LEFT JOIN wilayah w_desa ON w_desa.kode = lahan.idwilayah").
 		Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = LEFT(lahan.idwilayah, 8)").
@@ -199,7 +204,12 @@ func GetKelolaList(c *gin.Context) {
 			SELECT p1.* FROM panen p1 
 			INNER JOIN (SELECT idlahan, MAX(idpanen) as max_id FROM panen GROUP BY idlahan) p2 
 			ON p1.idlahan = p2.idlahan AND p1.idpanen = p2.max_id
-		) p_latest ON p_latest.idlahan = lahan.idlahan`)
+		) p_latest ON p_latest.idlahan = lahan.idlahan`).
+		Joins(`LEFT JOIN (
+			SELECT d1.* FROM distribusi d1 
+			INNER JOIN (SELECT idlahan, MAX(iddistribusi) as max_id FROM distribusi GROUP BY idlahan) d2 
+			ON d1.idlahan = d2.idlahan AND d1.iddistribusi = d2.max_id
+		) d_latest ON d_latest.idlahan = lahan.idlahan`)
 
 	if search != "" {
 		s := "%" + strings.ToUpper(search) + "%"
@@ -207,13 +217,13 @@ func GetKelolaList(c *gin.Context) {
 	}
 
 	if polres != "" {
-		kab := strings.TrimSpace(strings.TrimPrefix(polres, "POLRES "))
-		query = query.Where("UPPER(w_kab.nama) = ?", kab)
+		kab := strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polres), "POLRES", ""))
+		query = query.Where("UPPER(w_kab.nama) LIKE ?", "%"+kab+"%")
 	}
 
 	if polsek != "" {
-		kec := strings.TrimSpace(strings.TrimPrefix(polsek, "POLSEK "))
-		query = query.Where("UPPER(w_kec.nama) = ?", kec)
+		kec := strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polsek), "POLSEK", ""))
+		query = query.Where("UPPER(w_kec.nama) LIKE ?", "%"+kec+"%")
 	}
 
 	if komoditas != "" {
@@ -279,7 +289,7 @@ func UpdateTanamLahan(c *gin.Context) {
 			UPDATE tanam 
 			SET luastanam = ?, bibitdigunakan = ?, kebutuhanbibit = ?, 
 			    estawalpanen = ?, estakhirpanen = ?, suratedit = ?, 
-			    keterangan = ?, datetransaction = ? 
+			    keterangan = ?, datetransaction = ?, statustanam = '1' 
 			WHERE idtanam = ?
 		`, req.LuasTanam, req.JenisBibit, req.KebutuhanBibit,
 			req.EstAwalPanen, req.EstAkhirPanen, req.DokumenPendukung,
@@ -295,8 +305,8 @@ func UpdateTanamLahan(c *gin.Context) {
 	} else {
 		if err := tx.Exec(`
 			INSERT INTO tanam (idlahan, luastanam, bibitdigunakan, kebutuhanbibit, 
-			                  estawalpanen, estakhirpanen, suratedit, keterangan, datetransaction)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			                  estawalpanen, estakhirpanen, suratedit, keterangan, datetransaction, statustanam)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '1')
 		`, idLahan, req.LuasTanam, req.JenisBibit, req.KebutuhanBibit,
 			req.EstAwalPanen, req.EstAkhirPanen, req.DokumenPendukung, req.Keterangan, req.TglTanam).Error; err != nil {
 			tx.Rollback()
@@ -320,6 +330,151 @@ func DeleteKelolaLahan(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"message": "Berhasil menghapus data lahan"})
+}
 
+func ValidateTanamLahan(c *gin.Context) {
+	idTanam := c.Param("id")
+	var req struct {
+		Status string `json:"status"` // '3' for Tervalidasi, '4' for Ditolak
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
+	if err := initializers.DB.Exec("UPDATE tanam SET statustanam = ? WHERE idtanam = ?", req.Status, idTanam).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Berhasil memvalidasi tanam"})
+}
+
+func ValidatePanenLahan(c *gin.Context) {
+	idPanen := c.Param("id")
+	var req struct {
+		Status string `json:"status"` // '3' for Tervalidasi, '4' for Ditolak
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
+	if err := initializers.DB.Exec("UPDATE panen SET statuspanen = ? WHERE idpanen = ?", req.Status, idPanen).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Berhasil memvalidasi panen"})
+}
+
+func ValidateSerapanLahan(c *gin.Context) {
+	idSerapan := c.Param("id")
+	var req struct {
+		Status string `json:"status"` // '3' for Tervalidasi, '4' for Ditolak
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
+	if err := initializers.DB.Exec("UPDATE distribusi SET statusdistribusi = ? WHERE iddistribusi = ?", req.Status, idSerapan).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Berhasil memvalidasi serapan"})
+}
+
+type UpdatePanenReq struct {
+	IdTanam         string  `json:"id_tanam"`
+	LuasPanen       float64 `json:"luas_panen"`
+	TotalPanen      float64 `json:"total_panen"`
+	TglPanen        string  `json:"tgl_panen"`
+	Keterangan      string  `json:"keterangan"`
+	SuratEdit       string  `json:"surat_edit"`
+}
+
+func UpdatePanenLahan(c *gin.Context) {
+	idLahan := c.Param("id")
+	var req UpdatePanenReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
+	
+	tx := initializers.DB.Begin()
+	var idPanen int
+	tx.Table("panen").Select("idpanen").Where("idlahan = ? AND idtanam = ?", idLahan, req.IdTanam).Order("idpanen DESC").Limit(1).Scan(&idPanen)
+	
+	if idPanen > 0 {
+		if err := tx.Exec(`
+			UPDATE panen 
+			SET luaspanen = ?, totalpanen = ?, tglpanen = ?, keterangan = ?, suratedit = ?, statuspanen = '1' 
+			WHERE idpanen = ?
+		`, req.LuasPanen, req.TotalPanen, req.TglPanen, req.Keterangan, req.SuratEdit, idPanen).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		if err := tx.Exec(`
+			INSERT INTO panen (idlahan, idtanam, luaspanen, totalpanen, tglpanen, keterangan, suratedit, statuspanen)
+			VALUES (?, ?, ?, ?, ?, ?, ?, '1')
+		`, idLahan, req.IdTanam, req.LuasPanen, req.TotalPanen, req.TglPanen, req.Keterangan, req.SuratEdit).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data panen berhasil diperbarui"})
+}
+
+type UpdateSerapanReq struct {
+	IdPanen         string  `json:"id_panen"`
+	DistribusiKe    string  `json:"distribusi_ke"`
+	TglDistribusi   string  `json:"tgl_distribusi"`
+	TotalDistribusi float64 `json:"total_distribusi"`
+	Keterangan      string  `json:"keterangan"`
+	SuratEdit       string  `json:"surat_edit"`
+}
+
+func UpdateSerapanLahan(c *gin.Context) {
+	idLahan := c.Param("id")
+	var req UpdateSerapanReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		return
+	}
+	
+	tx := initializers.DB.Begin()
+	var idDistribusi int
+	tx.Table("distribusi").Select("iddistribusi").Where("idlahan = ? AND idpanen = ?", idLahan, req.IdPanen).Order("iddistribusi DESC").Limit(1).Scan(&idDistribusi)
+	
+	if idDistribusi > 0 {
+		if err := tx.Exec(`
+			UPDATE distribusi 
+			SET distribusike = ?, tgldistribusi = ?, totaldistribusi = ?, keterangan = ?, suratedit = ?, statusdistribusi = '1' 
+			WHERE iddistribusi = ?
+		`, req.DistribusiKe, req.TglDistribusi, req.TotalDistribusi, req.Keterangan, req.SuratEdit, idDistribusi).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		if err := tx.Exec(`
+			INSERT INTO distribusi (idlahan, idpanen, distribusike, tgldistribusi, totaldistribusi, keterangan, suratedit, statusdistribusi)
+			VALUES (?, ?, ?, ?, ?, ?, ?, '1')
+		`, idLahan, req.IdPanen, req.DistribusiKe, req.TglDistribusi, req.TotalDistribusi, req.Keterangan, req.SuratEdit).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data serapan berhasil diperbarui"})
+}
+
+func GetListResapan(c *gin.Context) {
+	var list []string
+	initializers.DB.Table("master_resapan").Select("nama").Order("id ASC").Pluck("nama", &list)
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   list,
+	})
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -251,16 +252,20 @@ func GetFilterOptions(c *gin.Context) {
 	}
 
 	var kecKode string
-	if polsekParam != "" && kabKode != "" {
+	if polsekParam != "" {
 		dbParam := strings.ToUpper(polsekParam)
 		dbParam = strings.ReplaceAll(dbParam, "POLSEK", "")
 		dbParam = strings.TrimSpace(dbParam)
 
-		initializers.DB.Table("wilayah").
+		query := initializers.DB.Table("wilayah").
 			Select("kode").
-			Where("CHAR_LENGTH(kode) = 8 AND kode LIKE ? AND UPPER(nama) LIKE ?", kabKode+".%", "%"+dbParam+"%").
-			Limit(1).
-			Pluck("kode", &kecKode)
+			Where("CHAR_LENGTH(kode) = 8 AND UPPER(nama) LIKE ?", "%"+dbParam+"%")
+			
+		if kabKode != "" {
+			query = query.Where("kode LIKE ?", kabKode+".%")
+		}
+		
+		query.Limit(1).Pluck("kode", &kecKode)
 	}
 
 	if kecKode != "" {
@@ -338,6 +343,19 @@ func CreatePotensiLahan(c *gin.Context) {
 	input.DateTransaction = time.Now()
 	input.TglEdit = now
 
+	// Jika input.Foto berupa string Base64 yang panjang, decode dan simpan jadi file
+	if len(input.Foto) > 500 {
+		decoded, err := base64.StdEncoding.DecodeString(input.Foto)
+		if err == nil {
+			filename := fmt.Sprintf("lahan_%d.jpg", time.Now().UnixNano())
+			filepathStr := filepath.Join("uploads", filename)
+			os.MkdirAll("uploads", os.ModePerm)
+			if err := os.WriteFile(filepathStr, decoded, 0644); err == nil {
+				input.Foto = filename
+			}
+		}
+	}
+
 	// Perbaikan Error 1364: idanggota otomatis diisi dengan ID user (EditOleh)
 	input.IDAnggota = input.EditOleh
 	if input.IDAnggota == "" {
@@ -377,6 +395,19 @@ func UpdatePotensiLahan(c *gin.Context) {
 	idAnggota := input.EditOleh
 	if idAnggota == "" {
 		idAnggota = "0"
+	}
+
+	// Jika input.Foto berupa string Base64 yang panjang, decode dan simpan jadi file
+	if len(input.Foto) > 500 {
+		decoded, err := base64.StdEncoding.DecodeString(input.Foto)
+		if err == nil {
+			filename := fmt.Sprintf("lahan_%d.jpg", time.Now().UnixNano())
+			filepathStr := filepath.Join("uploads", filename)
+			os.MkdirAll("uploads", os.ModePerm)
+			if err := os.WriteFile(filepathStr, decoded, 0644); err == nil {
+				input.Foto = filename
+			}
+		}
 	}
 
 	updates := map[string]interface{}{

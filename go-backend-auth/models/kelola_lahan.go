@@ -47,4 +47,11 @@ type KelolaLahanItem struct {
 	EstAkhirPanen    string  `json:"est_akhir_panen"`
 	DokumenPendukung string  `json:"dokumen_pendukung"`
 	KeteranganTanam  string  `json:"keterangan_tanam"`
+	StatusTanam      string  `json:"status_tanam"`
+
+	IdPanen          string  `json:"id_panen"`
+	StatusPanen      string  `json:"status_panen"`
+
+	IdSerapan        string  `json:"id_serapan"`
+	StatusSerapan    string  `json:"status_serapan"`
 }

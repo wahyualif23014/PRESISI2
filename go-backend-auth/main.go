@@ -116,7 +116,16 @@ func main() {
 			kelola.GET("/", controllers.GetKelolaList)
 			kelola.GET("/summary", controllers.GetKelolaSummary)
 			kelola.GET("/filters", controllers.GetKelolaFilterOptions)
+			kelola.GET("/resapan", controllers.GetListResapan)
 			kelola.PUT("/:id/tanam", controllers.UpdateTanamLahan)
+			kelola.PUT("/:id/panen", controllers.UpdatePanenLahan)
+			kelola.PUT("/:id/serapan", controllers.UpdateSerapanLahan)
+			
+			// Validations
+			kelola.PUT("/:id/validate-tanam", controllers.ValidateTanamLahan)
+			kelola.PUT("/:id/validate-panen", controllers.ValidatePanenLahan)
+			kelola.PUT("/:id/validate-serapan", controllers.ValidateSerapanLahan)
+			
 			kelola.DELETE("/:id", controllers.DeleteKelolaLahan)
 		}
 
