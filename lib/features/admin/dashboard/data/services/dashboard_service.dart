@@ -26,7 +26,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String apiBaseUrl = "http://10.16.10.36:8080/api";
+  final String apiBaseUrl = "http://192.168.18.248:8080/api";
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();

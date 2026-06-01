@@ -4,5 +4,6 @@
     "flutterTools.displayRiverpodContextMenu": true,
     "flutterTools.displayModularContextMenu": false,
     "cmake.sourceDirectory": "C:/Users/ASUS/APP SDM/linux",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "flutterTools.displaySignalsContextMenu": false
 }

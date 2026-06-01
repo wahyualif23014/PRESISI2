@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/lahan_history_model.dart';
 
 class LandHistoryRepository {
-  final String baseUrl = "http://10.107.144.231:8080/api/riwayat-lahan";
+  final String baseUrl = "http://192.168.18.248:8080/api/riwayat-lahan";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
