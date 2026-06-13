@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/commodity_category_model.dart';
 import '../models/commodity_model.dart';
@@ -23,7 +24,7 @@ class CommodityService {
   Future<CategoryFetchResult> fetchCategoriesData() async {
     final token = await _getToken();
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse('$baseUrl/categories'),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -49,7 +50,7 @@ class CommodityService {
   Future<bool> addCommodity(String categoryId, String name) async {
     final token = await _getToken();
     try {
-      final response = await http.post(
+      final response = await ApiClient.post(
         Uri.parse('$baseUrl/categories'),
         headers: {
           'Authorization': 'Bearer $token',
@@ -66,7 +67,7 @@ class CommodityService {
   Future<bool> deleteCategory(String kindName) async {
     final token = await _getToken();
     try {
-      final response = await http.post(
+      final response = await ApiClient.post(
         Uri.parse('$baseUrl/categories/delete'),
         headers: {
           'Authorization': 'Bearer $token',
@@ -86,7 +87,7 @@ class CommodityService {
       final uri = Uri.parse(
         '$baseUrl/commodities',
       ).replace(queryParameters: {'kind': kind});
-      final response = await http.get(
+      final response = await ApiClient.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -106,7 +107,7 @@ class CommodityService {
   Future<bool> updateCommodity(String id, String newName) async {
     final token = await _getToken();
     try {
-      final response = await http.post(
+      final response = await ApiClient.post(
         Uri.parse('$baseUrl/commodity/update'),
         headers: {
           'Authorization': 'Bearer $token',
@@ -123,7 +124,7 @@ class CommodityService {
   Future<bool> deleteCommodityItem(String id) async {
     final token = await _getToken();
     try {
-      final response = await http.post(
+      final response = await ApiClient.post(
         Uri.parse('$baseUrl/commodity/delete-item'),
         headers: {
           'Authorization': 'Bearer $token',

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart';
 
 class HistoryRegionExpansionTile extends StatelessWidget {
@@ -368,30 +370,97 @@ class HistoryRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Center(
-              child: InkWell(
-                onTap: () => _showDetail(context),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.visibility, color: Colors.blue, size: 22),
-                      const SizedBox(height: 4),
-                      const Text(
-                        "Detail",
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
+              child: Builder(builder: (context) {
+                final isPolsek = context.watch<AuthProvider>().isOperator;
+                final isRejected = item.status.toLowerCase().contains('tolak') || item.status == '2';
+                final canEditOrDelete = !isPolsek || isRejected;
+
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: () => _showDetail(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.visibility, color: Colors.blue, size: 20),
+                            const SizedBox(height: 2),
+                            const Text(
+                              "Detail",
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
+                    if (canEditOrDelete) ...[
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Fitur Edit Panen sedang dalam pengembangan backend")),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit_rounded, color: Colors.orange.shade700, size: 20),
+                              const SizedBox(height: 2),
+                              Text(
+                                "Edit",
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.orange.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Fitur Hapus Panen sedang dalam pengembangan backend")),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                              const SizedBox(height: 2),
+                              const Text(
+                                "Hapus",
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ]
+                  ],
+                );
+              }),
             ),
           ),
         ],

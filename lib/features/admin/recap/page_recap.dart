@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/controllers/recap_controller.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/PrintSuccess.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_filter_dialog.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_header_section.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_table_header.dart';
 import 'package:KETAHANANPANGAN/features/admin/recap/presentation/widgets/recap_pagination_wrapper.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 
 class PageRecap extends StatefulWidget {
   const PageRecap({super.key});
@@ -20,7 +23,24 @@ class _PageRecapState extends State<PageRecap> {
   @override
   void initState() {
     super.initState();
-    _controller.fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final filters = <String, String>{};
+      _applyRoleBasedFilters(filters);
+      _controller.fetchData(filters: filters);
+    });
+  }
+
+  void _applyRoleBasedFilters(Map<String, String> filters) {
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+
+    if (auth.isOperator && unitName.isNotEmpty) {
+      filters['polsek'] = unitName;
+    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+      filters['polres'] = unitName;
+    }
   }
 
   @override
@@ -82,6 +102,7 @@ class _PageRecapState extends State<PageRecap> {
       builder: (context) => const RecapFilterDialog(),
     );
     if (result != null && mounted) {
+      _applyRoleBasedFilters(result);
       _controller.onFilterComplex(result);
     }
   }
@@ -127,9 +148,7 @@ class _PageRecapState extends State<PageRecap> {
   Widget _buildBodyContent() {
     switch (_controller.state) {
       case RecapState.loading:
-        return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF673AB7)),
-        );
+        return SkeletonLoading.listCard(count: 5);
       case RecapState.error:
         return _buildErrorState();
       case RecapState.empty:

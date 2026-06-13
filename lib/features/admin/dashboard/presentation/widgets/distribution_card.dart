@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/providers/dashboard_provider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 
 class DistributionCard extends StatefulWidget {
   final double chartSize;
@@ -77,10 +78,7 @@ class _DistributionCardState extends State<DistributionCard>
         ],
       ),
       child: provider.isWilayahLoading
-          ? const SizedBox(
-              height: 120,
-              child: Center(child: CircularProgressIndicator()),
-            )
+          ? SkeletonLoading.box(height: 120, margin: EdgeInsets.zero)
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [

@@ -1,6 +1,7 @@
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 
 // --- IMPORT MODELS ---
 import '../../data/models/commodity_category_model.dart';
@@ -155,7 +156,7 @@ class _ComoditiesPageState extends State<ComoditiesPage> {
                   : null,
           body:
               provider.isLoading && provider.categories.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? SkeletonLoading.listCard(count: 3)
                   : RefreshIndicator(
                     onRefresh: () => provider.fetchAllCategories(),
                     child: SingleChildScrollView(

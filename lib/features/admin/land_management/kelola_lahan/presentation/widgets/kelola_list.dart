@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/repos/kelola_repo.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/update_tanam_page.dart';
 
 class KelolaRegionExpansionGroup extends StatelessWidget {
   final String title;
@@ -324,6 +327,9 @@ class KelolaItemDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isValidated =
         item.status == 'VALIDATED' || item.status == 'TERVALIDASI';
+    final bool isRejected = item.status.toUpperCase().contains('TOLAK') || item.status == '2';
+    final isPolsek = context.watch<AuthProvider>().isOperator;
+    final canEditOrDelete = !isPolsek || isRejected;
 
     return InkWell(
       onTap: () => _showDetail(context),
@@ -424,9 +430,9 @@ class KelolaItemDetailCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        isValidated ? 'TERVALIDASI' : 'BELUM TERVALIDASI',
+                        isValidated ? 'TERVALIDASI' : (isRejected ? 'DITOLAK' : 'BELUM TERVALIDASI'),
                         style: TextStyle(
-                          color: isValidated ? Colors.green : Colors.orange,
+                          color: isValidated ? Colors.green : (isRejected ? Colors.red : Colors.orange),
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
@@ -454,18 +460,20 @@ class KelolaItemDetailCard extends StatelessWidget {
                             Colors.blue,
                             () => _showDetail(context),
                           ),
-                          _buildVerticalDivider(),
-                          _buildActionIcon(
-                            Icons.edit_rounded,
-                            Colors.orange.shade700,
-                            () => _showUpdateDialog(context),
-                          ),
-                          _buildVerticalDivider(),
-                          _buildActionIcon(
-                            Icons.delete_outline_rounded,
-                            Colors.red,
-                            () => _showDeleteDialog(context),
-                          ),
+                          if (canEditOrDelete) ...[
+                            _buildVerticalDivider(),
+                            _buildActionIcon(
+                              Icons.edit_rounded,
+                              Colors.orange.shade700,
+                              () => _showUpdateDialog(context),
+                            ),
+                            _buildVerticalDivider(),
+                            _buildActionIcon(
+                              Icons.delete_outline_rounded,
+                              Colors.red,
+                              () => _showDeleteDialog(context),
+                            ),
+                          ],
                         ],
                       ),
                     ),

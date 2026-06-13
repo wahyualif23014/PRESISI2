@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/repos/lahan_history_repos.dart';
 
 class FilterriwayatDialog extends StatefulWidget {
@@ -45,6 +47,11 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
 
       if (!mounted) return;
 
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final unitName = auth.user?.tingkatDetail?.nama ?? '';
+      final isPolres = unitName.toUpperCase().contains('POLRES');
+
       setState(() {
         _listPolres = (data['polres'] ?? []).toSet().toList();
         _listJenisLahan = (data['jenis_lahan'] ?? []).toSet().toList();
@@ -53,8 +60,33 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
         _listPolsek = []; // ⛔ kosongin dulu
         _isLoading = false;
       });
+
+      if (auth.isAdmin && isPolres) {
+        // Admin Polres: set Polres, load Polseks
+        final polresMatch = _listPolres.where((p) => p == unitName).toList();
+        if (polresMatch.isNotEmpty) {
+          _selectedPolres = polresMatch.first;
+          _loadPolsek(_selectedPolres!);
+        } else {
+          _selectedPolres = unitName;
+          _listPolres.add(unitName);
+          _loadPolsek(_selectedPolres!);
+        }
+      } else if (auth.isOperator) {
+        // Operator Polsek
+        _selectedPolres = "Polres (Otomatis)";
+        if (!_listPolres.contains(_selectedPolres)) {
+          _listPolres.insert(0, _selectedPolres!);
+        }
+        
+        _selectedPolsek = unitName;
+        if (!_listPolsek.contains(_selectedPolsek)) {
+          _listPolsek.insert(0, _selectedPolsek!);
+        }
+      }
     } catch (e) {
       debugPrint("Error initial load: $e");
+    } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -87,6 +119,9 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
@@ -134,13 +169,14 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
+                    // KEPOLISIAN RESOR (POLRES)
                     _buildDropdown(
                       label: "Kepolisian Resor",
                       hint: "Pilih Polres",
                       value: _selectedPolres,
                       items: _listPolres,
                       icon: Icons.account_balance,
-                      onChanged: (val) {
+                      onChanged: (auth.isOperator || (auth.isAdmin && isPolres)) ? null : (val) {
                         setState(() {
                           _selectedPolres = val;
                           _selectedPolsek = null;
@@ -150,16 +186,18 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    
+                    // KEPOLISIAN SEKTOR (POLSEK)
                     _buildDropdown(
                       label: "Kepolisian Sektor",
                       hint: "Pilih Polsek",
                       value: _selectedPolsek,
                       items: _listPolsek,
-                      icon: Icons.location_city,
-                      onChanged:
+                      icon: Icons.shield,
+                      onChanged: auth.isOperator ? null : (
                           _selectedPolres == null
                               ? null
-                              : (val) => setState(() => _selectedPolsek = val),
+                              : (val) => setState(() => _selectedPolsek = val)),
                     ),
                     const SizedBox(height: 16),
                     _buildDropdown(
@@ -204,12 +242,18 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      widget.onApply({
-                        'polres': _selectedPolres ?? '',
-                        'polsek': _selectedPolsek ?? '',
-                        'jenis_lahan': _selectedJenisLahan ?? '',
-                        'komoditi': _selectedkomoditi ?? '',
-                      });
+                      Map<String, String> filters = {};
+                      if (auth.isOperator) {
+                        filters['polres'] = _selectedPolres ?? '';
+                        filters['polsek'] = auth.user?.tingkatDetail?.nama ?? '';
+                      } else {
+                        filters['polres'] = _selectedPolres ?? '';
+                        filters['polsek'] = _selectedPolsek ?? '';
+                      }
+                      filters['jenis_lahan'] = _selectedJenisLahan ?? '';
+                      filters['komoditi'] = _selectedkomoditi ?? '';
+                      
+                      widget.onApply(filters);
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(

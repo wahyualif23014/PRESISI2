@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:KETAHANANPANGAN/core/globals.dart';
 
 // --- AUTH & ROUTER ---
 import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
@@ -62,6 +63,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'Ketahanan Pangan Presisi',
       debugShowCheckedModeBanner: false,
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 
 import '../../data/model/land_potential_model.dart';
 import '../../data/service/land_potential_service.dart';
@@ -286,19 +288,19 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      isValidated ? 'TERVALIDASI' : 'BELUM TERVALIDASI',
+                      isValidated ? 'TERVALIDASI' : (widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2' ? 'DITOLAK' : 'BELUM TERVALIDASI'),
                       style: TextStyle(
-                        color: isValidated ? Colors.green : Colors.orange,
+                        color: isValidated ? Colors.green : (widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2' ? Colors.red : Colors.orange),
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  if (isValidated)
+                  if (isValidated || widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2')
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        widget.data.infoValidasi,
+                        isValidated ? widget.data.infoValidasi : "Menunggu perbaikan data",
                         style: const TextStyle(
                           fontSize: 7,
                           color: Colors.grey,
@@ -308,42 +310,59 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
                       ),
                     ),
                   const SizedBox(height: 12),
-                  Container(
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildActionIcon(
-                          _isProcessing
-                              ? Icons.hourglass_empty
-                              : (isValidated
-                                  ? Icons.unpublished_rounded
-                                  : Icons.check_circle_rounded),
-                          isValidated ? Colors.orange : Colors.green,
-                          _isProcessing
-                              ? null
-                              : () => _showConfirmDialog(isValidated),
-                        ),
-                        _buildVerticalDivider(),
-                        _buildActionIcon(
-                          Icons.edit_rounded,
-                          Colors.blue,
-                          widget.onEdit,
-                        ),
-                        _buildVerticalDivider(),
-                        _buildActionIcon(
-                          Icons.delete_outline_rounded,
-                          Colors.red,
-                          widget.onDelete,
-                        ),
-                      ],
-                    ),
-                  ),
+                  
+                  // Role Checking
+                  Builder(builder: (context) {
+                    final isPolsek = context.watch<AuthProvider>().isOperator;
+                    final isRejected = widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2';
+                    final canEditOrDelete = !isPolsek || isRejected;
+
+                    // Jika Polsek dan sudah divalidasi atau belum ditolak, tidak tampilkan tombol action
+                    if (isPolsek && !isRejected) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Container(
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!isPolsek) ...[
+                            _buildActionIcon(
+                              _isProcessing
+                                  ? Icons.hourglass_empty
+                                  : (isValidated
+                                      ? Icons.unpublished_rounded
+                                      : Icons.check_circle_rounded),
+                              isValidated ? Colors.orange : Colors.green,
+                              _isProcessing
+                                  ? null
+                                  : () => _showConfirmDialog(isValidated),
+                            ),
+                            _buildVerticalDivider(),
+                          ],
+                          if (canEditOrDelete) ...[
+                            _buildActionIcon(
+                              Icons.edit_rounded,
+                              Colors.blue,
+                              widget.onEdit,
+                            ),
+                            _buildVerticalDivider(),
+                            _buildActionIcon(
+                              Icons.delete_outline_rounded,
+                              Colors.red,
+                              widget.onDelete,
+                            ),
+                          ]
+                        ],
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),

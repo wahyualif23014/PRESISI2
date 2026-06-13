@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/models/kelola_mode.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/repos/kelola_repo.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_list.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_summary.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/search_kelola_lahan.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/filter_lahan_dialog.dart';
 
@@ -30,12 +33,29 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
     _fetchData();
   }
 
+  /// Menerapkan filter otomatis berdasarkan role user yang login.
+  void _applyRoleBasedFilters(Map<String, String> filters) {
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+
+    if (auth.isOperator && unitName.isNotEmpty) {
+      filters['polsek'] = unitName;
+    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+      filters['polres'] = unitName;
+    }
+  }
+
   Future<void> _fetchData({String keyword = ""}) async {
     setState(() => _isLoading = true);
 
+    // Buat salinan filter dan terapkan role-based scope
+    final effectiveFilters = Map<String, String>.from(_activeFilters ?? {});
+    _applyRoleBasedFilters(effectiveFilters);
+
     final list = await _repo.getLandManagementList(
       keyword: keyword.isNotEmpty ? keyword : _searchController.text,
-      filters: _activeFilters,
+      filters: effectiveFilters,
     );
 
     if (mounted) {
@@ -101,12 +121,7 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
                 children: [
                   KelolaSummaryWidget(key: _summaryKey),
                   if (_isLoading && _listData.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
+                    SkeletonLoading.listCard(count: 3)
                   else
                     ..._groupedData.entries.map(
                       (e) => KelolaRegionExpansionGroup(

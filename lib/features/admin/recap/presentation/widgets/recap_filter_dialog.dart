@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import '../../data/repo/recap_repo.dart';
 
 class RecapFilterDialog extends StatefulWidget {
@@ -33,12 +35,34 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   }
 
   Future<void> _loadInitial() async {
-    final data = await _repo.getFilterOptions();
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final isPolres = unitName.toUpperCase().contains('POLRES');
+
+    if (auth.isAdmin && isPolres) {
+      _selPolres = unitName;
+    } else if (auth.isOperator && unitName.isNotEmpty) {
+      // In Polsek role, we don't necessarily know the Polres name easily from AuthProvider,
+      // but we can lock the Polsek selection.
+      _selPolsek = unitName;
+    }
+
+    final data = await _repo.getFilterOptions(polres: _selPolres);
     if (mounted) {
       setState(() {
         _listPolres = data['polres'] ?? [];
+        _listPolsek = data['polsek'] ?? [];
         _listJenis = data['jenis_lahan'] ?? [];
         _listKomoditi = data['komoditi'] ?? [];
+        
+        // Ensure unit name is in list to prevent dropdown errors if backend doesn't return it
+        if (_selPolres != null && !_listPolres.contains(_selPolres)) {
+          _listPolres.add(_selPolres!);
+        }
+        if (_selPolsek != null && !_listPolsek.contains(_selPolsek)) {
+          _listPolsek.add(_selPolsek!);
+        }
+        
         _isLoading = false;
       });
     }
@@ -58,22 +82,30 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   }
 
   void _resetFilterInternal() {
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final isPolres = unitName.toUpperCase().contains('POLRES');
+
     setState(() {
-      _selPolres = null;
-      _selPolsek = null;
+      _selPolres = (auth.isAdmin && isPolres) ? unitName : null;
+      _selPolsek = (auth.isOperator && unitName.isNotEmpty) ? unitName : null;
       _selJenis = null;
       _selKomoditi = null;
       _selYear = null;
       _selQuarter = null;
       _startDate = null;
       _endDate = null;
-      _listPolsek = [];
+      if (!auth.isAdmin && !auth.isOperator) {
+        _listPolsek = [];
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     bool isPolresSelected = _selPolres != null;
+    final auth = context.read<AuthProvider>();
+    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -105,7 +137,7 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                         "Pilih Polres",
                         _selPolres,
                         _listPolres,
-                        true,
+                        !(auth.isAdmin && isPolres) && !auth.isOperator,
                         (v) {
                           setState(() {
                             _selPolres = v;
@@ -124,7 +156,7 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                         "Pilih Polsek",
                         _selPolsek,
                         _listPolsek,
-                        isPolresSelected,
+                        isPolresSelected && !auth.isOperator,
                         (v) => setState(() => _selPolsek = v),
                       ),
                       const SizedBox(height: 16),

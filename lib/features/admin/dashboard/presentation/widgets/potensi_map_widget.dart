@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:flutter_map_heatmap/flutter_map_heatmap.dart';
 import 'package:flutter_map_geojson/flutter_map_geojson.dart';
 
@@ -437,36 +438,7 @@ class _PotensiMapSectionState extends State<PotensiMapSection>
   }
 
   Widget _buildLoadingState(ThemeData theme) {
-    return Container(
-      color: theme.colorScheme.surface,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  theme.colorScheme.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Memuat data peta...",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return SkeletonLoading.box(height: double.infinity, margin: EdgeInsets.zero);
   }
 
   Widget _buildEmptyState(ThemeData theme) {

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'route_names.dart';
+import '../core/globals.dart';
 
 // --- AUTH & CORE ---
 import '../../auth/provider/auth_provider.dart';
@@ -30,15 +31,13 @@ class AppRouter {
   final AuthProvider authProvider;
   AppRouter(this.authProvider);
 
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>(
-    debugLabel: 'root',
-  );
+  // Using rootNavigatorKey from globals.dart
   static final _shellNavigatorKey = GlobalKey<NavigatorState>(
     debugLabel: 'shell',
   );
 
   late final GoRouter router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
     refreshListenable: authProvider,
     debugLogDiagnostics: true,
@@ -83,7 +82,7 @@ class AppRouter {
       GoRoute(
         path: RouteNames.login,
         name: RouteNames.login,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const LoginScreen(),
       ),
 
@@ -188,7 +187,7 @@ class AppRouter {
       GoRoute(
         path: RouteNames.profile,
         name: RouteNames.profile,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (_, __) => const ProfilePage(),
       ),
     ],

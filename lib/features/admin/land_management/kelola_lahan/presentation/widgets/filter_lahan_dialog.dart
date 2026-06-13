@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data/repos/kelola_repo.dart';
 
 class FilterLahanDialog extends StatefulWidget {
@@ -37,7 +39,6 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
     _loadInitialData();
   }
 
-  // Load awal: Memuat Polres, Jenis Lahan, dan Komoditas dari database
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     try {
@@ -47,12 +48,56 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
       final Map<String, dynamic> response = result as Map<String, dynamic>;
       final Map<String, dynamic> data = response['data'] ?? response;
 
-      if (mounted) {
-        setState(() {
-          _listPolres = List<String>.from(data['polres'] ?? []);
-          _listJenisLahan = List<String>.from(data['jenis_lahan'] ?? []);
-          _listKomoditas = List<String>.from(data['komoditas'] ?? []);
-        });
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final unitName = auth.user?.tingkatDetail?.nama ?? '';
+      final isPolres = unitName.toUpperCase().contains('POLRES');
+
+      setState(() {
+        _listPolres = List<String>.from(data['polres'] ?? []);
+        _listJenisLahan = List<String>.from(data['jenis_lahan'] ?? []);
+        _listKomoditas = List<String>.from(data['komoditas'] ?? []);
+      });
+
+      if (auth.isAdmin && isPolres) {
+        // Admin Polres: set Polres, load Polseks
+        final polresMatch = _listPolres.where((p) => p == unitName).toList();
+        if (polresMatch.isNotEmpty) {
+          _selectedPolres = polresMatch.first;
+          _onPolresChanged(_selectedPolres);
+        } else {
+          _selectedPolres = unitName;
+          _listPolres.add(unitName);
+          _onPolresChanged(_selectedPolres);
+        }
+      } else if (auth.isOperator) {
+        // Operator Polsek: Find Polres from Polsek's parent
+        // Since getFilterOptions() returns just strings for polres, we can't search by kode directly.
+        // We'll just display a dummy "Polres (Auto)" if we can't find it, and lock it.
+        // Or better: the dashboard provider already has this info? No.
+        _selectedPolres = "Polres (Otomatis)";
+        if (!_listPolres.contains(_selectedPolres)) {
+          _listPolres.insert(0, _selectedPolres!);
+        }
+        
+        _selectedPolsek = unitName;
+        if (!_listPolsek.contains(_selectedPolsek)) {
+          _listPolsek.insert(0, _selectedPolsek!);
+        }
+        
+        // Trigger load for Jenis Lahan & Komoditi for this polsek
+        // We don't have the actual polres, but the backend filter might work if we just pass polsek
+        try {
+           final result = await _repo.getFilterOptions(polsek: _selectedPolsek);
+           final Map<String, dynamic> response = result as Map<String, dynamic>;
+           final Map<String, dynamic> data = response['data'] ?? response;
+           if (mounted) {
+             setState(() {
+               _listJenisLahan = List<String>.from(data['jenis_lahan'] ?? _listJenisLahan);
+               _listKomoditas = List<String>.from(data['komoditas'] ?? _listKomoditas);
+             });
+           }
+        } catch(e) {}
       }
     } catch (e) {
       debugPrint("Error Load Initial: $e");
@@ -136,6 +181,9 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
@@ -181,7 +229,7 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                         : "Pilih Polres",
                 value: _selectedPolres,
                 items: _listPolres.toSet().toList(),
-                onChanged: _isLoading ? null : _onPolresChanged,
+                onChanged: (_isLoading || auth.isOperator || (auth.isAdmin && isPolres)) ? null : _onPolresChanged,
                 icon: Icons.local_police,
               ),
               const SizedBox(height: 16),
@@ -190,13 +238,13 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
               _buildDropdown(
                 label: "Kepolisian Sektor",
                 hint:
-                    _selectedPolres == null
+                    _selectedPolres == null && !auth.isOperator
                         ? "Pilih Polres Terlebih Dahulu"
                         : "Pilih Polsek",
                 value: _selectedPolsek,
                 items: _listPolsek.toSet().toList(),
                 onChanged:
-                    _selectedPolres == null || _isLoading
+                    (_selectedPolres == null && !auth.isOperator) || _isLoading || auth.isOperator
                         ? null
                         : _onPolsekChanged,
                 icon: Icons.shield,

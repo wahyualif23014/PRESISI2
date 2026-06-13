@@ -6,6 +6,7 @@ import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/provider
 
 // Import Models & Widgets
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/data/models/position_model.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_action_buttons.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_form_widget.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/positions/presentation/widgets/jabatan_card_item.dart';
@@ -110,7 +111,7 @@ class _PositionPageState extends State<PositionPage> {
               Expanded(
                 child:
                     provider.isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? SkeletonLoading.listCard(count: 5)
                         : provider.displayData.isEmpty
                         ? _buildEmptyState(
                           provider,

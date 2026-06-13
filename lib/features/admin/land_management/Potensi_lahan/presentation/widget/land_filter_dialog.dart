@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import '../../data/service/land_potential_service.dart';
 
 class LandFilterDialog extends StatefulWidget {
@@ -46,10 +48,29 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
 
   Future<void> _loadInitial() async {
     final data = await _service.fetchDynamicWilayah();
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final isPolres = unitName.toUpperCase().contains('POLRES');
+
     setState(() {
       _listPolres = data;
       _isLoading = false;
     });
+
+    if (auth.isAdmin && isPolres) {
+      _selPolres = unitName;
+      _loadPolsek(unitName);
+    } else if (auth.isOperator) {
+      _selPolres = "Polres (Otomatis)";
+      if (!_listPolres.any((e) => e['nama'] == _selPolres)) {
+         _listPolres.insert(0, {'kode': 'DUMMY_POLRES', 'nama': _selPolres});
+      }
+      _selPolsek = unitName;
+      if (!_listPolsek.any((e) => e['nama'] == _selPolsek)) {
+         _listPolsek.insert(0, {'kode': 'DUMMY_POLSEK', 'nama': _selPolsek});
+      }
+    }
   }
 
   Future<void> _loadPolsek(String? polresName) async {
@@ -70,6 +91,9 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 10,
@@ -113,7 +137,7 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                     icon: Icons.account_balance,
                     items: _listPolres,
                     value: _selPolres,
-                    onChanged: (v) {
+                    onChanged: (auth.isOperator || (auth.isAdmin && isPolres)) ? null : (v) {
                       if (v == null) return;
                       setState(() {
                         _selPolres = v;
@@ -125,16 +149,19 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                   ),
               const SizedBox(height: 16),
 
-              _selPolres != null && _listPolsek.isEmpty
+              _selPolres != null && _listPolsek.isEmpty && !auth.isOperator
                   ? _buildEmptyState("Data Polsek tidak ada")
                   : _buildDropWilayah(
                     label: "Kepolisian Sektor",
-                    icon: Icons.location_city,
+                    icon: Icons.shield,
                     items: _listPolsek,
                     value: _selPolsek,
-                    onChanged: (v) => setState(() => _selPolsek = v),
-                    enabled: _selPolres != null,
+                    onChanged: auth.isOperator ? null : (v) {
+                      if (v == null) return;
+                      setState(() => _selPolsek = v);
+                    },
                   ),
+              const SizedBox(height: 16),
               const SizedBox(height: 16),
 
               _buildDropSimple(
@@ -191,12 +218,18 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                       ),
                     ),
                     onPressed: () {
-                      widget.onApply({
-                        'polres': _selPolres ?? '',
-                        'polsek': _selPolsek ?? '',
-                        'jenis_lahan': _selJenis ?? '',
-                        'status_validasi': _selValidasi ?? '',
-                      });
+                      Map<String, String> filters = {};
+                      if (auth.isOperator) {
+                        filters['polres'] = _selPolres ?? '';
+                        filters['polsek'] = auth.user?.tingkatDetail?.nama ?? '';
+                      } else {
+                        if (_selPolres != null) filters['polres'] = _selPolres!;
+                        if (_selPolsek != null) filters['polsek'] = _selPolsek!;
+                      }
+                      filters['jenis_lahan'] = _selJenis ?? '';
+                      filters['status_validasi'] = _selValidasi ?? '';
+                      
+                      widget.onApply(filters);
                       Navigator.pop(context);
                     },
                     child: const Text(
@@ -253,7 +286,7 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
     required IconData icon,
     required List<Map<String, dynamic>> items,
     required String? value,
-    required Function(String?) onChanged,
+    required Function(String?)? onChanged,
     bool enabled = true,
   }) {
     return Column(

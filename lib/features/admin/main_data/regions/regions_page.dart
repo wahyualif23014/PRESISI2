@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/models/region_model.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/data/provider/region_provider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_search_filter.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_list_item.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/regions/presentation/widgets/wilayah_group_headers.dart';
@@ -345,7 +346,7 @@ class _RegionsPageState extends State<RegionsPage> {
               Expanded(
                 child:
                     provider.isLoading
-                        ? const Center(child: CircularProgressIndicator())
+                        ? SkeletonLoading.listCard(count: 5)
                         : _buildListWilayah(provider),
               ),
             ],

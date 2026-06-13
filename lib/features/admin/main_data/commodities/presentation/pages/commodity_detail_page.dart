@@ -1,4 +1,5 @@
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -264,7 +265,7 @@ class _CommodityDetailPageState extends State<CommodityDetailPage> {
                         : _filteredItems;
 
                 if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return SkeletonLoading.listCard(count: 5);
                 }
 
                 if (itemsToShow.isEmpty) {

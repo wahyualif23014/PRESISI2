@@ -6,6 +6,7 @@ import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/wilayah_dist
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 
 import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/resapan_model.dart'
     show ResapanModel;
@@ -26,7 +27,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String apiBaseUrl = "http://192.168.18.248:8080/api";
+  final String apiBaseUrl = "http://192.168.1.76:8080/api";
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();
@@ -102,7 +103,7 @@ class DashboardService {
 
       final uri = _buildUri('/dashboard', queryParams);
 
-      final response = await _client
+      final response = await ApiClient
           .get(uri, headers: await _getHeaders())
           .timeout(const Duration(seconds: 20));
 
@@ -146,7 +147,7 @@ class DashboardService {
 
       final uri = _buildUri('/dashboard/map-potensi', queryParams);
 
-      final response = await _client
+      final response = await ApiClient
           .get(uri, headers: await _getHeaders())
           .timeout(const Duration(seconds: 20));
 
@@ -176,7 +177,7 @@ class DashboardService {
     try {
       final uri = _buildUri('/dashboard/filters/jenis-komoditi', {});
 
-      final response = await _client
+      final response = await ApiClient
           .get(uri, headers: await _getHeaders())
           .timeout(const Duration(seconds: 20));
 
@@ -219,7 +220,7 @@ class DashboardService {
 
       final uri = _buildUri('/dashboard/wilayah-distribution', queryParams);
 
-      final response = await _client
+      final response = await ApiClient
           .get(uri, headers: await _getHeaders())
           .timeout(const Duration(seconds: 20));
 
@@ -257,7 +258,7 @@ class DashboardService {
         _cleanParams({'jenis_komoditi': jenisKomoditi}),
       );
 
-      final response = await _client
+      final response = await ApiClient
           .get(uri, headers: await _getHeaders())
           .timeout(const Duration(seconds: 20));
 
@@ -291,7 +292,7 @@ class DashboardService {
 
       final uri = _buildUri('/dashboard/resapan', queryParams);
 
-      final response = await _client
+      final response = await ApiClient
           .get(uri, headers: await _getHeaders())
           .timeout(const Duration(seconds: 20));
 
@@ -311,6 +312,6 @@ class DashboardService {
   }
 
   void dispose() {
-    _client.close();
+    // _client.close();
   }
 }

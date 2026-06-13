@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Pakai ini, bukan SharedPreferences
 import 'package:shared_preferences/shared_preferences.dart'; // Buat jaga-jaga
 import '../models/kesatuan_model.dart';
@@ -32,7 +33,7 @@ class KesatuanService {
 
     // 4. REQUEST KE BACKEND
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse(baseUrl),
         headers: {
           'Content-Type': 'application/json',

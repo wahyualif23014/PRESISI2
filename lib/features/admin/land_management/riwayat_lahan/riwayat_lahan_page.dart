@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/data/models/lahan_history_model.dart' show LandHistoryItemModel;
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart' show LandHistoryProvider;
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/presentation/widget/filter_riwayat.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/presentation/widget/history_list.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/presentation/widget/history_summary.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/presentation/widget/search_lahan_history.dart';
 
 class RiwayatKelolaLahanPage extends StatefulWidget {
@@ -28,7 +30,18 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LandHistoryProvider>().initialize();
+      // Bangun role filter sesuai tingkatan user
+      final auth = context.read<AuthProvider>();
+      final unitName = auth.user?.tingkatDetail?.nama ?? '';
+      final roleFilters = <String, String>{};
+
+      if (auth.isOperator && unitName.isNotEmpty) {
+        roleFilters['polsek'] = unitName;
+      } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+        roleFilters['polres'] = unitName;
+      }
+
+      context.read<LandHistoryProvider>().initialize(roleFilters: roleFilters);
     });
   }
 
@@ -115,6 +128,7 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
+                // Role filters sudah tersimpan di provider, cukup panggil initialize() ulang
                 await context.read<LandHistoryProvider>().initialize();
               },
               color: const Color(0xFF1A237E),
@@ -137,14 +151,7 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
                   /// ================= LOADING =================
 
                   if (provider.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(80),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF1A237E),
-                        ),
-                      ),
-                    )
+                    SkeletonLoading.listCard(count: 3)
 
                   /// ================= EMPTY =================
 

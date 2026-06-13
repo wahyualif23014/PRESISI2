@@ -41,6 +41,9 @@ class LandHistoryProvider extends ChangeNotifier {
 
   String _searchKeyword = "";
 
+  // Filter otomatis berdasarkan role user
+  Map<String, String> _roleFilters = {};
+
   // ==============================
   // SET SEARCH
   // ==============================
@@ -111,9 +114,13 @@ class LandHistoryProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      // Gabungkan role filter + active filter manual dari UI
+      final combinedFilters = Map<String, String>.from(_roleFilters);
+      combinedFilters.addAll(_activeFilters);
+
       final result = await _repository.getHistoryList(
         keyword: _searchKeyword,
-        filters: _activeFilters,
+        filters: combinedFilters,
       );
 
       _historyList = result;
@@ -129,7 +136,12 @@ class LandHistoryProvider extends ChangeNotifier {
   // INITIAL LOAD
   // ==============================
 
-  Future<void> initialize() async {
+  /// Inisialisasi dengan role-based filter.
+  /// [roleFilters] akan diterapkan otomatis ke setiap fetch.
+  Future<void> initialize({Map<String, String>? roleFilters}) async {
+    if (roleFilters != null) {
+      _roleFilters = roleFilters;
+    }
     _isLoading = true;
     notifyListeners();
 

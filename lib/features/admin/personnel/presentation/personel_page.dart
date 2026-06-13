@@ -4,6 +4,7 @@ import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_prov
 import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 
 import 'widgets/personel_card.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'widgets/personel_toolbar.dart';
 import 'widgets/edit_personel_dialog.dart';
 
@@ -36,13 +37,7 @@ class _PersonelPageState extends State<PersonelPage> {
             child: Consumer<PersonelProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(
-                    child: SizedBox(
-                      height: 40,
-                      width: 40,
-                      child: CircularProgressIndicator(strokeWidth: 3),
-                    ),
-                  );
+                  return SkeletonLoading.listCard(count: 3);
                 }
 
                 if (provider.errorMessage != null) {

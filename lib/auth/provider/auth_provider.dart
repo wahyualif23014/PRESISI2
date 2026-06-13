@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:KETAHANANPANGAN/core/globals.dart';
+import 'dart:async';
 
 import '../models/auth_model.dart';
 import '../models/role_enum.dart';
@@ -14,18 +16,35 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   String? _token;
   bool _isLoading = false;
+  Timer? _sessionTimer;
+  bool _sessionExpiredOnInit = false;
 
   UserModel? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
+  bool get sessionExpiredOnInit => _sessionExpiredOnInit;
+
+  void clearSessionExpiredFlag() {
+    _sessionExpiredOnInit = false;
+  }
 
   bool get isAuthenticated {
-    if (_token == null) return false;
+    if (_token == null || _user == null || _user!.id == 0) return false;
     try {
       return !JwtDecoder.isExpired(_token!);
     } catch (e) {
       return false;
     }
+  }
+
+  void _startSessionTimer() {
+    _sessionTimer?.cancel();
+    // Cek setiap 5 menit apakah token expired
+    _sessionTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (_token != null && JwtDecoder.isExpired(_token!)) {
+        forceLogout('Sesi Anda telah berakhir. Silakan login kembali.');
+      }
+    });
   }
 
   UserRole get userRole => _user?.role ?? UserRole.unknown;
@@ -62,6 +81,7 @@ class AuthProvider with ChangeNotifier {
         ); // FIX DI SINI
 
         _isLoading = false;
+        _startSessionTimer();
         notifyListeners();
         return null;
       } else {
@@ -82,6 +102,7 @@ class AuthProvider with ChangeNotifier {
       if (savedToken == null) return;
 
       if (JwtDecoder.isExpired(savedToken)) {
+        _sessionExpiredOnInit = true;
         await logout();
         return;
       }
@@ -91,8 +112,18 @@ class AuthProvider with ChangeNotifier {
       final userString = await _storage.read(key: 'user_data');
       if (userString != null) {
         _user = UserModel.fromJson(jsonDecode(userString));
+        if (_user!.id == 0) {
+          _sessionExpiredOnInit = true;
+          await logout();
+          return;
+        }
+      } else {
+        _sessionExpiredOnInit = true;
+        await logout();
+        return;
       }
 
+      _startSessionTimer();
       notifyListeners();
     } catch (e) {
       debugPrint("Auto Login Error: $e");
@@ -125,9 +156,21 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    _sessionTimer?.cancel();
     _token = null;
     _user = null;
     await _storage.deleteAll();
     notifyListeners();
+  }
+
+  Future<void> forceLogout(String message) async {
+    await logout();
+    scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }

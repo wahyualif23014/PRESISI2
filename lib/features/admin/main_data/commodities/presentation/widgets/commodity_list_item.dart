@@ -1,6 +1,8 @@
 import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/features/admin/main_data/commodities/providers/CommodityProvider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import '../../data/models/commodity_category_model.dart';
 import '../../data/models/commodity_model.dart';
 
@@ -227,7 +229,7 @@ class _CommodityListPageState extends State<CommodityListPage> {
               // 4. List View
               Expanded(
                 child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? SkeletonLoading.listCard(count: 5)
                     : items.isEmpty
                         ? const Center(child: Text("Tidak ada data ditemukan"))
                         : ListView.separated(

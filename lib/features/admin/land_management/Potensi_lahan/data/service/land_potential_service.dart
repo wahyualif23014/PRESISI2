@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../model/land_potential_model.dart';
@@ -8,7 +9,7 @@ import '../model/land_summary_model.dart';
 import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
-  final String baseUrl = "http://192.168.18.248:8080/api/potensi-lahan";
+  final String baseUrl = "http://192.168.1.76:8080/api/potensi-lahan";
   final _storage = const FlutterSecureStorage();
 
   // Mendapatkan token JWT dari storage lokal
@@ -40,7 +41,7 @@ class LandPotentialService {
       final uri = Uri.parse(
         "$baseUrl/filter-options",
       ).replace(queryParameters: qParams);
-      final response = await http.get(uri, headers: await _getHeaders());
+      final response = await ApiClient.get(uri, headers: await _getHeaders());
 
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
@@ -66,7 +67,7 @@ class LandPotentialService {
   // Mengambil daftar komoditi dari endpoint filter-options
   Future<List<Map<String, dynamic>>> fetchKomoditiOptions() async {
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse("$baseUrl/filter-options"),
         headers: await _getHeaders(),
       );
@@ -106,7 +107,7 @@ class LandPotentialService {
       }
 
       final uri = Uri.parse(baseUrl).replace(queryParameters: qParams);
-      final response = await http.get(uri, headers: await _getHeaders());
+      final response = await ApiClient.get(uri, headers: await _getHeaders());
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -126,7 +127,7 @@ class LandPotentialService {
   // Mengambil data statistik wilayah yang belum memiliki potensi lahan
   Future<NoLandPotentialModel?> fetchNoLandData() async {
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse("$baseUrl/no-potential"),
         headers: await _getHeaders(),
       );
@@ -147,7 +148,7 @@ class LandPotentialService {
   // Mengirim data lahan baru ke server
   Future<bool> postLandData(LandPotentialModel data) async {
     try {
-      final response = await http.post(
+      final response = await ApiClient.post(
         Uri.parse(baseUrl),
         headers: await _getHeaders(),
         body: json.encode(data.toJson()),
@@ -162,7 +163,7 @@ class LandPotentialService {
   // Memperbarui data lahan yang sudah ada
   Future<bool> updateLandData(String id, LandPotentialModel data) async {
     try {
-      final response = await http.put(
+      final response = await ApiClient.put(
         Uri.parse("$baseUrl/$id"),
         headers: await _getHeaders(),
         body: json.encode(data.toJson()),
@@ -177,7 +178,7 @@ class LandPotentialService {
   // Menghapus data lahan berdasarkan ID
   Future<bool> deleteLandData(String id) async {
     try {
-      final response = await http.delete(
+      final response = await ApiClient.delete(
         Uri.parse("$baseUrl/$id"),
         headers: await _getHeaders(),
       );
@@ -193,8 +194,8 @@ class LandPotentialService {
     try {
       final headers = await _getHeaders();
       final results = await Future.wait([
-        http.get(Uri.parse("$baseUrl/summary"), headers: headers),
-        http.get(Uri.parse("$baseUrl/no-potential"), headers: headers),
+        ApiClient.get(Uri.parse("$baseUrl/summary"), headers: headers),
+        ApiClient.get(Uri.parse("$baseUrl/no-potential"), headers: headers),
       ]);
 
       final summaryRes = results[0];
@@ -224,7 +225,7 @@ class LandPotentialService {
   // Mengubah status validasi lahan (Validasi/Batal Validasi)
   Future<bool> toggleValidation(int landId) async {
     try {
-      final response = await http.post(
+      final response = await ApiClient.post(
         Uri.parse("$baseUrl/validate"),
         headers: await _getHeaders(),
         body: jsonEncode({'id_lahan': landId}),

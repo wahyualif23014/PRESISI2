@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AdminService {
 
-  final String baseUrl = 'http://192.168.18.248:8080'; 
+  final String baseUrl = 'http://192.168.1.76:8080'; 
   final _storage = const FlutterSecureStorage();
 
   // ===============================
@@ -29,7 +30,7 @@ class AdminService {
   Future<List<dynamic>> getUsers() async {
     final headers = await _getHeaders();
 
-    final response = await http
+    final response = await ApiClient
         .get(Uri.parse('$baseUrl/api/admin/users'), headers: headers)
         .timeout(const Duration(seconds: 15));
 
@@ -57,7 +58,7 @@ class AdminService {
   Future<void> createUser(Map<String, dynamic> userData) async {
     final headers = await _getHeaders();
 
-    final response = await http
+    final response = await ApiClient
         .post(
           Uri.parse('$baseUrl/api/admin/users'),
           headers: headers,
@@ -73,16 +74,16 @@ class AdminService {
 
     try {
       final errorData = jsonDecode(response.body);
-      throw Exception(errorData['error'] ?? 'Gagal mendaftarkan personel');
+      throw Exception(errorData['error'] ?? errorData['message'] ?? response.body);
     } catch (_) {
-      throw Exception('Gagal mendaftarkan personel');
+      throw Exception('Gagal mendaftarkan personel: ${response.statusCode} - ${response.body}');
     }
   }
   
   // --- FETCH LIST JABATAN (Dropdown) ---
   Future<List<dynamic>> getJabatanList() async {
     final headers = await _getHeaders();
-    final response = await http.get(
+    final response = await ApiClient.get(
       Uri.parse('$baseUrl/api/admin/jabatan/list'),
       headers: headers
     );
@@ -97,7 +98,7 @@ class AdminService {
   // --- FETCH LIST TINGKAT/UNIT (Dropdown) ---
   Future<List<dynamic>> getTingkatList() async {
     final headers = await _getHeaders();
-    final response = await http.get(
+    final response = await ApiClient.get(
       Uri.parse('$baseUrl/api/admin/tingkat/list'), 
       headers: headers
     );
@@ -115,7 +116,7 @@ class AdminService {
   Future<void> updateUser(int id, Map<String, dynamic> userData) async {
     final headers = await _getHeaders();
 
-    final response = await http
+    final response = await ApiClient
         .put(
           Uri.parse('$baseUrl/api/admin/users/$id'),
           headers: headers,
@@ -138,7 +139,7 @@ class AdminService {
   Future<void> deleteUser(int id) async {
     final headers = await _getHeaders();
 
-    final response = await http
+    final response = await ApiClient
         .delete(Uri.parse('$baseUrl/api/admin/users/$id'), headers: headers)
         .timeout(const Duration(seconds: 15));
 

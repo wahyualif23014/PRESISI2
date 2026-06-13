@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'data/model/land_potential_model.dart';
 import 'data/service/land_potential_service.dart';
 import 'presentation/widget/add_land_data_page.dart';
@@ -8,6 +10,7 @@ import 'presentation/widget/land_potential_group.dart';
 import 'presentation/widget/land_potential_toolbar.dart';
 import 'presentation/widget/land_summary_widget.dart';
 import 'presentation/widget/no_land_potential_widget.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
@@ -41,6 +44,25 @@ class _OverviewPageState extends State<OverviewPage> {
     _noLandKey.currentState?.fetchData();
   }
 
+  /// Menerapkan filter otomatis berdasarkan role user yang login.
+  /// - Operator Polsek: hanya melihat data Polsek-nya sendiri.
+  /// - Admin Polres: hanya melihat data Polres-nya (semua Polsek di bawahnya).
+  /// - Admin Polda / Viewer: melihat semua data.
+  void _applyRoleBasedFilters(Map<String, String> filters) {
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+
+    if (auth.isOperator && unitName.isNotEmpty) {
+      // Operator Polsek → scope ke polsek-nya
+      filters['polsek'] = unitName;
+    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+      // Admin Polres → scope ke polres-nya
+      filters['polres'] = unitName;
+    }
+    // Polda / Viewer → tidak ada filter tambahan
+  }
+
   Future<void> _fetchData({
     String keyword = "",
     Map<String, String>? filters,
@@ -55,11 +77,15 @@ class _OverviewPageState extends State<OverviewPage> {
     if (filters != null) _activeFilters = filters;
     if (keyword.isNotEmpty) _currentSearch = keyword;
 
+    // Buat salinan filter agar tidak mengubah _activeFilters langsung
+    final effectiveFilters = Map<String, String>.from(_activeFilters ?? {});
+    _applyRoleBasedFilters(effectiveFilters);
+
     try {
-      String? polresVal = _activeFilters?['polres'];
-      String? polsekVal = _activeFilters?['polsek'];
-      String? jenisLahanVal = _activeFilters?['jenis_lahan'];
-      String? statusVal = _activeFilters?['status_validasi'];
+      String? polresVal = effectiveFilters['polres'];
+      String? polsekVal = effectiveFilters['polsek'];
+      String? jenisLahanVal = effectiveFilters['jenis_lahan'];
+      String? statusVal = effectiveFilters['status_validasi'];
 
       final List<LandPotentialModel> data = await _service.fetchLandData(
         search: keyword.isNotEmpty ? keyword : _currentSearch,
@@ -116,8 +142,7 @@ class _OverviewPageState extends State<OverviewPage> {
             onSearchChanged: _onSearch,
             onFilterTap: _onFilterTap,
             onAddTap: () async {
-              final result = await Navigator.push(
-                context,
+              final result = await Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (c) => const AddLandDataPage()),
               );
               if (result == true) _fetchData();
@@ -135,14 +160,7 @@ class _OverviewPageState extends State<OverviewPage> {
                   _buildHeaderPembatas("DAFTAR POTENSI LAHAN"),
 
                   if (_isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(80),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF0097B2),
-                        ),
-                      ),
-                    )
+                    SkeletonLoading.listCard(count: 3)
                   else if (_isError)
                     _buildErrorState()
                   else if (_groupedData.isEmpty)
@@ -153,8 +171,7 @@ class _OverviewPageState extends State<OverviewPage> {
                         kabupatenName: entry.key,
                         itemsInKabupaten: entry.value,
                         onEdit: (item) async {
-                          final result = await Navigator.push(
-                            context,
+                          final result = await Navigator.of(context, rootNavigator: true).push(
                             MaterialPageRoute(
                               builder: (c) => AddLandDataPage(editData: item),
                             ),

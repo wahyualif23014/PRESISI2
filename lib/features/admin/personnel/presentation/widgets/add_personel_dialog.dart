@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/auth/models/auth_model.dart';
 import 'package:KETAHANANPANGAN/auth/models/role_enum.dart';
 import 'package:KETAHANANPANGAN/features/admin/personnel/providers/personel_provider.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class AddPersonelDialog extends StatefulWidget {
   const AddPersonelDialog({super.key});
@@ -22,7 +23,8 @@ class _AddPersonelDialogState extends State<AddPersonelDialog> {
   
   // State for selections
   UserRole _selectedRole = UserRole.view;
-  String? _selectedTingkatKode; 
+  String? _selectedPolresKode; 
+  String? _selectedPolsekKode; 
   int? _selectedJabatanId;      
   bool _isObscure = true;
 
@@ -50,7 +52,7 @@ class _AddPersonelDialogState extends State<AddPersonelDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     // 2. Validasi Pilihan Dropdown
-    if (_selectedTingkatKode == null || _selectedJabatanId == null) {
+    if (_selectedPolresKode == null || _selectedJabatanId == null) {
       _showSnackBar("Pilih Unit Kerja dan Jabatan!", Colors.orange);
       return;
     }
@@ -67,7 +69,7 @@ class _AddPersonelDialogState extends State<AddPersonelDialog> {
       namaLengkap: _nameController.text.trim(),
       nrp: _nrpController.text.trim(),
       noTelp: _telpController.text.trim(),
-      idTugas: _selectedTingkatKode!,
+      idTugas: _selectedPolsekKode ?? _selectedPolresKode!,
       idJabatan: _selectedJabatanId,
       role: _selectedRole,
     );
@@ -151,34 +153,124 @@ class _AddPersonelDialogState extends State<AddPersonelDialog> {
                             icon: Icons.badge_outlined,
                           ),
 
-                          // Dropdown Unit Kerja
-                          _buildDropdown<String>(
-                            label: "Unit Kerja / Tingkat",
-                            hint: "Pilih Unit",
-                            value: _selectedTingkatKode,
-                            icon: Icons.account_balance_outlined,
-                            items: provider.tingkatOptions.map((item) {
-                              return DropdownMenuItem<String>(
-                                value: item['kode'].toString(),
-                                child: Text(item['nama'] ?? "", overflow: TextOverflow.ellipsis),
+                          // Dropdown Unit Kerja (Hirarki)
+                          Builder(builder: (context) {
+                            // 1. Ambil List Polres (Parent)
+                            final parentUnits = provider.tingkatOptions.where((item) {
+                              final nama = item['nama']?.toString().toLowerCase() ?? '';
+                              if (nama.contains('polres') || nama.contains('polda') || nama.contains('mabes') || nama.contains('polresta')) return true;
+                              if (nama.contains('polsek')) return false;
+                              return !nama.contains(',');
+                            }).toList();
+
+                            // 2. Ambil List Polsek (Child) berdasarkan Polres yang dipilih
+                            List<dynamic> childUnits = [];
+                            if (_selectedPolresKode != null) {
+                              final selectedParent = parentUnits.firstWhere(
+                                (p) => p['kode'].toString() == _selectedPolresKode, 
+                                orElse: () => null
                               );
-                            }).toList(),
-                            onChanged: (val) => setState(() => _selectedTingkatKode = val),
-                          ),
+                              if (selectedParent != null) {
+                                // Cek apakah data sudah nested dari API
+                                if (selectedParent['daftar_polsek'] != null) {
+                                  childUnits = List<dynamic>.from(selectedParent['daftar_polsek']);
+                                } else if (selectedParent['polsek'] != null) {
+                                  childUnits = List<dynamic>.from(selectedParent['polsek']);
+                                } else {
+                                  // Fallback ke pencarian flat list
+                                  final parentName = selectedParent['nama'].toString().toLowerCase().replaceAll('polres ', '').replaceAll('polrestabes ', '').replaceAll('polresta ', '').trim();
+                                  final parentKode = selectedParent['kode'].toString();
+                                  
+                                  childUnits = provider.tingkatOptions.where((item) {
+                                    if (item == selectedParent) return false;
+                                    
+                                    final nama = item['nama']?.toString().toLowerCase() ?? '';
+                                    final kode = item['kode']?.toString() ?? '';
+                                    
+                                    // Cek relasi ID
+                                    if (item['parent_id']?.toString() == parentKode) return true;
+                                    if (item['id_polres']?.toString() == parentKode) return true;
+                                    
+                                    // Cek relasi Kode Prefix
+                                    if (kode.length > parentKode.length && kode.startsWith(parentKode)) return true;
+                                    
+                                    // Cek relasi Nama
+                                    if (nama.contains(parentName) && nama.contains('polsek')) return true;
+                                    
+                                    return false;
+                                  }).toList();
+                                }
+                              }
+                            }
+
+                            return Column(
+                              children: [
+                                _buildSearchableDropdown<dynamic>(
+                                  label: "Kesatuan / Polres",
+                                  hint: "Pilih Polres",
+                                  value: parentUnits.firstWhere(
+                                    (p) => p['kode'].toString() == _selectedPolresKode, 
+                                    orElse: () => null
+                                  ),
+                                  icon: Icons.account_balance_outlined,
+                                  items: parentUnits,
+                                  itemAsString: (item) => item['nama']?.toString() ?? "",
+                                  compareFn: (i1, i2) => i1['kode'] == i2['kode'],
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _selectedPolresKode = val['kode'].toString();
+                                        _selectedPolsekKode = null; // Reset Polsek jika Polres berubah
+                                      });
+                                    }
+                                  },
+                                ),
+                                if (childUnits.isNotEmpty)
+                                  _buildSearchableDropdown<dynamic>(
+                                    label: "Polsek (Opsional)",
+                                    hint: "Pilih Polsek",
+                                    value: childUnits.firstWhere(
+                                      (p) => p['kode'].toString() == _selectedPolsekKode, 
+                                      orElse: () => null
+                                    ),
+                                    icon: Icons.local_police_outlined,
+                                    items: [
+                                      {'kode': null, 'nama': "-- Polres / Satker Pusat --"},
+                                      ...childUnits
+                                    ],
+                                    itemAsString: (item) {
+                                      String n = item['nama']?.toString() ?? "";
+                                      return n.split(',')[0].trim();
+                                    },
+                                    compareFn: (i1, i2) => i1['kode'] == i2['kode'],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() => _selectedPolsekKode = val['kode']?.toString());
+                                      }
+                                    },
+                                    isOptional: true,
+                                  ),
+                              ],
+                            );
+                          }),
 
                           // Dropdown Jabatan
-                          _buildDropdown<int>(
+                          _buildSearchableDropdown<dynamic>(
                             label: "Jabatan",
                             hint: "Pilih Jabatan",
-                            value: _selectedJabatanId,
+                            value: provider.jabatanOptions.firstWhere(
+                              (p) => p['id'].toString() == _selectedJabatanId?.toString(), 
+                              orElse: () => null
+                            ),
                             icon: Icons.work_outline_rounded,
-                            items: provider.jabatanOptions.map((item) {
-                              return DropdownMenuItem<int>(
-                                value: int.tryParse(item['id'].toString()),
-                                child: Text(item['nama'] ?? ""),
-                              );
-                            }).toList(),
-                            onChanged: (val) => setState(() => _selectedJabatanId = val),
+                            items: provider.jabatanOptions,
+                            itemAsString: (item) => item['nama_jabatan'] ?? item['nama'] ?? "",
+                            compareFn: (i1, i2) => i1['id'] == i2['id'],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedJabatanId = int.tryParse(val['id'].toString()));
+                              }
+                            },
                           ),
                           
                           const SizedBox(height: 24),
@@ -252,6 +344,55 @@ class _AddPersonelDialogState extends State<AddPersonelDialog> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
         ),
         validator: (v) => v == null ? "Wajib dipilih" : null,
+      ),
+    );
+  }
+
+  Widget _buildSearchableDropdown<T>({
+    required String label,
+    required String hint,
+    required T? value,
+    required IconData icon,
+    required List<T> items,
+    required String Function(T) itemAsString,
+    required ValueChanged<T?> onChanged,
+    bool Function(T, T)? compareFn,
+    bool isOptional = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownSearch<T>(
+        selectedItem: value,
+        compareFn: compareFn ?? (i1, i2) => itemAsString(i1) == itemAsString(i2),
+        items: (filter, loadProps) {
+          if (filter.isEmpty) return items;
+          return items.where((item) => itemAsString(item).toLowerCase().contains(filter.toLowerCase())).toList();
+        },
+        itemAsString: itemAsString,
+        onChanged: onChanged,
+        popupProps: const PopupProps.menu(
+          showSearchBox: true,
+          searchDelay: Duration(milliseconds: 100),
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: "Ketik untuk mencari...",
+              prefixIcon: Icon(Icons.search, size: 20),
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        decoratorProps: DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 20),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+          ),
+        ),
+        validator: isOptional ? null : (v) => v == null ? "Wajib dipilih" : null,
       ),
     );
   }

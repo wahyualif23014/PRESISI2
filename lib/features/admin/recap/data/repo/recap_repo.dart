@@ -4,13 +4,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../model/recap_model.dart';
 
 class RecapRepo {
-  final String baseUrl = "http://10.107.144.231:8080/api/rekapitulasi";
+  final String baseUrl = "http://192.168.1.76:8080/api/rekapitulasi";
   final String filterUrl =
-      "http://10.107.144.231:8080/api/riwayat-lahan/filter-options";
+      "http://192.168.1.76:8080/api/riwayat-lahan/filter-options";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {
@@ -27,7 +28,7 @@ class RecapRepo {
         },
       );
 
-      final response = await http.get(
+      final response = await ApiClient.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -53,7 +54,7 @@ class RecapRepo {
       final token = await _getToken();
       final uri = Uri.parse(baseUrl).replace(queryParameters: filters);
 
-      final response = await http.get(
+      final response = await ApiClient.get(
         uri,
         headers: {
           'Content-Type': 'application/json',

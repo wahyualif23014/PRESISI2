@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/model/land_summary_model.dart';
 import '../../data/service/land_potential_service.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 
 class LandSummaryWidget extends StatefulWidget {
   const LandSummaryWidget({super.key});
@@ -112,11 +113,7 @@ class LandSummaryWidgetState extends State<LandSummaryWidget> {
     ),
   );
 
-  Widget _buildLoading() => Container(
-    height: 60,
-    alignment: Alignment.center,
-    child: const CircularProgressIndicator(),
-  );
+  Widget _buildLoading() => SkeletonLoading.summaryCard();
 
   Widget _buildExpandedContent() {
     return Column(

@@ -92,6 +92,18 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with TickerProv
       // Kita menggunakan 'read' karena hanya butuh cek sekali, tidak perlu listen perubahan UI
       final auth = context.read<AuthProvider>();
       
+      // Jika saat inisialisasi sesi ditemukan sudah expired / ID null
+      if (auth.sessionExpiredOnInit) {
+        auth.clearSessionExpiredFlag();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sesi Anda telah berakhir. Silakan login kembali.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
       // Update: Menggunakan getter 'isAuthenticated' sesuai Provider baru
       if (auth.isAuthenticated) {
         context.go(RouteNames.dashboard);

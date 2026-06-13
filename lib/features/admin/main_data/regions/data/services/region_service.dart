@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/region_model.dart';
 
@@ -12,7 +13,7 @@ class RegionService {
     try {
       final String? token = await _storage.read(key: 'jwt_token');
 
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
@@ -36,7 +37,7 @@ class RegionService {
     try {
       final String? token = await _storage.read(key: 'jwt_token');
 
-      final response = await http.put(
+      final response = await ApiClient.put(
         Uri.parse('$_baseUrl/$kode'),
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import 'package:KETAHANANPANGAN/features/admin/land_management/riwayat_lahan/providers/land_history_provider.dart' show LandHistoryProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 
 class HistorySummary extends StatefulWidget {
   const HistorySummary({super.key});
@@ -252,10 +253,6 @@ class _HistorySummaryState extends State<HistorySummary> {
   }
 
   Widget _buildLoading() {
-    return Container(
-      height: 60,
-      alignment: Alignment.center,
-      child: const CircularProgressIndicator(color: Colors.black),
-    );
+    return SkeletonLoading.summaryCard();
   }
 }

@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
-  final String baseUrl = "http://192.168.18.248:8080/api/kelola-lahan";
+  final String baseUrl = "http://192.168.1.76:8080/api/kelola-lahan";
   final _storage = const FlutterSecureStorage();
 
   // Mendapatkan token JWT dari storage lokal
@@ -38,7 +39,7 @@ class LandManagementRepository {
     }
 
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse(url),
         headers: await _getHeaders(),
       );
@@ -64,7 +65,7 @@ class LandManagementRepository {
   // Mengambil data ringkasan total luas potensi, tanam, panen, dan serapan
   Future<LandManagementSummaryModel> getSummaryStats() async {
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse('$baseUrl/summary'),
         headers: await _getHeaders(),
       );
@@ -118,7 +119,7 @@ class LandManagementRepository {
     }
 
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse(url),
         headers: await _getHeaders(),
       );
@@ -139,7 +140,7 @@ class LandManagementRepository {
   // Menghapus data lahan berdasarkan ID
   Future<bool> deleteLahan(String id) async {
     try {
-      final response = await http.delete(
+      final response = await ApiClient.delete(
         Uri.parse('$baseUrl/$id'),
         headers: await _getHeaders(),
       );
@@ -154,7 +155,7 @@ class LandManagementRepository {
   // Memperbarui data tanam (tanggal tanam, bibit, dll) untuk lahan tertentu
   Future<bool> updateTanam(String idLahan, Map<String, dynamic> data) async {
     try {
-      final response = await http.put(
+      final response = await ApiClient.put(
         Uri.parse('$baseUrl/$idLahan/tanam'),
         headers: await _getHeaders(),
         body: jsonEncode(data),

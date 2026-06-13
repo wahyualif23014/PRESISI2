@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/polres_model.dart';
 import '../models/polsek_model.dart';
@@ -21,7 +22,7 @@ class UnitService {
 
   // --- GET WILAYAH ---
   Future<List<WilayahModel>> getWilayah() async {
-    final response = await http.get(
+    final response = await ApiClient.get(
       Uri.parse('$baseUrl/admin/wilayah'),
       headers: await _getHeaders(),
     );
@@ -37,7 +38,7 @@ class UnitService {
 
   // --- GET POLRES ---
   Future<List<PolresModel>> getPolres() async {
-    final response = await http.get(
+    final response = await ApiClient.get(
       Uri.parse('$baseUrl/admin/polres'),
       headers: await _getHeaders(),
     );
@@ -53,7 +54,7 @@ class UnitService {
 
   // --- GET POLSEK ---
   Future<List<PolsekModel>> getPolsek() async {
-    final response = await http.get(
+    final response = await ApiClient.get(
       Uri.parse('$baseUrl/admin/polsek'),
       headers: await _getHeaders(),
     );
@@ -69,7 +70,7 @@ class UnitService {
 
   // --- CREATE DATA (Contoh untuk Polres) ---
   Future<void> addPolres(Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await ApiClient.post(
       Uri.parse('$baseUrl/admin/polres'),
       headers: await _getHeaders(),
       body: jsonEncode(data),

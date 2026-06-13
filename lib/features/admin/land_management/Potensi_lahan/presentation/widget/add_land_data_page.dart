@@ -1,4 +1,8 @@
+
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../data/model/land_potential_model.dart';
 import '../../data/service/land_potential_service.dart';
@@ -68,9 +72,105 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
     setState(() => _isLoading = true);
     _currentUserId = await _storage.read(key: 'user_id') ?? "0";
 
-    // Load Polres & Komoditi pertama kali
-    _listKab = await _service.fetchDynamicWilayah();
+    // Load Komoditi
     _listKomoditi = await _service.fetchKomoditiOptions();
+
+    // Load Polres & scope berdasarkan role
+    final allPolres = await _service.fetchDynamicWilayah();
+    
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final userKode = auth.user?.tingkatDetail?.kode ?? auth.user?.idTugas ?? '';
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    
+    debugPrint('=== ADD LAND SCOPING ===');
+    debugPrint('isOperator: ${auth.isOperator}, isAdmin: ${auth.isAdmin}');
+    debugPrint('userKode: $userKode, unitName: $unitName');
+    debugPrint('allPolres count: ${allPolres.length}');
+    if (allPolres.isNotEmpty) debugPrint('allPolres sample: ${allPolres.first}');
+    
+    if (auth.isOperator) {
+      // Operator Polsek: Fetch Desa first to find the hierarchy
+      debugPrint('Fetching desa for polsek: $unitName');
+      final desasList = await _service.fetchDynamicWilayah(polsek: unitName);
+      debugPrint('desasList count: ${desasList.length}');
+      if (desasList.isNotEmpty) debugPrint('desasList sample: ${desasList.first}');
+      
+      if (desasList.isNotEmpty) {
+        final firstDesaKode = desasList.first['kode'].toString();
+        // Extract Polres and Polsek kodes based on BPS format (e.g., "35.78.01.2001")
+        String polresKode = "";
+        String polsekKode = "";
+        
+        if (firstDesaKode.length >= 5) {
+          polresKode = firstDesaKode.substring(0, 5);
+        }
+        if (firstDesaKode.length >= 8) {
+          polsekKode = firstDesaKode.substring(0, 8);
+        }
+        
+        debugPrint('Extracted polresKode: $polresKode, polsekKode: $polsekKode');
+        
+        final polresMatch = allPolres.where((e) => e['kode'].toString() == polresKode).toList();
+        debugPrint('polresMatch: $polresMatch');
+        
+        if (polresMatch.isNotEmpty) {
+          _listKab = polresMatch;
+          _selectedKabKode = polresKode;
+          
+          final polresName = polresMatch.first['nama'].toString();
+          final allKec = await _service.fetchDynamicWilayah(polres: polresName);
+          debugPrint('allKec count: ${allKec.length}');
+          if (allKec.isNotEmpty) debugPrint('allKec sample: ${allKec.first}');
+          
+          final polsekMatch = allKec.where((e) => e['kode'].toString() == polsekKode || e['nama'].toString() == unitName).toList();
+          debugPrint('polsekMatch: $polsekMatch');
+          
+          if (polsekMatch.isNotEmpty) {
+            _listKec = polsekMatch;
+            _selectedKecKode = polsekMatch.first['kode'].toString();
+            _listDesa = desasList;
+          } else {
+            // Fallback if Polsek not found in allKec
+            _listKec = [{'kode': polsekKode.isEmpty ? 'DUMMY' : polsekKode, 'nama': unitName}];
+            _selectedKecKode = _listKec.first['kode'].toString();
+            _listDesa = desasList;
+          }
+        } else {
+           // Fallback if Polres not found
+           _listKab = [{'kode': polresKode.isEmpty ? 'DUMMY' : polresKode, 'nama': 'Polres (Auto)'}];
+           _selectedKabKode = _listKab.first['kode'].toString();
+           _listKec = [{'kode': polsekKode.isEmpty ? 'DUMMY' : polsekKode, 'nama': unitName}];
+           _selectedKecKode = _listKec.first['kode'].toString();
+           _listDesa = desasList;
+        }
+      } else {
+        // Fallback if Desa is empty
+        debugPrint('WARNING: desasList empty! Check if unitName matches API polsek field.');
+        _listKab = allPolres;
+        _listKec = [{'kode': 'DUMMY', 'nama': unitName}];
+        _selectedKecKode = 'DUMMY';
+      }
+    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+      // Admin Polres: auto-select Polres, bisa pilih Polsek
+      final polresMatch = allPolres.where((e) {
+        final kode = e['kode'].toString();
+        final nama = e['nama'].toString();
+        return (userKode.isNotEmpty && userKode.startsWith(kode)) || nama == unitName;
+      }).toList();
+      
+      if (polresMatch.isNotEmpty) {
+        _listKab = polresMatch;
+        _selectedKabKode = polresMatch.first['kode'].toString();
+        final polresName = polresMatch.first['nama'].toString();
+        _listKec = await _service.fetchDynamicWilayah(polres: polresName);
+      } else {
+        _listKab = allPolres;
+      }
+    } else {
+      // Polda / Viewer: full access
+      _listKab = allPolres;
+    }
 
     if (widget.editData != null) {
       await _fillEditData();
@@ -180,6 +280,9 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FA),
       appBar: AppBar(
@@ -208,7 +311,9 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
                       _buildDropdownWilayah(
                         "Pilih Kepolisian Resor (Kab/Kota)",
                         _listKab,
-                        (v) async {
+                        (auth.isOperator || (auth.isAdmin && unitName.toUpperCase().contains('POLRES'))) 
+                            ? null 
+                            : (v) async {
                           if (v == null) return;
                           setState(() {
                             _selectedKabKode = v;
@@ -232,7 +337,9 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
                       _buildDropdownWilayah(
                         "Pilih Kepolisian Sektor (Kecamatan)",
                         _listKec,
-                        (v) async {
+                        auth.isOperator 
+                            ? null 
+                            : (v) async {
                           if (v == null) return;
                           setState(() {
                             _selectedKecKode = v;
@@ -470,7 +577,7 @@ class _AddLandDataPageState extends State<AddLandDataPage> {
   Widget _buildDropdownWilayah(
     String label,
     List<Map<String, dynamic>> items,
-    Function(String?) onChanged,
+    Function(String?)? onChanged,
     String? value,
   ) {
     return Padding(

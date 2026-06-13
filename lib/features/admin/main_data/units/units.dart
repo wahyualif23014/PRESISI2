@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/providers/unit_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/data/models/unit_model.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/presentation/widgets/unit_filter_dialog.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/presentation/widgets/unit_search_bar.dart';
 import 'package:KETAHANANPANGAN/features/admin/main_data/units/presentation/widgets/unit_item_card.dart';
@@ -172,8 +173,8 @@ class _UnitsPageState extends State<UnitsPage> {
   // ✅ CONTENT BUILDER
   Widget _buildContent(UnitProvider provider, Color connectionColor) {
     if (provider.isLoading) {
-      return const SliverFillRemaining(
-        child: Center(child: CircularProgressIndicator()),
+      return SliverFillRemaining(
+        child: SkeletonLoading.listCard(count: 5),
       );
     }
 

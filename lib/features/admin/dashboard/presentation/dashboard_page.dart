@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
+import 'package:KETAHANANPANGAN/shared/widget/skeleton_loading.dart';
 import 'package:KETAHANANPANGAN/features/admin/dashboard/providers/dashboard_provider.dart';
 
 import 'widgets/dashboard_header.dart';
@@ -33,8 +34,18 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().refreshAllData();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final auth = context.read<AuthProvider>();
+      final dashProv = context.read<DashboardProvider>();
+      final unitName = auth.user?.tingkatDetail?.nama ?? '';
+
+      if (auth.isOperator && unitName.isNotEmpty) {
+        await dashProv.updateSektor(unitName);
+      } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+        await dashProv.updateResor(unitName);
+      } else {
+        dashProv.refreshAllData();
+      }
     });
   }
 
@@ -49,7 +60,9 @@ class _DashboardPageState extends State<DashboardPage> {
       body: Consumer<DashboardProvider>(
         builder: (context, dashboardProv, child) {
           if (dashboardProv.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView(
+              children: [SkeletonLoading.listCard(count: 3)],
+            );
           }
 
           if (dashboardProv.errorMessage.isNotEmpty) {
@@ -189,12 +202,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           Consumer<DashboardProvider>(
                             builder: (context, prov, _) {
                               if (prov.isWilayahLoading) {
-                                return const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(20),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
+                                return SkeletonLoading.dashboardCard();
                               }
 
                               return _buildDistributionSection();

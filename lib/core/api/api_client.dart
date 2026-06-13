@@ -30,43 +30,55 @@ class ApiClient {
     }
   }
 
-  static Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
-    final mergedHeaders = await _getHeaders(customHeaders: headers);
-    final response = await http.get(url, headers: mergedHeaders).timeout(const Duration(seconds: 15));
-    if (response.statusCode == 401) {
+  static void _checkUnauthorized(http.Response response) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
       _handleUnauthorized();
       throw Exception('Token tidak valid atau sudah kadaluarsa.');
     }
+
+    // Cek isi body jika API return 200 tapi isinya pesan error session / id null
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map) {
+        final message = body['message']?.toString().toLowerCase() ?? '';
+        final error = body['error']?.toString().toLowerCase() ?? '';
+        
+        if (message.contains('id null') || 
+            error.contains('id null') ||
+            message.contains('token') && message.contains('expire') ||
+            message.contains('unauthorized')) {
+          _handleUnauthorized();
+          throw Exception('Sesi tidak valid. Silakan login kembali.');
+        }
+      }
+    } catch (_) {}
+  }
+
+  static Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
+    final mergedHeaders = await _getHeaders(customHeaders: headers);
+    final response = await http.get(url, headers: mergedHeaders).timeout(const Duration(seconds: 15));
+    _checkUnauthorized(response);
     return response;
   }
 
   static Future<http.Response> post(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final mergedHeaders = await _getHeaders(customHeaders: headers);
     final response = await http.post(url, headers: mergedHeaders, body: body, encoding: encoding).timeout(const Duration(seconds: 15));
-    if (response.statusCode == 401) {
-      _handleUnauthorized();
-      throw Exception('Token tidak valid atau sudah kadaluarsa.');
-    }
+    _checkUnauthorized(response);
     return response;
   }
 
   static Future<http.Response> put(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final mergedHeaders = await _getHeaders(customHeaders: headers);
     final response = await http.put(url, headers: mergedHeaders, body: body, encoding: encoding).timeout(const Duration(seconds: 15));
-    if (response.statusCode == 401) {
-      _handleUnauthorized();
-      throw Exception('Token tidak valid atau sudah kadaluarsa.');
-    }
+    _checkUnauthorized(response);
     return response;
   }
 
   static Future<http.Response> delete(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final mergedHeaders = await _getHeaders(customHeaders: headers);
     final response = await http.delete(url, headers: mergedHeaders, body: body, encoding: encoding).timeout(const Duration(seconds: 15));
-    if (response.statusCode == 401) {
-      _handleUnauthorized();
-      throw Exception('Token tidak valid atau sudah kadaluarsa.');
-    }
+    _checkUnauthorized(response);
     return response;
   }
 }

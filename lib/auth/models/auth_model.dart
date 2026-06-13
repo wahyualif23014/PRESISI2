@@ -75,6 +75,9 @@ class UserModel {
       'role': role.value, // Konversi Enum ke String '1','2','3'
       'no_telp': noTelp,
       'id_jabatan': idJabatan,
+      // PENTING: Simpan tingkatDetail agar scoping bisa berjalan setelah auto-login
+      'tingkat_detail': tingkatDetail?.toJson(),
+      'jabatan': jabatanDetail?.toJson(),
     };
   }
 }

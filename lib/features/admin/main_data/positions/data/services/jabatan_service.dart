@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/position_model.dart' show JabatanModel;
 
@@ -17,7 +18,7 @@ class JabatanService {
 
   Future<List<JabatanModel>> getJabatanList() async {
     try {
-      final response = await http.get(
+      final response = await ApiClient.get(
         Uri.parse(baseUrl),
         headers: await _getHeaders(),
       );
@@ -34,7 +35,7 @@ class JabatanService {
   }
 
   Future<bool> createJabatan(String nama) async {
-    final response = await http.post(
+    final response = await ApiClient.post(
       Uri.parse(baseUrl),
       headers: await _getHeaders(),
       body: jsonEncode({"nama_jabatan": nama}),
@@ -43,7 +44,7 @@ class JabatanService {
   }
 
   Future<bool> updateJabatan(int id, String nama) async {
-    final response = await http.put(
+    final response = await ApiClient.put(
       Uri.parse("$baseUrl/$id"),
       headers: await _getHeaders(),
       body: jsonEncode({"nama_jabatan": nama}),
@@ -52,7 +53,7 @@ class JabatanService {
   }
 
   Future<bool> deleteJabatan(int id) async {
-    final response = await http.delete(
+    final response = await ApiClient.delete(
       Uri.parse("$baseUrl/$id"),
       headers: await _getHeaders(),
     );
