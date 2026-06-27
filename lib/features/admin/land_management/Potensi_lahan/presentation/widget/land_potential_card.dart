@@ -34,7 +34,7 @@ class LandPotentialCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -215,9 +215,9 @@ class LandPotentialCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         isValid ? "VALID" : "PENDING",
@@ -237,7 +237,7 @@ class LandPotentialCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 18, color: color),

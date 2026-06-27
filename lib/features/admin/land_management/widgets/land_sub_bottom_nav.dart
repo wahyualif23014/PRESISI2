@@ -37,7 +37,7 @@ class LandSubBottomNav extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: _forestGreen.withOpacity(0.12),
+              color: _forestGreen.withValues(alpha: 0.12),
               blurRadius: 24,
               offset: const Offset(0, 8),
               spreadRadius: -4,
@@ -51,7 +51,7 @@ class LandSubBottomNav extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: _forestGreen.withOpacity(0.08),
+                color: _forestGreen.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Row(
@@ -134,7 +134,7 @@ class _LandPopupItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _warmBeige.withOpacity(0.5),
+                color: _warmBeige.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, size: 22, color: _forestGreen),
@@ -150,7 +150,7 @@ class _LandPopupItem extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 22, color: _slateGrey.withOpacity(0.4)),
+            Icon(Icons.chevron_right_rounded, size: 22, color: _slateGrey.withValues(alpha: 0.4)),
           ],
         ),
       ),

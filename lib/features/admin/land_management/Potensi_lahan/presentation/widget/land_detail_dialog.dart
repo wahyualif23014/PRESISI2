@@ -462,7 +462,7 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
         ],
       ),
       child: Column(

@@ -52,6 +52,7 @@ class LandManagementItemModel {
   final String alamatLahan;
   final String wilayahLahan;
   final String idTanam;
+  final String idPanen;
   final String tglTanam;
   final double luasTanamDetail;
   final String jenisBibit;
@@ -60,6 +61,10 @@ class LandManagementItemModel {
   final String estAkhirPanen;
   final String dokumenPendukung;
   final String keteranganTanam;
+  final String statusTanam;
+  final String statusPanen;
+  final String statusSerapan;
+  final String idSerapan;
 
   LandManagementItemModel({
     required this.id,
@@ -89,6 +94,7 @@ class LandManagementItemModel {
     required this.alamatLahan,
     required this.wilayahLahan,
     required this.idTanam,
+    required this.idPanen,
     required this.tglTanam,
     required this.luasTanamDetail,
     required this.jenisBibit,
@@ -97,6 +103,10 @@ class LandManagementItemModel {
     required this.estAkhirPanen,
     required this.dokumenPendukung,
     required this.keteranganTanam,
+    required this.statusTanam,
+    required this.statusPanen,
+    required this.statusSerapan,
+    required this.idSerapan,
   });
 
   factory LandManagementItemModel.fromJson(Map<String, dynamic> json) {
@@ -127,6 +137,7 @@ class LandManagementItemModel {
       alamatLahan: json['alamat_lahan'] ?? '-',
       wilayahLahan: json['wilayah_lahan'] ?? '-',
       idTanam: json['id_tanam']?.toString() ?? '',
+      idPanen: json['id_panen']?.toString() ?? '',
       tglTanam: json['tgl_tanam'] ?? '',
       luasTanamDetail: (json['luas_tanam_detail'] as num?)?.toDouble() ?? 0.0,
       jenisBibit: json['jenis_bibit'] ?? '',
@@ -135,6 +146,10 @@ class LandManagementItemModel {
       estAkhirPanen: json['est_akhir_panen'] ?? '',
       dokumenPendukung: json['dokumen_pendukung'] ?? '',
       keteranganTanam: json['keterangan_tanam'] ?? '',
+      statusTanam: json['status_tanam']?.toString() ?? '1',
+      statusPanen: json['status_panen']?.toString() ?? '1',
+      statusSerapan: json['status_serapan']?.toString() ?? '1',
+      idSerapan: json['id_serapan']?.toString() ?? '',
     );
   }
 }

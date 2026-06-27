@@ -3,18 +3,25 @@ enum UserRole { admin, operator, view, unknown }
 extension UserRoleX on UserRole {
   static UserRole fromString(String val) {
     switch (val) {
-      case '1': return UserRole.admin;
-      case '2': return UserRole.operator;
-      case '3': return UserRole.view;
-      default: return UserRole.unknown;
+      case '1':
+      case 'admin':
+        return UserRole.admin;
+      case '2':
+      case 'operator':
+        return UserRole.operator;
+      case '3':
+      case 'view':
+        return UserRole.view;
+      default:
+        return UserRole.unknown;
     }
   }
 
   String get value {
     switch (this) {
-      case UserRole.admin: return '1';
-      case UserRole.operator: return '2';
-      default: return '3';
+      case UserRole.admin: return 'admin';
+      case UserRole.operator: return 'operator';
+      default: return 'view';
     }
   }
 

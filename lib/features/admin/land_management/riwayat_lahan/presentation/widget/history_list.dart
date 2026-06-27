@@ -301,170 +301,210 @@ class HistoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(item.statusColor);
+    
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildLabel("POLISI PENGGERAK"),
-                _buildName(
-                  item.policeName.isNotEmpty ? item.policeName : "-",
-                ),
-                const SizedBox(height: 2),
-                _buildPhone(item.policePhone),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildLabel("PENANGGUNG JAWAB"),
-                _buildName(item.picName.isNotEmpty ? item.picName : "-"),
-                const SizedBox(height: 2),
-                _buildPhone(item.picPhone),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(
-                    color: _getStatusColor(item.statusColor),
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  item.status.replaceAll(' ', '\n'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _getStatusColor(item.statusColor),
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Center(
-              child: Builder(builder: (context) {
-                final isPolsek = context.watch<AuthProvider>().isOperator;
-                final isRejected = item.status.toLowerCase().contains('tolak') || item.status == '2';
-                final canEditOrDelete = !isPolsek || isRejected;
-
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () => _showDetail(context),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.visibility, color: Colors.blue, size: 20),
-                            const SizedBox(height: 2),
-                            const Text(
-                              "Detail",
-                              style: TextStyle(
-                                fontSize: 8,
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (canEditOrDelete) ...[
-                      const SizedBox(width: 4),
-                      InkWell(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Fitur Edit Panen sedang dalam pengembangan backend")),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.edit_rounded, color: Colors.orange.shade700, size: 20),
-                              const SizedBox(height: 2),
-                              Text(
-                                "Edit",
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.orange.shade700,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      InkWell(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Fitur Hapus Panen sedang dalam pengembangan backend")),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
-                              const SizedBox(height: 2),
-                              const Text(
-                                "Hapus",
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ]
-                  ],
-                );
-              }),
-            ),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
+        border: Border.all(color: Colors.grey.shade200),
       ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _showDetail(context),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.subRegionGroup.isEmpty || item.subRegionGroup == '-'
+                          ? 'DUSUN TIDAK TERDATA'
+                          : item.subRegionGroup.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A237E),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      item.status.toUpperCase(),
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Divider(height: 1, color: Colors.grey.shade100),
+              const SizedBox(height: 8),
+
+              // Body
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabel("POLISI PENGGERAK"),
+                        const SizedBox(height: 2),
+                        _buildName(item.policeName.isNotEmpty ? item.policeName : "-"),
+                        _buildPhone(item.policePhone),
+                        const SizedBox(height: 6),
+                        _buildLabel("PENANGGUNG JAWAB"),
+                        const SizedBox(height: 2),
+                        _buildName(item.picName.isNotEmpty ? item.picName : "-"),
+                        _buildPhone(item.picPhone),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabel("DETAIL LUAS"),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Lahan: ${item.landArea} Ha",
+                          style: const TextStyle(fontSize: 10, color: Colors.black87),
+                        ),
+                        Text(
+                          "Tanam: ${item.tanamArea} Ha",
+                          style: const TextStyle(fontSize: 10, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 6),
+                        _buildLabel("HASIL PANEN & SERAPAN"),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Panen: ${item.panenTon} Ton",
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                        ),
+                        Text(
+                          "Serapan: ${item.serapanTon} Ton",
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Footer
+              _buildActionFooter(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionFooter(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 6),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade100, width: 1),
+        ),
+      ),
+      child: Builder(builder: (context) {
+        final auth = context.watch<AuthProvider>();
+        final isPolsek = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLSEK');
+        final isRejected = item.status.toLowerCase().contains('tolak') || item.status == '2';
+        final canEditOrDelete = !isPolsek || isRejected;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue.shade700,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                backgroundColor: Colors.blue.shade50,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              onPressed: () => _showDetail(context),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.visibility_outlined, size: 12),
+                  SizedBox(width: 4),
+                  Text("Detail", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            if (canEditOrDelete)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 16, color: Colors.grey),
+                padding: EdgeInsets.zero,
+                onSelected: (val) {
+                  if (val == 'edit') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Fitur Edit Panen sedang dalam pengembangan backend")),
+                    );
+                  } else if (val == 'delete') {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Fitur Hapus Panen sedang dalam pengembangan backend")),
+                    );
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 16, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text("Edit", style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline_outlined, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text("Hapus", style: TextStyle(fontSize: 11, color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        );
+      }),
     );
   }
 
@@ -479,13 +519,13 @@ class HistoryRow extends StatelessWidget {
 
   Widget _buildName(String text) => Text(
         text,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       );
 
   Widget _buildPhone(String text) => Text(
         text.isEmpty ? "-" : text,
-        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+        style: TextStyle(fontSize: 9, color: Colors.grey[600]),
       );
 }

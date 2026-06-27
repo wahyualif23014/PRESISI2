@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ func Login(c *gin.Context) {
 	}
 
 	var user models.User
-	err := initializers.DB.Preload("Jabatan").Preload("TingkatDetail").
+	err := initializers.DB.Preload("JabatanDetail").Preload("TingkatDetail").
 		Where("username = ? AND deletestatus = ?", body.Username, models.StatusActive).
 		First(&user).Error
 
@@ -35,7 +36,9 @@ func Login(c *gin.Context) {
 	}
 
 	// --- VERIFIKASI PASSWORD ---
-	if err := bcrypt.CompareHashAndPassword([]byte(user.KataSandi), []byte(body.Password)); err != nil {
+	// PHP bcrypt menghasilkan hash $2y$, tapi Go hanya mengenali $2a$
+	storedHash := strings.Replace(user.KataSandi, "$2y$", "$2a$", 1)
+	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(body.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "NRP atau Password salah"})
 		return
 	}

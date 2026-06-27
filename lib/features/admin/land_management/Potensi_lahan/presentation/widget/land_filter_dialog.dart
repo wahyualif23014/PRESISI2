@@ -50,18 +50,21 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
     final data = await _service.fetchDynamicWilayah();
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
+    final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
     final unitName = auth.user?.tingkatDetail?.nama ?? '';
-    final isPolres = unitName.toUpperCase().contains('POLRES');
+    final unitNameUpper = unitName.toUpperCase();
+    final bool isPolresUnit = !isAdmin && unitNameUpper.contains('POLRES');
+    final bool isPolsekUnit = !isAdmin && unitNameUpper.contains('POLSEK');
 
     setState(() {
       _listPolres = data;
       _isLoading = false;
     });
 
-    if (auth.isAdmin && isPolres) {
+    if (isPolresUnit) {
       _selPolres = unitName;
       _loadPolsek(unitName);
-    } else if (auth.isOperator) {
+    } else if (isPolsekUnit) {
       _selPolres = "Polres (Otomatis)";
       if (!_listPolres.any((e) => e['nama'] == _selPolres)) {
          _listPolres.insert(0, {'kode': 'DUMMY_POLRES', 'nama': _selPolres});
@@ -92,7 +95,11 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
-    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+    final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
+    final bool isLockedToPolres = !isAdmin && (unitNameUpper.contains('POLRES') || unitNameUpper.contains('POLSEK'));
+    final bool isLockedToPolsek = !isAdmin && unitNameUpper.contains('POLSEK');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -137,7 +144,7 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                     icon: Icons.account_balance,
                     items: _listPolres,
                     value: _selPolres,
-                    onChanged: (auth.isOperator || (auth.isAdmin && isPolres)) ? null : (v) {
+                    onChanged: isLockedToPolres ? null : (v) {
                       if (v == null) return;
                       setState(() {
                         _selPolres = v;
@@ -149,14 +156,14 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                   ),
               const SizedBox(height: 16),
 
-              _selPolres != null && _listPolsek.isEmpty && !auth.isOperator
+              _selPolres != null && _listPolsek.isEmpty && !isLockedToPolres
                   ? _buildEmptyState("Data Polsek tidak ada")
                   : _buildDropWilayah(
                     label: "Kepolisian Sektor",
                     icon: Icons.shield,
                     items: _listPolsek,
                     value: _selPolsek,
-                    onChanged: auth.isOperator ? null : (v) {
+                    onChanged: isLockedToPolsek ? null : (v) {
                       if (v == null) return;
                       setState(() => _selPolsek = v);
                     },
@@ -219,9 +226,12 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
                     ),
                     onPressed: () {
                       Map<String, String> filters = {};
-                      if (auth.isOperator) {
+                      if (isLockedToPolsek) {
                         filters['polres'] = _selPolres ?? '';
                         filters['polsek'] = auth.user?.tingkatDetail?.nama ?? '';
+                      } else if (isLockedToPolres) {
+                        filters['polres'] = auth.user?.tingkatDetail?.nama ?? '';
+                        if (_selPolsek != null) filters['polsek'] = _selPolsek!;
                       } else {
                         if (_selPolres != null) filters['polres'] = _selPolres!;
                         if (_selPolsek != null) filters['polsek'] = _selPolsek!;
@@ -254,9 +264,9 @@ class _LandFilterDialogState extends State<LandFilterDialog> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0097B2).withOpacity(0.05),
+        color: const Color(0xFF0097B2).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFF0097B2).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFF0097B2).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [

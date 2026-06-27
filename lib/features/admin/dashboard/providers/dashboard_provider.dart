@@ -342,6 +342,16 @@ class DashboardProvider with ChangeNotifier {
   }
 
   // =====================================================
+  // CLEAR SCOPE FILTER (for Admin - show all data)
+  // =====================================================
+
+  void clearScopeFilter() {
+    _selectedResor = null;
+    _selectedSektor = null;
+    notifyListeners();
+  }
+
+  // =====================================================
   // CLEAR DATA
   // =====================================================
 

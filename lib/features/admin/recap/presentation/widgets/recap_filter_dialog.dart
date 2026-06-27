@@ -37,13 +37,13 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   Future<void> _loadInitial() async {
     final auth = context.read<AuthProvider>();
     final unitName = auth.user?.tingkatDetail?.nama ?? '';
-    final isPolres = unitName.toUpperCase().contains('POLRES');
+    final unitNameUpper = unitName.toUpperCase();
+    final isPolres = unitNameUpper.contains('POLRES');
+    final isPolsek = unitNameUpper.contains('POLSEK');
 
-    if (auth.isAdmin && isPolres) {
+    if (isPolres) {
       _selPolres = unitName;
-    } else if (auth.isOperator && unitName.isNotEmpty) {
-      // In Polsek role, we don't necessarily know the Polres name easily from AuthProvider,
-      // but we can lock the Polsek selection.
+    } else if (isPolsek) {
       _selPolsek = unitName;
     }
 
@@ -84,18 +84,20 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   void _resetFilterInternal() {
     final auth = context.read<AuthProvider>();
     final unitName = auth.user?.tingkatDetail?.nama ?? '';
-    final isPolres = unitName.toUpperCase().contains('POLRES');
+    final unitNameUpper = unitName.toUpperCase();
+    final isPolres = unitNameUpper.contains('POLRES');
+    final isPolsek = unitNameUpper.contains('POLSEK');
 
     setState(() {
-      _selPolres = (auth.isAdmin && isPolres) ? unitName : null;
-      _selPolsek = (auth.isOperator && unitName.isNotEmpty) ? unitName : null;
+      _selPolres = isPolres ? unitName : null;
+      _selPolsek = isPolsek ? unitName : null;
       _selJenis = null;
       _selKomoditi = null;
       _selYear = null;
       _selQuarter = null;
       _startDate = null;
       _endDate = null;
-      if (!auth.isAdmin && !auth.isOperator) {
+      if (!isPolres && !isPolsek) {
         _listPolsek = [];
       }
     });
@@ -105,7 +107,10 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   Widget build(BuildContext context) {
     bool isPolresSelected = _selPolres != null;
     final auth = context.read<AuthProvider>();
-    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
+    final bool isLockedToPolres = unitNameUpper.contains('POLRES') || unitNameUpper.contains('POLSEK');
+    final bool isLockedToPolsek = unitNameUpper.contains('POLSEK');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -133,11 +138,11 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                       )
                     else ...[
                       _buildSectionTitle("Wilayah"),
-                      _buildDrop(
+                       _buildDrop(
                         "Pilih Polres",
                         _selPolres,
                         _listPolres,
-                        !(auth.isAdmin && isPolres) && !auth.isOperator,
+                        !isLockedToPolres,
                         (v) {
                           setState(() {
                             _selPolres = v;
@@ -156,7 +161,7 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
                         "Pilih Polsek",
                         _selPolsek,
                         _listPolsek,
-                        isPolresSelected && !auth.isOperator,
+                        isPolresSelected && !isLockedToPolsek,
                         (v) => setState(() => _selPolsek = v),
                       ),
                       const SizedBox(height: 16),
@@ -380,6 +385,12 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
   }
 
   Widget _buildActions(BuildContext context) {
+    final auth = context.read<AuthProvider>();
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
+    final bool isLockedToPolres = unitNameUpper.contains('POLRES') || unitNameUpper.contains('POLSEK');
+    final bool isLockedToPolsek = unitNameUpper.contains('POLSEK');
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -411,16 +422,25 @@ class _RecapFilterDialogState extends State<RecapFilterDialog> {
             flex: 2,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pop(context, {
-                  'polres': _selPolres ?? '',
-                  'polsek': _selPolsek ?? '',
+                Map<String, String> filters = {
                   'jenis_lahan': _selJenis ?? '',
                   'komoditi': _selKomoditi ?? '',
                   'tahun': _selYear ?? '',
                   'kuartal': _selQuarter ?? '',
                   'tgl_awal': _startDate?.toIso8601String().split('T')[0] ?? '',
                   'tgl_akhir': _endDate?.toIso8601String().split('T')[0] ?? '',
-                });
+                };
+                if (isLockedToPolsek) {
+                  filters['polres'] = _selPolres ?? '';
+                  filters['polsek'] = auth.user?.tingkatDetail?.nama ?? '';
+                } else if (isLockedToPolres) {
+                  filters['polres'] = auth.user?.tingkatDetail?.nama ?? '';
+                  filters['polsek'] = _selPolsek ?? '';
+                } else {
+                  filters['polres'] = _selPolres ?? '';
+                  filters['polsek'] = _selPolsek ?? '';
+                }
+                Navigator.pop(context, filters);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepPurple,

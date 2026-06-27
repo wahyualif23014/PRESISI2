@@ -12,7 +12,6 @@ import (
 func CreateJabatan(c *gin.Context) {
 	var input struct {
 		NamaJabatan string `json:"nama_jabatan" binding:"required"`
-		IdAnggota   *int   `json:"id_anggota"` // Optional sesuai data di DB
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -23,7 +22,6 @@ func CreateJabatan(c *gin.Context) {
 	jabatan := models.Jabatan{
 		NamaJabatan:  input.NamaJabatan,
 		DeleteStatus: "2", // Status Aktif
-		IdAnggota:    input.IdAnggota,
 	}
 
 	// Operasi Create
@@ -42,14 +40,14 @@ func CreateJabatan(c *gin.Context) {
 func GetJabatan(c *gin.Context) {
 	var jabatans []models.Jabatan
 	// Filter deletestatus = '2' (Sesuai logic soft delete Anda)
-	if err := initializers.DB.Where("deletestatus = ?", "2").Order("idjabatan DESC").Find(&jabatans).Error; err != nil {
+	if err := initializers.DB.Where("deletestatus = ?", "2").Order("id_jabatan DESC").Find(&jabatans).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": jabatans})
 }
 
-// UpdateJabatan: Memperbarui nama jabatan berdasarkan idjabatan
+// UpdateJabatan: Memperbarui nama jabatan berdasarkan id_jabatan
 func UpdateJabatan(c *gin.Context) {
 	id := c.Param("id")
 	var input struct {
@@ -63,13 +61,13 @@ func UpdateJabatan(c *gin.Context) {
 
 	var jabatan models.Jabatan
 	// Mencari data yang aktif (status 2)
-	if err := initializers.DB.Where("idjabatan = ? AND deletestatus = ?", id, "2").First(&jabatan).Error; err != nil {
+	if err := initializers.DB.Where("id_jabatan = ? AND deletestatus = ?", id, "2").First(&jabatan).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Jabatan tidak ditemukan atau sudah dihapus"})
 		return
 	}
 
-	// Update field namajabatan
-	if err := initializers.DB.Model(&jabatan).Update("namajabatan", input.NamaJabatan).Error; err != nil {
+	// Update field nama_jabatan
+	if err := initializers.DB.Model(&jabatan).Update("nama_jabatan", input.NamaJabatan).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui data"})
 		return
 	}
@@ -85,8 +83,8 @@ func DeleteJabatan(c *gin.Context) {
 	id := c.Param("id")
 
 	var jabatan models.Jabatan
-	// Cari data berdasarkan primary key idjabatan
-	if err := initializers.DB.Where("idjabatan = ?", id).First(&jabatan).Error; err != nil {
+	// Cari data berdasarkan primary key id_jabatan
+	if err := initializers.DB.Where("id_jabatan = ?", id).First(&jabatan).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Jabatan tidak ditemukan"})
 		return
 	}

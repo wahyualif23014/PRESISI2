@@ -22,7 +22,7 @@ func GetCategories(c *gin.Context) {
 	// Hitung Total
 	if err := initializers.DB.Model(&models.Komoditi{}).
 		Where("deletestatus = ?", "2").
-		Where("namakomoditi IS NOT NULL AND namakomoditi != ''").
+		Where("nama_komoditi IS NOT NULL AND nama_komoditi != ''").
 		Count(&totalItems).Error; err != nil {
 
 		fmt.Println("Error Count:", err) // Print Error jika ada
@@ -36,9 +36,9 @@ func GetCategories(c *gin.Context) {
 	// ... (Sisa kode query categories tetap sama) ...
 	result := initializers.DB.Model(&models.Komoditi{}).
 		Where("deletestatus = ?", "2").
-		Where("jeniskomoditi IS NOT NULL AND jeniskomoditi != ''").
+		Where("jenis_komoditi IS NOT NULL AND jenis_komoditi != ''").
 		Distinct().
-		Pluck("jeniskomoditi", &categories)
+		Pluck("jenis_komoditi", &categories)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data kategori"})
@@ -76,7 +76,7 @@ func GetCommodities(c *gin.Context) {
 
 	// Filter berdasarkan jenis jika ada parameter kind
 	if kind != "" {
-		query = query.Where("jeniskomoditi = ?", kind)
+		query = query.Where("jenis_komoditi = ?", kind)
 	}
 
 	// Eksekusi Query
@@ -147,7 +147,7 @@ func DeleteCategory(c *gin.Context) {
 
 	// Soft Delete (ubah deletestatus jadi '1') untuk SEMUA data dengan jenis tersebut
 	result := initializers.DB.Model(&models.Komoditi{}).
-		Where("jeniskomoditi = ?", input.KindName).
+		Where("jenis_komoditi = ?", input.KindName).
 		Update("deletestatus", "1")
 
 	if result.Error != nil {
@@ -174,8 +174,8 @@ func UpdateCommodity(c *gin.Context) {
 
 	// Update nama komoditi berdasarkan ID
 	result := initializers.DB.Model(&models.Komoditi{}).
-		Where("idkomoditi = ?", input.ID).
-		Update("namakomoditi", input.Name)
+		Where("id_komoditi = ?", input.ID).
+		Update("nama_komoditi", input.Name)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengupdate data"})
@@ -200,7 +200,7 @@ func DeleteCommodityItem(c *gin.Context) {
 
 	// Soft Delete satu item
 	result := initializers.DB.Model(&models.Komoditi{}).
-		Where("idkomoditi = ?", input.ID).
+		Where("id_komoditi = ?", input.ID).
 		Update("deletestatus", "1")
 
 	if result.Error != nil {

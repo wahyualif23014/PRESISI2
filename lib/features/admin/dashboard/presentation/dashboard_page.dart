@@ -37,13 +37,24 @@ class _DashboardPageState extends State<DashboardPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthProvider>();
       final dashProv = context.read<DashboardProvider>();
-      final unitName = auth.user?.tingkatDetail?.nama ?? '';
 
-      if (auth.isOperator && unitName.isNotEmpty) {
-        await dashProv.updateSektor(unitName);
-      } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+      // Deteksi role terlebih dahulu
+      final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
+      final unitName = auth.user?.tingkatDetail?.nama ?? '';
+      final unitNameUpper = unitName.toUpperCase();
+
+      if (isAdmin) {
+        // Admin: reset semua filter wilayah, load semua data se-Jatim
+        dashProv.clearScopeFilter();
+        dashProv.refreshAllData();
+      } else if (unitNameUpper.contains('POLRES')) {
+        // Operator Polres: scope ke polres sendiri
         await dashProv.updateResor(unitName);
+      } else if (unitNameUpper.contains('POLSEK')) {
+        // Operator Polsek: scope ke polsek sendiri
+        await dashProv.updateSektor(unitName);
       } else {
+        // Default fallback (Polda/Viewer): load semua
         dashProv.refreshAllData();
       }
     });
@@ -52,8 +63,21 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final UserModel? user = context.select<AuthProvider, UserModel?>(
-      (auth) => auth.user,
+      (a) => a.user,
     );
+
+    // Tentukan label scope berdasarkan role
+    final bool isAdmin = user?.role?.toString().contains('admin') ?? false;
+    final unitName = user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
+
+    final String scopeLabel = isAdmin
+        ? 'ADMIN - SE-JAWA TIMUR'
+        : unitNameUpper.contains('POLRES')
+            ? unitName.toUpperCase()
+            : unitNameUpper.contains('POLSEK')
+                ? unitName.toUpperCase()
+                : (user?.roleDisplay ?? 'User');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -97,12 +121,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                     child: DashboardHeader(
                       userName: user?.namaLengkap ?? "Pengguna",
-                      userRole: user?.roleDisplay ?? "User",
+                      userRole: scopeLabel,
                     ),
                   ),
                 ),
 
-                /// CAROUSEL
+
+
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),

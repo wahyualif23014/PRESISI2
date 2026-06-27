@@ -33,12 +33,16 @@ class _RiwayatKelolaLahanPageState extends State<RiwayatKelolaLahanPage> {
       // Bangun role filter sesuai tingkatan user
       final auth = context.read<AuthProvider>();
       final unitName = auth.user?.tingkatDetail?.nama ?? '';
+      final unitNameUpper = unitName.toUpperCase();
       final roleFilters = <String, String>{};
+      final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
 
-      if (auth.isOperator && unitName.isNotEmpty) {
-        roleFilters['polsek'] = unitName;
-      } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
-        roleFilters['polres'] = unitName;
+      if (!isAdmin && unitNameUpper.isNotEmpty) {
+        if (unitNameUpper.contains('POLRES')) {
+          roleFilters['polres'] = unitName;
+        } else if (unitNameUpper.contains('POLSEK')) {
+          roleFilters['polsek'] = unitName;
+        }
       }
 
       context.read<LandHistoryProvider>().initialize(roleFilters: roleFilters);

@@ -49,10 +49,6 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	// 3. Ambil data admin dari context middleware
-	userValue, _ := c.Get("user")
-	adminUser := userValue.(models.User)
-
 	// 4. Inisialisasi model sesuai skema db_pgri
 	user := models.User{
 		NamaLengkap:     input.NamaLengkap, // Mapping ke kolom 'nama'
@@ -60,14 +56,13 @@ func CreateUser(c *gin.Context) {
 		IDTugas:         input.IDTugas,     // 'kode' unit dari tingkat
 		Username:        input.Username,
 		KataSandi:       string(hash),      // Mapping ke kolom 'password'
-		IDJabatan:       &input.JabatanID,
+		JabatanID:       input.JabatanID,   // Tanpa & (ampersand)
 		Role:            input.Role,        // Mapping ke kolom 'statusadmin'
-		IDPengguna:      adminUser.ID,      // ID pembuat akun
 		DeleteStatus:    "2",               // Aktif
 		DateTransaction: time.Now(),
 	}
 
-	if err := initializers.DB.Create(&user).Error; err != nil {
+	if err := initializers.DB.Omit("id_anggota").Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database Error: " + err.Error()})
 		return
 	}
@@ -83,7 +78,7 @@ func GetUsers(c *gin.Context) {
 
 	// Implementasi Preload untuk mengambil detail Jabatan & Tingkat
 	err := initializers.DB.
-		Preload("Jabatan").
+		Preload("JabatanDetail").
 		Preload("TingkatDetail"). 
 		Where("deletestatus = ?", models.StatusActive).
 		Find(&users).Error
@@ -101,7 +96,7 @@ func GetUserByID(c *gin.Context) {
 	var user models.User
 
 	err := initializers.DB.
-		Preload("Jabatan").
+		Preload("JabatanDetail").
 		Preload("TingkatDetail").
 		Where("idanggota = ? AND deletestatus = ?", id, models.StatusActive).
 		First(&user).Error
@@ -123,17 +118,17 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := initializers.DB.Where("idanggota = ?", id).First(&user).Error; err != nil {
+	if err := initializers.DB.Where("id_anggota = ?", id).First(&user).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User tidak ditemukan"})
 		return
 	}
 
 	updates := make(map[string]interface{})
-	if input.NamaLengkap != "" { updates["nama"] = input.NamaLengkap }
-	if input.NoTelp != ""      { updates["hp"] = input.NoTelp }
-	if input.IDTugas != ""      { updates["idtugas"] = input.IDTugas }
-	if input.IDJabatan != nil   { updates["idjabatan"] = *input.IDJabatan }
-	if input.Role != ""         { updates["statusadmin"] = input.Role }
+	if input.NamaLengkap != "" { updates["nama_anggota"] = input.NamaLengkap }
+	if input.NoTelp != ""      { updates["no_telp_anggota"] = input.NoTelp }
+	if input.IDTugas != ""      { updates["id_tugas"] = input.IDTugas }
+	if input.IDJabatan != nil   { updates["id_jabatan"] = *input.IDJabatan }
+	if input.Role != ""         { updates["role"] = input.Role }
 
 	initializers.DB.Model(&user).Updates(updates)
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully", "data": user})
@@ -142,7 +137,7 @@ func UpdateUser(c *gin.Context) {
 func DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	result := initializers.DB.Model(&models.User{}).
-		Where("idanggota = ?", id).
+		Where("id_anggota = ?", id).
 		Update("deletestatus", models.StatusDeleted)
 
 	if result.RowsAffected == 0 {
@@ -168,7 +163,7 @@ func GetJabatanList(c *gin.Context) {
 
 func GetTingkatList(c *gin.Context) {
     var tingkats []models.Tingkat
-    if err := initializers.DB.Select("kode, nama").Find(&tingkats).Error; err != nil {
+    if err := initializers.DB.Select("id_tingkat, nama_tingkat").Find(&tingkats).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data unit"})
         return
     }

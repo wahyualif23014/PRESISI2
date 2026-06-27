@@ -33,16 +33,21 @@ class _KelolaLahanPageState extends State<KelolaLahanPage> {
     _fetchData();
   }
 
-  /// Menerapkan filter otomatis berdasarkan role user yang login.
+  /// Menerapkan filter otomatis berdasarkan tingkat unit user yang login.
   void _applyRoleBasedFilters(Map<String, String> filters) {
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
+    final roleString = auth.user?.role?.toString() ?? '';
     final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
 
-    if (auth.isOperator && unitName.isNotEmpty) {
-      filters['polsek'] = unitName;
-    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+    if (roleString.contains('admin')) return;
+    if (unitNameUpper.isEmpty) return;
+
+    if (unitNameUpper.contains('POLRES')) {
       filters['polres'] = unitName;
+    } else if (unitNameUpper.contains('POLSEK')) {
+      filters['polsek'] = unitName;
     }
   }
 

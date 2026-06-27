@@ -25,7 +25,7 @@ class SearchLahanHistory extends StatelessWidget {
               border: Border.all(color: Colors.black, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 4,
                   offset: const Offset(0, 4),
                 ),
@@ -77,7 +77,7 @@ class SearchLahanHistory extends StatelessWidget {
             border: Border.all(color: Colors.black, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 4,
                 offset: const Offset(0, 4),
               ),

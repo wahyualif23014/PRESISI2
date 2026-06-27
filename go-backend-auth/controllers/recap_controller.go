@@ -33,27 +33,27 @@ func buildRecapFilters(c *gin.Context) (string, []interface{}) {
 	polres := c.Query("polres")
 	if polres != "" {
 		kab := strings.TrimSpace(strings.TrimPrefix(polres, "POLRES "))
-		conditions = append(conditions, "UPPER(kab.nama) LIKE ?")
+		conditions = append(conditions, "UPPER(kab.nama_wilayah) LIKE ?")
 		args = append(args, "%"+strings.ToUpper(kab)+"%")
 	}
 
 	polsek := c.Query("polsek")
 	if polsek != "" {
 		kec := strings.TrimSpace(strings.TrimPrefix(polsek, "POLSEK "))
-		conditions = append(conditions, "UPPER(pk.nama) LIKE ?")
+		conditions = append(conditions, "UPPER(pk.nama_wilayah) LIKE ?")
 		args = append(args, "%"+strings.ToUpper(kec)+"%")
 	}
 
 	polresID := c.Query("polres_id")
 	if polresID != "" && polresID != "ALL" {
-		conditions = append(conditions, "kab.kode = ?")
+		conditions = append(conditions, "kab.id_wilayah = ?")
 		args = append(args, polresID)
 	}
 
 	selectedIDs := c.Query("selected_ids")
 	if selectedIDs != "" {
 		ids := strings.Split(selectedIDs, ",")
-		conditions = append(conditions, "w.kode IN ?")
+		conditions = append(conditions, "w.id_wilayah IN ?")
 		args = append(args, ids)
 	}
 
@@ -68,43 +68,43 @@ func buildRecapFilters(c *gin.Context) (string, []interface{}) {
 			"MILIK POLRI":                         5,
 			"PRODUKTIF (MASYARAKAT BINAAN POLRI)": 6,
 			"PRODUKTIF (TUMPANG SARI)":            7,
-			"HUTAN (PERHUTANI/INHUTANI)":          8,
+			"HUTAN (PERHUTANAN/INHUTANI)":          8,
 			"LAHAN TIDAK PRODUKTIF":               9,
 		}
 		if id, ok := mapping[strings.ToUpper(jenisLahan)]; ok {
-			conditions = append(conditions, "l.idjenislahan = ?")
+			conditions = append(conditions, "l.id_jenis_lahan = ?")
 			args = append(args, id)
 		}
 	}
 
 	komoditi := c.Query("komoditi")
 	if komoditi != "" {
-		conditions = append(conditions, "UPPER(k.namakomoditi) LIKE ?")
+		conditions = append(conditions, "UPPER(k.nama_komoditi) LIKE ?")
 		args = append(args, "%"+strings.ToUpper(komoditi)+"%")
 	}
 
 	// Filter Waktu
 	tahun := c.Query("tahun")
 	if tahun != "" {
-		conditions = append(conditions, "YEAR(t.tgltanam) = ?")
+		conditions = append(conditions, "YEAR(t.tgl_tanam) = ?")
 		args = append(args, tahun)
 	}
 
 	kuartal := c.Query("kuartal")
 	if kuartal != "" {
-		conditions = append(conditions, "QUARTER(t.tgltanam) = ?")
+		conditions = append(conditions, "QUARTER(t.tgl_tanam) = ?")
 		args = append(args, kuartal)
 	}
 
 	tglAwal := c.Query("tgl_awal")
 	if tglAwal != "" {
-		conditions = append(conditions, "t.tgltanam >= ?")
+		conditions = append(conditions, "t.tgl_tanam >= ?")
 		args = append(args, tglAwal)
 	}
 
 	tglAkhir := c.Query("tgl_akhir")
 	if tglAkhir != "" {
-		conditions = append(conditions, "t.tgltanam <= ?")
+		conditions = append(conditions, "t.tgl_tanam <= ?")
 		args = append(args, tglAkhir)
 	}
 
@@ -121,26 +121,26 @@ func GetRecapData(c *gin.Context) {
 
 	query := `
 		SELECT 
-			w.kode as id,
-			w.nama as nama_wilayah,
-			COALESCE(SUM(l.luaslahan), 0) as potensi_lahan,
-			COALESCE(SUM(t.luastanam), 0) as tanam_lahan,
-			COALESCE(SUM(p.luaspanen), 0) as panen_luas,
-			COALESCE(SUM(p.totalpanen), 0) as panen_ton,
-			COALESCE(SUM(dis.totaldistribusi), 0) as serapan,
+			w.id_wilayah as id,
+			w.nama_wilayah as nama_wilayah,
+			COALESCE(SUM(l.luas_lahan), 0) as potensi_lahan,
+			COALESCE(SUM(t.luas_tanam), 0) as tanam_lahan,
+			COALESCE(SUM(p.luas_panen), 0) as panen_luas,
+			COALESCE(SUM(p.total_panen), 0) as panen_ton,
+			COALESCE(SUM(dis.total_distribusi), 0) as serapan,
 			'desa' as level,
-			COALESCE(pk.nama, '-') as nama_polsek
+			COALESCE(pk.nama_wilayah, '-') as nama_polsek
 		FROM wilayah w
-		LEFT JOIN lahan l ON l.idwilayah = w.kode
-		LEFT JOIN tanam t ON t.idlahan = l.idlahan
-		LEFT JOIN panen p ON p.idlahan = l.idlahan
-		LEFT JOIN distribusi dis ON dis.idlahan = l.idlahan
-		LEFT JOIN wilayah pk ON pk.kode = SUBSTR(w.kode, 1, 8)
-		LEFT JOIN wilayah kab ON kab.kode = SUBSTR(w.kode, 1, 5)
-		LEFT JOIN komoditi k ON k.idkomoditi = l.idkomoditi
-		WHERE CHAR_LENGTH(w.kode) > 8 ` + filterSQL + `
-		GROUP BY w.kode, w.nama, pk.nama
-		ORDER BY w.kode ASC
+		LEFT JOIN lahan l ON l.id_wilayah = w.id_wilayah
+		LEFT JOIN tanam t ON t.id_lahan = l.id_lahan
+		LEFT JOIN panen p ON p.id_lahan = l.id_lahan
+		LEFT JOIN distribusi dis ON dis.id_lahan = l.id_lahan
+		LEFT JOIN wilayah pk ON pk.id_wilayah = SUBSTR(w.id_wilayah, 1, 8)
+		LEFT JOIN wilayah kab ON kab.id_wilayah = SUBSTR(w.id_wilayah, 1, 5)
+		LEFT JOIN komoditi k ON k.id_komoditi = l.id_komoditi
+		WHERE CHAR_LENGTH(w.id_wilayah) > 8 ` + filterSQL + `
+		GROUP BY w.id_wilayah, w.nama_wilayah, pk.nama_wilayah
+		ORDER BY w.id_wilayah ASC
 	`
 	rows, err := initializers.DB.Raw(query, filterArgs...).Rows()
 	if err != nil {
@@ -165,7 +165,7 @@ func GetRecapData(c *gin.Context) {
 
 		if _, ok := polresMap[pID]; !ok {
 			var n string
-			initializers.DB.Table("wilayah").Select("nama").Where("kode = ?", pID).Scan(&n)
+			initializers.DB.Table("wilayah").Select("nama_wilayah").Where("id_wilayah = ?", pID).Scan(&n)
 			polresMap[pID] = &RecapResponse{
 				ID:          pID,
 				NamaWilayah: strings.TrimPrefix(n, "KAB. "),
@@ -248,25 +248,25 @@ func ExportRecapExcel(c *gin.Context) {
 
 	queryUtama := `
 		SELECT 
-			w.kode as kode_desa, w.nama as nama_desa,
-			COALESCE(pk.kode, '') as kode_polsek, COALESCE(pk.nama, '-') as nama_polsek,
-			COALESCE(kab.kode, '') as kode_polres, COALESCE(kab.nama, '-') as nama_polres,
-			COALESCE(SUM(l.luaslahan), 0) as potensi,
-			COALESCE(SUM(t.luastanam), 0) as tanam,
-			COALESCE(SUM(p.luaspanen), 0) as panen_luas,
-			COALESCE(SUM(p.totalpanen), 0) as panen_ton,
-			COALESCE(SUM(dis.totaldistribusi), 0) as serapan
+			w.id_wilayah as kode_desa, w.nama_wilayah as nama_desa,
+			COALESCE(pk.id_wilayah, '') as kode_polsek, COALESCE(pk.nama_wilayah, '-') as nama_polsek,
+			COALESCE(kab.id_wilayah, '') as kode_polres, COALESCE(kab.nama_wilayah, '-') as nama_polres,
+			COALESCE(SUM(l.luas_lahan), 0) as potensi,
+			COALESCE(SUM(t.luas_tanam), 0) as tanam,
+			COALESCE(SUM(p.luas_panen), 0) as panen_luas,
+			COALESCE(SUM(p.total_panen), 0) as panen_ton,
+			COALESCE(SUM(dis.total_distribusi), 0) as serapan
 		FROM wilayah w
-		LEFT JOIN wilayah pk ON pk.kode = SUBSTR(w.kode, 1, 8)
-		LEFT JOIN wilayah kab ON kab.kode = SUBSTR(w.kode, 1, 5)
-		LEFT JOIN lahan l ON l.idwilayah = w.kode
-		LEFT JOIN komoditi k ON k.idkomoditi = l.idkomoditi
-		LEFT JOIN tanam t ON t.idlahan = l.idlahan
-		LEFT JOIN panen p ON p.idlahan = l.idlahan
-		LEFT JOIN distribusi dis ON dis.idlahan = l.idlahan
-		WHERE CHAR_LENGTH(w.kode) > 8 ` + filterSQL + `
-		GROUP BY w.kode, w.nama, pk.kode, pk.nama, kab.kode, kab.nama
-		ORDER BY kab.kode ASC, pk.kode ASC, w.kode ASC
+		LEFT JOIN wilayah pk ON pk.id_wilayah = SUBSTR(w.id_wilayah, 1, 8)
+		LEFT JOIN wilayah kab ON kab.id_wilayah = SUBSTR(w.id_wilayah, 1, 5)
+		LEFT JOIN lahan l ON l.id_wilayah = w.id_wilayah
+		LEFT JOIN komoditi k ON k.id_komoditi = l.id_komoditi
+		LEFT JOIN tanam t ON t.id_lahan = l.id_lahan
+		LEFT JOIN panen p ON p.id_lahan = l.id_lahan
+		LEFT JOIN distribusi dis ON dis.id_lahan = l.id_lahan
+		WHERE CHAR_LENGTH(w.id_wilayah) > 8 ` + filterSQL + `
+		GROUP BY w.id_wilayah, w.nama_wilayah, pk.id_wilayah, pk.nama_wilayah, kab.id_wilayah, kab.nama_wilayah
+		ORDER BY kab.id_wilayah ASC, pk.id_wilayah ASC, w.id_wilayah ASC
 	`
 	rows, err := initializers.DB.Raw(queryUtama, filterArgs...).Rows()
 	if err != nil {
@@ -452,18 +452,18 @@ func ExportRecapExcel(c *gin.Context) {
 
 	queryDetail := `
 		SELECT 
-			COALESCE(kab.nama, '-') as polres, COALESCE(pk.nama, '-') as polsek,
-			w.nama as alamat, kab.nama as kabupaten, pk.nama as kecamatan, w.nama as kelurahan,
-			COALESCE(CAST(l.longi AS CHAR), '') as latitude,
-			COALESCE(CAST(l.lat AS CHAR), '') as longitude,
-			COALESCE(l.cp, '') as nama_polisi,
-			COALESCE(l.hp, '') as hp_polisi,
-			COALESCE(l.cppolisi, '') as nama_pj,
-			COALESCE(l.hppolisi, '') as hp_pj,
-			COALESCE(l.ketcp, '') as ket_pj,
-			COALESCE(CAST(l.idjenislahan AS CHAR), '') as jenis_lahan,
-			COALESCE(CONCAT(k.jeniskomoditi, ' - ', k.namakomoditi), '') as komoditi,
-			CASE l.status
+			COALESCE(kab.nama_wilayah, '-') as polres, COALESCE(pk.nama_wilayah, '-') as polsek,
+			w.nama_wilayah as alamat, kab.nama_wilayah as kabupaten, pk.nama_wilayah as kecamatan, w.nama_wilayah as kelurahan,
+			COALESCE(CAST(l.longitude AS CHAR), '') as latitude,
+			COALESCE(CAST(l.latitude AS CHAR), '') as longitude,
+			COALESCE(l.cp_lahan, '') as nama_polisi,
+			COALESCE(l.no_cp_lahan, '') as hp_polisi,
+			COALESCE(l.cp_polisi, '') as nama_pj,
+			COALESCE(l.no_cp_polisi, '') as hp_pj,
+			COALESCE(l.keterangan_lahan, '') as ket_pj,
+			COALESCE(CAST(l.id_jenis_lahan AS CHAR), '') as jenis_lahan,
+			COALESCE(CONCAT(k.jenis_komoditi, ' - ', k.nama_komoditi), '') as komoditi,
+			CASE l.status_lahan
 				WHEN 1 THEN 'Kosong'
 				WHEN 2 THEN 'Tanam'
 				WHEN 3 THEN 'Panen'
@@ -471,33 +471,33 @@ func ExportRecapExcel(c *gin.Context) {
 				ELSE '-'
 			END as status_lahan,
 			COALESCE(CAST(l.poktan AS CHAR), '0') as jml_poktan,
-			COALESCE(l.luaslahan, 0) as luas_lahan,
-			COALESCE(CAST(l.jmlsantri AS CHAR), '0') as jml_petani,
-			COALESCE(l.lembaga, '') as nama_lembaga,
-			COALESCE(l.sumberdata, '') as sumber_data,
-			COALESCE(l.sk, '') as no_sk,
-			COALESCE(l.keterangan, '') as ket_lahan,
-			COALESCE(CAST(t.tgltanam AS CHAR), '') as tgl_tanam,
-			COALESCE(t.bibitdigunakan, '') as jenis_bibit,
-			COALESCE(CAST(t.kebutuhanbibit AS CHAR), '0') as kebutuhan_bibit,
-			COALESCE(t.luastanam, 0) as luas_tanam,
-			COALESCE(CONCAT(t.estawalpanen, ' s/d ', t.estakhirpanen), '') as estimasi_panen,
-			COALESCE(t.keterangan, '') as ket_tanam,
-			COALESCE(CAST(p.tglpanen AS CHAR), '') as tgl_panen,
-			COALESCE(p.jenispanen, '') as jenis_panen,
-			COALESCE(p.totalpanen, 0) as luas_panen,
-			COALESCE(p.totalpanen, 0) as total_panen_ton,
-			COALESCE(dis.totaldistribusi, 0) as serapan
+			COALESCE(l.luas_lahan, 0) as luas_lahan,
+			COALESCE(CAST(l.jml_petani AS CHAR), '0') as jml_petani,
+			COALESCE(l.lembaga_lahan, '') as nama_lembaga,
+			COALESCE(l.sumber_data_lahan, '') as sumber_data,
+			COALESCE(l.no_sk, '') as no_sk,
+			COALESCE(l.keterangan_lahan, '') as ket_lahan,
+			COALESCE(CAST(t.tgl_tanam AS CHAR), '') as tgl_tanam,
+			COALESCE(t.nama_bibit, '') as jenis_bibit,
+			COALESCE(CAST(t.kebutuhan_bibit AS CHAR), '0') as kebutuhan_bibit,
+			COALESCE(t.luas_tanam, 0) as luas_tanam,
+			COALESCE(CONCAT(t.est_awal_panen, ' s/d ', t.est_akhir_panen), '') as estimasi_panen,
+			COALESCE(t.keterangan_tanam, '') as ket_tanam,
+			COALESCE(CAST(p.tgl_panen AS CHAR), '') as tgl_panen,
+			'' as jenis_panen,
+			COALESCE(p.total_panen, 0) as luas_panen,
+			COALESCE(p.total_panen, 0) as total_panen_ton,
+			COALESCE(dis.total_distribusi, 0) as serapan
 		FROM wilayah w
-		LEFT JOIN wilayah pk ON pk.kode = SUBSTR(w.kode, 1, 8)
-		LEFT JOIN wilayah kab ON kab.kode = SUBSTR(w.kode, 1, 5)
-		LEFT JOIN lahan l ON l.idwilayah = w.kode
-		LEFT JOIN komoditi k ON k.idkomoditi = l.idkomoditi
-		LEFT JOIN tanam t ON t.idlahan = l.idlahan
-		LEFT JOIN panen p ON p.idlahan = l.idlahan
-		LEFT JOIN distribusi dis ON dis.idlahan = l.idlahan
-		WHERE CHAR_LENGTH(w.kode) > 8 ` + filterSQL + `
-		ORDER BY kab.kode ASC, pk.kode ASC, w.kode ASC
+		LEFT JOIN wilayah pk ON pk.id_wilayah = SUBSTR(w.id_wilayah, 1, 8)
+		LEFT JOIN wilayah kab ON kab.id_wilayah = SUBSTR(w.id_wilayah, 1, 5)
+		LEFT JOIN lahan l ON l.id_wilayah = w.id_wilayah
+		LEFT JOIN komoditi k ON k.id_komoditi = l.id_komoditi
+		LEFT JOIN tanam t ON t.id_lahan = l.id_lahan
+		LEFT JOIN panen p ON p.id_lahan = l.id_lahan
+		LEFT JOIN distribusi dis ON dis.id_lahan = l.id_lahan
+		WHERE CHAR_LENGTH(w.id_wilayah) > 8 ` + filterSQL + `
+		ORDER BY kab.id_wilayah ASC, pk.id_wilayah ASC, w.id_wilayah ASC
 	`
 	rowsDetail, errDetail := initializers.DB.Raw(queryDetail, filterArgs...).Rows()
 	if errDetail != nil {

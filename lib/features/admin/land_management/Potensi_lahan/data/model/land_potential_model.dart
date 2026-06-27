@@ -173,6 +173,7 @@ class LandPotentialModel {
       "latitude": latitude,
       "longitude": longitude,
       "editoleh": editoleh,
+      "foto_lahan": fotoLahan,
     };
   }
 }

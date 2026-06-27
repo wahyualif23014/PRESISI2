@@ -5,6 +5,7 @@ import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/data
 import 'package:provider/provider.dart';
 import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/update_tanam_page.dart';
+import 'package:KETAHANANPANGAN/features/admin/land_management/kelola_lahan/presentation/widgets/kelola_stages.dart';
 
 class KelolaRegionExpansionGroup extends StatelessWidget {
   final String title;
@@ -203,6 +204,30 @@ class KelolaItemDetailCard extends StatelessWidget {
     );
   }
 
+  void _showPanenDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => UpdatePanenDialog(
+        item: item,
+        onSuccess: () {
+          onRefresh();
+        },
+      ),
+    );
+  }
+
+  void _showSerapanDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => UpdateSerapanDialog(
+        item: item,
+        onSuccess: () {
+          onRefresh();
+        },
+      ),
+    );
+  }
+
   void _showDeleteDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -328,160 +353,163 @@ class KelolaItemDetailCard extends StatelessWidget {
     final bool isValidated =
         item.status == 'VALIDATED' || item.status == 'TERVALIDASI';
     final bool isRejected = item.status.toUpperCase().contains('TOLAK') || item.status == '2';
-    final isPolsek = context.watch<AuthProvider>().isOperator;
+    final auth = context.watch<AuthProvider>();
+    final isPolsek = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLSEK');
     final canEditOrDelete = !isPolsek || isRejected;
 
-    return InkWell(
-      onTap: () => _showDetail(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+    // Badges color mapping
+    Color badgeBg;
+    Color badgeText;
+    String statusLabel;
+    if (isValidated) {
+      badgeBg = const Color(0xFFE8F5E9);
+      badgeText = const Color(0xFF2E7D32);
+      statusLabel = "TERVALIDASI";
+    } else if (isRejected) {
+      badgeBg = const Color(0xFFFFEBEE);
+      badgeText = const Color(0xFFC62828);
+      statusLabel = "DITOLAK";
+    } else {
+      badgeBg = const Color(0xFFFFF3E0);
+      badgeText = const Color(0xFFE65100);
+      statusLabel = "BELUM TERVALIDASI";
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showDetail(context),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Row: Lahan Name & Status Badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildLabel("POLISI PENGGERAK"),
-                  _buildName(
-                    item.policeName.isNotEmpty ? item.policeName : "-",
-                  ),
-                  _buildPhone(item.policePhone),
-                  const SizedBox(height: 8),
-                  Divider(
-                    color: Colors.grey.shade400,
-                    height: 1,
-                    thickness: 0.5,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildLabel("PENANGGUNG JAWAB"),
-                  _buildName(item.picName.isNotEmpty ? item.picName : "-"),
-                  _buildPhone(item.picPhone),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildLabel("ALAMAT LAHAN"),
-                  Text(
-                    item.alamatLahan.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.black87,
-                      height: 1.2,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Text(
+                      "LAHAN: ${item.alamatLahan.toUpperCase()}",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A237E),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.wilayahLahan,
-                    style: const TextStyle(fontSize: 9, color: Colors.black54),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "KOMODITI: ${item.komoditiName}",
-                    style: const TextStyle(
-                      fontSize: 8,
-                      color: Colors.blueGrey,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: badgeText,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 10),
+              Divider(height: 1, color: Colors.grey.shade200),
+              const SizedBox(height: 10),
+              
+              // Body Grid: 2 Columns
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(
-                          color: isValidated ? Colors.green : Colors.orange,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        isValidated ? 'TERVALIDASI' : (isRejected ? 'DITOLAK' : 'BELUM TERVALIDASI'),
-                        style: TextStyle(
-                          color: isValidated ? Colors.green : (isRejected ? Colors.red : Colors.orange),
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  // Left column: Police & PIC info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabel("POLISI PENGGERAK"),
+                        const SizedBox(height: 2),
+                        _buildName(item.policeName.isNotEmpty ? item.policeName : "-"),
+                        _buildPhone(item.policePhone),
+                        const SizedBox(height: 8),
+                        _buildLabel("PENANGGUNG JAWAB"),
+                        const SizedBox(height: 2),
+                        _buildName(item.picName.isNotEmpty ? item.picName : "-"),
+                        _buildPhone(item.picPhone),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 6,
-                        horizontal: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildActionIcon(
-                            Icons.visibility,
-                            Colors.blue,
-                            () => _showDetail(context),
+                  const SizedBox(width: 16),
+                  // Right column: Area, Wilayah, and Komoditi
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabel("WILAYAH LAHAN"),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.wilayahLahan,
+                          style: const TextStyle(fontSize: 10, color: Colors.black87),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildLabel("LUAS & KOMODITAS"),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${item.landArea} Ha",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey,
                           ),
-                          if (canEditOrDelete) ...[
-                            _buildVerticalDivider(),
-                            _buildActionIcon(
-                              Icons.edit_rounded,
-                              Colors.orange.shade700,
-                              () => _showUpdateDialog(context),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blueGrey.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.komoditiName.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueGrey.shade800,
                             ),
-                            _buildVerticalDivider(),
-                            _buildActionIcon(
-                              Icons.delete_outline_rounded,
-                              Colors.red,
-                              () => _showDeleteDialog(context),
-                            ),
-                          ],
-                        ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              
+              // Timeline Wizard
+              _buildCardWorkflowTimeline(context),
+              
+              // Action Footer Row
+              _buildActionFooter(context, canEditOrDelete, isValidated),
+            ],
+          ),
         ),
       ),
     );
@@ -518,7 +546,332 @@ class KelolaItemDetailCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildCardWorkflowTimeline(BuildContext context) {
+    // 1. Lahan Status
+    final bool isLahanOk = item.status == 'VALIDATED' || item.status == 'TERVALIDASI';
+
+    // 2. Tanam Status
+    final bool hasTanam = item.idTanam.isNotEmpty && item.idTanam != "0";
+    final bool isTanamOk = hasTanam && item.statusTanam == '3';
+    final bool isTanamPending = hasTanam && !isTanamOk;
+
+    // 3. Panen Status
+    final bool hasPanen = item.idPanen.isNotEmpty && item.idPanen != "0";
+    final bool isPanenOk = hasPanen && item.statusPanen == '3';
+    final bool isPanenPending = hasPanen && !isPanenOk;
+
+    // 4. Distribusi/Serapan Status
+    final bool hasSerapan = item.idSerapan.isNotEmpty && item.idSerapan != "0";
+    final bool isSerapanOk = hasSerapan && item.statusSerapan == '3';
+    final bool isSerapanPending = hasSerapan && !isSerapanOk;
+
+    final auth = context.read<AuthProvider>();
+    final role = auth.user?.role?.toString().toLowerCase() ?? '';
+    final bool isAdminOrPolres = role.contains('admin') || (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "ALUR TAHAPAN LAHAN (WIZARD)",
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A237E),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              if (isAdminOrPolres)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8EAF6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    "AKSES VALIDATOR",
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A237E),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Lahan Node
+              _buildTimelineNode(
+                "Lahan",
+                isLahanOk ? _NodeState.ok : _NodeState.pending,
+                onValidate: null,
+              ),
+              _buildTimelineConnector(isLahanOk),
+
+              // Tanam Node
+              _buildTimelineNode(
+                "Tanam",
+                isTanamOk
+                    ? _NodeState.ok
+                    : (isTanamPending ? _NodeState.pending : _NodeState.empty),
+                onValidate: (isTanamPending && isAdminOrPolres)
+                    ? () async {
+                        final success = await LandManagementRepository().validateTanam(item.idTanam);
+                        if (success) onRefresh();
+                      }
+                    : null,
+              ),
+              _buildTimelineConnector(isTanamOk),
+
+              // Panen Node
+              _buildTimelineNode(
+                "Panen",
+                isPanenOk
+                    ? _NodeState.ok
+                    : (isPanenPending ? _NodeState.pending : _NodeState.empty),
+                onValidate: (isPanenPending && isAdminOrPolres)
+                    ? () async {
+                        final success = await LandManagementRepository().validatePanen(item.idPanen);
+                        if (success) onRefresh();
+                      }
+                    : null,
+              ),
+              _buildTimelineConnector(isPanenOk),
+
+              // Serapan Node
+              _buildTimelineNode(
+                "Serapan",
+                isSerapanOk
+                    ? _NodeState.ok
+                    : (isSerapanPending ? _NodeState.pending : _NodeState.empty),
+                onValidate: (isSerapanPending && isAdminOrPolres)
+                    ? () async {
+                        final success = await LandManagementRepository().validateSerapan(item.idSerapan);
+                        if (success) onRefresh();
+                      }
+                    : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineNode(String label, _NodeState state, {VoidCallback? onValidate}) {
+    Color color;
+    IconData icon;
+    if (state == _NodeState.ok) {
+      color = const Color(0xFF2E7D32);
+      icon = Icons.check_circle;
+    } else if (state == _NodeState.pending) {
+      color = const Color(0xFFEF6C00);
+      icon = Icons.pending;
+    } else {
+      color = Colors.grey.shade300;
+      icon = Icons.radio_button_unchecked;
+    }
+
+    return SizedBox(
+      width: 60,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: state == _NodeState.empty ? Colors.grey : color,
+            ),
+          ),
+          if (onValidate != null) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 20,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: const Color(0xFFEF6C00).withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                onPressed: onValidate,
+                child: const Text(
+                  "VALIDASI",
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFEF6C00),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineConnector(bool active) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        color: active ? const Color(0xFF2E7D32) : Colors.grey.shade300,
+        margin: const EdgeInsets.only(top: 10),
+      ),
+    );
+  }
+
+  Widget _buildActionFooter(BuildContext context, bool canEditOrDelete, bool isValidated) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left side: Primary workflow stage actions
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFooterButton(
+                    icon: Icons.visibility_outlined,
+                    label: "Detail",
+                    color: Colors.blue.shade700,
+                    onPressed: () => _showDetail(context),
+                  ),
+                  if (isValidated) ...[
+                    if (item.idTanam.isEmpty || item.statusTanam != '3') ...[
+                      const SizedBox(width: 8),
+                      _buildFooterButton(
+                        icon: Icons.grass,
+                        label: "Tanam",
+                        color: Colors.green.shade700,
+                        onPressed: () => _showUpdateDialog(context),
+                      ),
+                    ],
+                    if (item.statusTanam == '3' && (item.idPanen.isEmpty || item.statusPanen != '3')) ...[
+                      const SizedBox(width: 8),
+                      _buildFooterButton(
+                        icon: Icons.agriculture,
+                        label: "Panen",
+                        color: Colors.orange.shade800,
+                        onPressed: () => _showPanenDialog(context),
+                      ),
+                    ],
+                    if (item.statusPanen == '3' && (item.idSerapan.isEmpty || item.statusSerapan != '3')) ...[
+                      const SizedBox(width: 8),
+                      _buildFooterButton(
+                        icon: Icons.local_shipping,
+                        label: "Serapan",
+                        color: Colors.purple.shade700,
+                        onPressed: () => _showSerapanDialog(context),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+          ),
+          
+          // Right side: Edit, Delete (More options popup)
+          if (canEditOrDelete)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              padding: EdgeInsets.zero,
+              onSelected: (val) {
+                if (val == 'edit') {
+                  _showUpdateDialog(context);
+                } else if (val == 'delete') {
+                  _showDeleteDialog(context);
+                }
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 18, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text("Ubah Data Lahan", style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline_outlined, size: 18, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text("Hapus Lahan", style: TextStyle(fontSize: 12, color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooterButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: color,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        backgroundColor: color.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+enum _NodeState { ok, pending, empty }
 
 class UpdateTanamDialog extends StatefulWidget {
   final LandManagementItemModel item;

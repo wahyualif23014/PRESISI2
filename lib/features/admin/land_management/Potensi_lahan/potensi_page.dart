@@ -51,16 +51,20 @@ class _OverviewPageState extends State<OverviewPage> {
   void _applyRoleBasedFilters(Map<String, String> filters) {
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
+    final roleString = auth.user?.role?.toString() ?? '';
     final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
 
-    if (auth.isOperator && unitName.isNotEmpty) {
+    if (roleString.contains('admin')) return;
+    if (unitNameUpper.isEmpty) return;
+
+    if (unitNameUpper.contains('POLRES')) {
+      // Admin/Operator Polres → scope ke polres-nya
+      filters['polres'] = unitName;
+    } else if (unitNameUpper.contains('POLSEK')) {
       // Operator Polsek → scope ke polsek-nya
       filters['polsek'] = unitName;
-    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
-      // Admin Polres → scope ke polres-nya
-      filters['polres'] = unitName;
     }
-    // Polda / Viewer → tidak ada filter tambahan
   }
 
   Future<void> _fetchData({

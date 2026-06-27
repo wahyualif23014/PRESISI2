@@ -4,10 +4,10 @@ import "time"
 
 // Sesuaikan struct dengan tabel 'komoditi' di SQL
 type Komoditi struct {
-	IDKomoditi      uint64    `gorm:"column:idkomoditi;primaryKey;autoIncrement"`
-	JenisKomoditi   string    `gorm:"column:jeniskomoditi"` // Kolom ini ada di SQL
-	NamaKomoditi    string    `gorm:"column:namakomoditi"`
-	IDAnggota       uint64    `gorm:"column:idanggota"`
+	IDKomoditi      uint64    `gorm:"column:id_komoditi;primaryKey;autoIncrement"`
+	JenisKomoditi   string    `gorm:"column:jenis_komoditi"` // Kolom ini ada di SQL
+	NamaKomoditi    string    `gorm:"column:nama_komoditi"`
+	IDAnggota       uint64    `gorm:"column:id_anggota"`
 	DeleteStatus    string    `gorm:"column:deletestatus;default:'2'"`
 	DateTransaction time.Time `gorm:"column:datetransaction"`
 }

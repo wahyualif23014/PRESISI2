@@ -53,7 +53,7 @@ class _LandShellPageState extends State<LandShellPage> {
                         sigmaY: 3.0 * value,
                       ),
                       child: Container(
-                        color: Colors.black.withOpacity(0.2 * value),
+                        color: Colors.black.withValues(alpha: 0.2 * value),
                       ),
                     );
                   },

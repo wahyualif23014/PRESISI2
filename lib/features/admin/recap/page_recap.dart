@@ -35,11 +35,14 @@ class _PageRecapState extends State<PageRecap> {
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
     final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
 
-    if (auth.isOperator && unitName.isNotEmpty) {
-      filters['polsek'] = unitName;
-    } else if (auth.isAdmin && unitName.toUpperCase().contains('POLRES')) {
+    if (unitNameUpper.isEmpty) return;
+
+    if (unitNameUpper.contains('POLRES')) {
       filters['polres'] = unitName;
+    } else if (unitNameUpper.contains('POLSEK')) {
+      filters['polsek'] = unitName;
     }
   }
 

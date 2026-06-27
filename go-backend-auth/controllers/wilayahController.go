@@ -14,19 +14,19 @@ func GetWilayah(c *gin.Context) {
 	results := []models.WilayahResponse{}
 	query := `
 		SELECT 
-			d.kode,
-			COALESCE(k.nama, '') AS kabupaten,
-			COALESCE(c.nama, '') AS kecamatan,
-			d.nama AS nama_desa,
-			COALESCE(d.lat, 0) AS latitude,
-			COALESCE(d.lng, 0) AS longitude,
-			COALESCE(d.idanggota, '') AS updated_by,
+			d.id_wilayah AS kode,
+			COALESCE(k.nama_wilayah, '') AS kabupaten,
+			COALESCE(c.nama_wilayah, '') AS kecamatan,
+			d.nama_wilayah AS nama_desa,
+			COALESCE(d.Latitude, 0) AS latitude,
+			COALESCE(d.longitude, 0) AS longitude,
+			COALESCE(d.id_anggota, '') AS updated_by,
 			COALESCE(DATE_FORMAT(d.datetransaction, '%Y-%m-%d %H:%i:%s'), '') AS last_updated
 		FROM wilayah d
-		LEFT JOIN wilayah c ON c.kode = LEFT(d.kode, 8) 
-		LEFT JOIN wilayah k ON k.kode = LEFT(d.kode, 5) 
-		WHERE CHAR_LENGTH(d.kode) > 8 
-		ORDER BY d.kode ASC
+		LEFT JOIN wilayah c ON c.id_wilayah = LEFT(d.id_wilayah, 8) 
+		LEFT JOIN wilayah k ON k.id_wilayah = LEFT(d.id_wilayah, 5) 
+		WHERE CHAR_LENGTH(d.id_wilayah) > 8 
+		ORDER BY d.id_wilayah ASC
 	`
 	if err := initializers.DB.Raw(query).Scan(&results).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -52,11 +52,11 @@ func UpdateWilayah(c *gin.Context) {
 	currentUser := userValue.(models.User)
 
 	result := initializers.DB.Table("wilayah").
-		Where("kode = ?", kode).
+		Where("id_wilayah = ?", kode).
 		Updates(map[string]interface{}{
-			"lat":             body.Latitude,
-			"lng":             body.Longitude,
-			"idanggota":       currentUser.ID,
+			"Latitude":        body.Latitude,
+			"longitude":       body.Longitude,
+			"id_anggota":      currentUser.ID,
 			"datetransaction": time.Now(),
 		})
 

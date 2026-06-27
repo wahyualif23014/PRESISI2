@@ -50,6 +50,7 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
 
       if (!mounted) return;
       final auth = context.read<AuthProvider>();
+      final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
       final unitName = auth.user?.tingkatDetail?.nama ?? '';
       final isPolres = unitName.toUpperCase().contains('POLRES');
 
@@ -59,8 +60,12 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
         _listKomoditas = List<String>.from(data['komoditas'] ?? []);
       });
 
-      if (auth.isAdmin && isPolres) {
-        // Admin Polres: set Polres, load Polseks
+      final unitNameUpper = unitName.toUpperCase();
+      final bool isPolresUnit = !isAdmin && unitNameUpper.contains('POLRES');
+      final bool isPolsekUnit = !isAdmin && unitNameUpper.contains('POLSEK');
+
+      if (isPolresUnit) {
+        // Admin/Operator Polres: set Polres, load Polseks
         final polresMatch = _listPolres.where((p) => p == unitName).toList();
         if (polresMatch.isNotEmpty) {
           _selectedPolres = polresMatch.first;
@@ -70,11 +75,8 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
           _listPolres.add(unitName);
           _onPolresChanged(_selectedPolres);
         }
-      } else if (auth.isOperator) {
-        // Operator Polsek: Find Polres from Polsek's parent
-        // Since getFilterOptions() returns just strings for polres, we can't search by kode directly.
-        // We'll just display a dummy "Polres (Auto)" if we can't find it, and lock it.
-        // Or better: the dashboard provider already has this info? No.
+      } else if (isPolsekUnit) {
+        // Operator Polsek: lock both Polres and Polsek
         _selectedPolres = "Polres (Otomatis)";
         if (!_listPolres.contains(_selectedPolres)) {
           _listPolres.insert(0, _selectedPolres!);
@@ -85,8 +87,6 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
           _listPolsek.insert(0, _selectedPolsek!);
         }
         
-        // Trigger load for Jenis Lahan & Komoditi for this polsek
-        // We don't have the actual polres, but the backend filter might work if we just pass polsek
         try {
            final result = await _repo.getFilterOptions(polsek: _selectedPolsek);
            final Map<String, dynamic> response = result as Map<String, dynamic>;
@@ -182,7 +182,11 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
-    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+    final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
+    final bool isLockedToPolres = !isAdmin && (unitNameUpper.contains('POLRES') || unitNameUpper.contains('POLSEK'));
+    final bool isLockedToPolsek = !isAdmin && unitNameUpper.contains('POLSEK');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -229,7 +233,7 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                         : "Pilih Polres",
                 value: _selectedPolres,
                 items: _listPolres.toSet().toList(),
-                onChanged: (_isLoading || auth.isOperator || (auth.isAdmin && isPolres)) ? null : _onPolresChanged,
+                onChanged: (_isLoading || isLockedToPolres) ? null : _onPolresChanged,
                 icon: Icons.local_police,
               ),
               const SizedBox(height: 16),
@@ -238,13 +242,13 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
               _buildDropdown(
                 label: "Kepolisian Sektor",
                 hint:
-                    _selectedPolres == null && !auth.isOperator
+                    _selectedPolres == null && !isLockedToPolres
                         ? "Pilih Polres Terlebih Dahulu"
                         : "Pilih Polsek",
                 value: _selectedPolsek,
                 items: _listPolsek.toSet().toList(),
                 onChanged:
-                    (_selectedPolres == null && !auth.isOperator) || _isLoading || auth.isOperator
+                    (_selectedPolres == null && !isLockedToPolres) || _isLoading || isLockedToPolsek
                         ? null
                         : _onPolsekChanged,
                 icon: Icons.shield,
@@ -305,12 +309,21 @@ class _FilterLahanDialogState extends State<FilterLahanDialog> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        widget.onApply({
-                          'polres': _selectedPolres ?? '',
-                          'polsek': _selectedPolsek ?? '',
-                          'jenis_lahan': _selectedJenisLahan ?? '',
-                          'komoditas': _selectedKomoditas ?? '',
-                        });
+                        Map<String, String> filters = {};
+                        if (isLockedToPolsek) {
+                          filters['polres'] = _selectedPolres ?? '';
+                          filters['polsek'] = auth.user?.tingkatDetail?.nama ?? '';
+                        } else if (isLockedToPolres) {
+                          filters['polres'] = auth.user?.tingkatDetail?.nama ?? '';
+                          filters['polsek'] = _selectedPolsek ?? '';
+                        } else {
+                          filters['polres'] = _selectedPolres ?? '';
+                          filters['polsek'] = _selectedPolsek ?? '';
+                        }
+                        filters['jenis_lahan'] = _selectedJenisLahan ?? '';
+                        filters['komoditas'] = _selectedKomoditas ?? '';
+
+                        widget.onApply(filters);
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(

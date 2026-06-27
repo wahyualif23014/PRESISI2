@@ -168,4 +168,95 @@ class LandManagementRepository {
       return false;
     }
   }
+
+  // 6. UPDATE DATA PANEN
+  Future<bool> updatePanen(String idLahan, Map<String, dynamic> data) async {
+    try {
+      final response = await ApiClient.put(
+        Uri.parse('$baseUrl/$idLahan/panen'),
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error update panen: $e");
+      return false;
+    }
+  }
+
+  // 7. UPDATE DATA SERAPAN
+  Future<bool> updateSerapan(String idLahan, Map<String, dynamic> data) async {
+    try {
+      final response = await ApiClient.put(
+        Uri.parse('$baseUrl/$idLahan/serapan'),
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error update serapan: $e");
+      return false;
+    }
+  }
+
+  // 8. GET RESAPAN LIST
+  Future<List<String>> getResapanList() async {
+    try {
+      final response = await ApiClient.get(
+        Uri.parse('$baseUrl/resapan'),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        return List<String>.from(data);
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Error getting resapan list: $e");
+      return [];
+    }
+  }
+
+  // 9. VALIDATE TANAM
+  Future<bool> validateTanam(String idTanam) async {
+    try {
+      final response = await ApiClient.put(
+        Uri.parse('$baseUrl/$idTanam/validate-tanam'),
+        headers: await _getHeaders(),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error validate tanam: $e");
+      return false;
+    }
+  }
+
+  // 10. VALIDATE PANEN
+  Future<bool> validatePanen(String idPanen) async {
+    try {
+      final response = await ApiClient.put(
+        Uri.parse('$baseUrl/$idPanen/validate-panen'),
+        headers: await _getHeaders(),
+        body: jsonEncode({"status": "3"}), // '3' for Tervalidasi
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error validate panen: $e");
+      return false;
+    }
+  }
+
+  // 11. VALIDATE SERAPAN
+  Future<bool> validateSerapan(String idSerapan) async {
+    try {
+      final response = await ApiClient.put(
+        Uri.parse('$baseUrl/$idSerapan/validate-serapan'),
+        headers: await _getHeaders(),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("Error validate serapan: $e");
+      return false;
+    }
+  }
 }

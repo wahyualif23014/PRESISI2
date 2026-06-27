@@ -61,8 +61,13 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
         _isLoading = false;
       });
 
-      if (auth.isAdmin && isPolres) {
-        // Admin Polres: set Polres, load Polseks
+      final unitNameUpper = unitName.toUpperCase();
+      final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
+      final bool isPolresUnit = !isAdmin && unitNameUpper.contains('POLRES');
+      final bool isPolsekUnit = !isAdmin && unitNameUpper.contains('POLSEK');
+
+      if (isPolresUnit) {
+        // Admin/Operator Polres: set Polres, load Polseks
         final polresMatch = _listPolres.where((p) => p == unitName).toList();
         if (polresMatch.isNotEmpty) {
           _selectedPolres = polresMatch.first;
@@ -72,7 +77,7 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
           _listPolres.add(unitName);
           _loadPolsek(_selectedPolres!);
         }
-      } else if (auth.isOperator) {
+      } else if (isPolsekUnit) {
         // Operator Polsek
         _selectedPolres = "Polres (Otomatis)";
         if (!_listPolres.contains(_selectedPolres)) {
@@ -120,7 +125,11 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
-    final isPolres = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLRES');
+    final unitName = auth.user?.tingkatDetail?.nama ?? '';
+    final unitNameUpper = unitName.toUpperCase();
+    final bool isAdmin = auth.user?.role?.toString().contains('admin') ?? false;
+    final bool isLockedToPolres = !isAdmin && (unitNameUpper.contains('POLRES') || unitNameUpper.contains('POLSEK'));
+    final bool isLockedToPolsek = !isAdmin && unitNameUpper.contains('POLSEK');
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -142,7 +151,7 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple.withOpacity(0.1),
+                    color: Colors.deepPurple.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
@@ -176,7 +185,7 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
                       value: _selectedPolres,
                       items: _listPolres,
                       icon: Icons.account_balance,
-                      onChanged: (auth.isOperator || (auth.isAdmin && isPolres)) ? null : (val) {
+                      onChanged: isLockedToPolres ? null : (val) {
                         setState(() {
                           _selectedPolres = val;
                           _selectedPolsek = null;
@@ -190,14 +199,13 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
                     // KEPOLISIAN SEKTOR (POLSEK)
                     _buildDropdown(
                       label: "Kepolisian Sektor",
-                      hint: "Pilih Polsek",
+                      hint: _selectedPolres == null && !isLockedToPolres ? "Pilih Polres Terlebih Dahulu" : "Pilih Polsek",
                       value: _selectedPolsek,
                       items: _listPolsek,
                       icon: Icons.shield,
-                      onChanged: auth.isOperator ? null : (
-                          _selectedPolres == null
-                              ? null
-                              : (val) => setState(() => _selectedPolsek = val)),
+                      onChanged: (isLockedToPolsek || (_selectedPolres == null && !isLockedToPolres))
+                          ? null
+                          : (val) => setState(() => _selectedPolsek = val),
                     ),
                     const SizedBox(height: 16),
                     _buildDropdown(
@@ -243,9 +251,12 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
                   child: ElevatedButton(
                     onPressed: () {
                       Map<String, String> filters = {};
-                      if (auth.isOperator) {
+                      if (isLockedToPolsek) {
                         filters['polres'] = _selectedPolres ?? '';
                         filters['polsek'] = auth.user?.tingkatDetail?.nama ?? '';
+                      } else if (isLockedToPolres) {
+                        filters['polres'] = auth.user?.tingkatDetail?.nama ?? '';
+                        filters['polsek'] = _selectedPolsek ?? '';
                       } else {
                         filters['polres'] = _selectedPolres ?? '';
                         filters['polsek'] = _selectedPolsek ?? '';
@@ -308,12 +319,12 @@ class _FilterriwayatDialogState extends State<FilterriwayatDialog> {
               color:
                   isDisabled
                       ? Colors.grey[300]!
-                      : Colors.deepPurple.withOpacity(0.3),
+                      : Colors.deepPurple.withValues(alpha: 0.3),
             ),
             boxShadow: [
               if (!isDisabled)
                 BoxShadow(
-                  color: Colors.deepPurple.withOpacity(0.05),
+                  color: Colors.deepPurple.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),

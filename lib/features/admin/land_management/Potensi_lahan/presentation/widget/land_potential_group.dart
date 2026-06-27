@@ -313,7 +313,8 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
                   
                   // Role Checking
                   Builder(builder: (context) {
-                    final isPolsek = context.watch<AuthProvider>().isOperator;
+                    final auth = context.watch<AuthProvider>();
+                    final isPolsek = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLSEK');
                     final isRejected = widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2';
                     final canEditOrDelete = !isPolsek || isRejected;
 

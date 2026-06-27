@@ -14,23 +14,23 @@ func GetTingkat(c *gin.Context) {
 
 	query := `
 		SELECT 
-			t.kode AS kode,
-			t.nama AS nama_satuan,
-			COALESCE(j.namajabatan, '-') AS jabatan,
-			COALESCE(a.nama, 'Belum Ada Pejabat') AS nama_pejabat,
-			COALESCE(a.hp, '-') AS no_hp
+			t.id_tingkat AS kode,
+			t.nama_tingkat AS nama_satuan,
+			COALESCE(j.nama_jabatan, '-') AS jabatan,
+			COALESCE(a.nama_anggota, 'Belum Ada Pejabat') AS nama_pejabat,
+			COALESCE(a.no_telp_anggota, '-') AS no_hp
 		FROM tingkat t
 		LEFT JOIN (
 			SELECT *, 
 			ROW_NUMBER() OVER (
-				PARTITION BY idtugas 
-				ORDER BY FIELD(idjabatan, 1, 2, 3, 7, 8) ASC
+				PARTITION BY id_tugas 
+				ORDER BY FIELD(id_jabatan, 1, 2, 3, 7, 8) ASC
 			) as rank_jabatan
 			FROM anggota 
 			WHERE deletestatus != '1' 
-		) a ON a.idtugas = t.kode AND a.rank_jabatan = 1
-		LEFT JOIN jabatan j ON a.idjabatan = j.idjabatan
-		ORDER BY t.kode ASC
+		) a ON a.id_tugas = t.id_tingkat AND a.rank_jabatan = 1
+		LEFT JOIN jabatan j ON a.id_jabatan = j.id_jabatan
+		ORDER BY t.id_tingkat ASC
 	`
 
 	if err := initializers.DB.Raw(query).Scan(&rawData).Error; err != nil {

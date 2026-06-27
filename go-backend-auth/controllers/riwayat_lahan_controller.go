@@ -14,61 +14,78 @@ func GetRiwayatSummary(c *gin.Context) {
 
 	var summary models.RiwayatLahanSummary
 
+	var user models.User
+	if val, exists := c.Get("user"); exists {
+		if u, ok := val.(models.User); ok {
+			user = u
+		}
+	}
+
 	// ================= POTENSI =================
 
-	initializers.DB.Table("lahan l").
-		Select(`
-			COALESCE(SUM(l.luaslahan),0) as total
-		`).
+	queryPotensi := initializers.DB.Table("lahan l").
 		Where("l.deletestatus = ?", "2").
-		Where("l.statuslahan IN ?", []string{"1", "2", "3", "4"}).
-		Scan(&summary.TotalPotensiLahan)
+		Where("l.status_lahan IN ?", []string{"1", "2", "3", "4"})
+		
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		queryPotensi = queryPotensi.Where("l.id_tingkat LIKE ?", user.IDTugas+"%")
+	}
+	queryPotensi.Select("COALESCE(SUM(l.luas_lahan),0) as total").Scan(&summary.TotalPotensiLahan)
 
 	// ================= TANAM =================
 
-	initializers.DB.Table("tanam t").
-		Select(`
-			COALESCE(SUM(t.luastanam),0) as total
-		`).
-		Joins("JOIN lahan l ON l.idlahan = t.idlahan").
+	queryTanam := initializers.DB.Table("tanam t").
+		Joins("JOIN lahan l ON l.id_lahan = t.id_lahan").
 		Where("t.deletestatus = ?", "2").
-		Where("l.deletestatus = ?", "2").
-		Scan(&summary.TotalTanamLahan)
+		Where("l.deletestatus = ?", "2")
+		
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		queryTanam = queryTanam.Where("l.id_tingkat LIKE ?", user.IDTugas+"%")
+	}
+	queryTanam.Select("COALESCE(SUM(t.luas_tanam),0) as total").Scan(&summary.TotalTanamLahan)
 
 	// ================= PANEN =================
 
-	initializers.DB.Table("panen p").
-		Select(`
-			COALESCE(SUM(p.luaspanen),0) as panen_ha,
-			COALESCE(SUM(p.totalpanen),0) as panen_ton
-		`).
-		Joins("JOIN tanam t ON t.idtanam = p.idtanam").
-		Joins("JOIN lahan l ON l.idlahan = t.idlahan").
+	queryPanen := initializers.DB.Table("panen p").
+		Joins("JOIN tanam t ON t.id_tanam = p.id_tanam").
+		Joins("JOIN lahan l ON l.id_lahan = t.id_lahan").
 		Where("p.deletestatus = ?", "2").
 		Where("t.deletestatus = ?", "2").
-		Where("l.deletestatus = ?", "2").
-		Row().
-		Scan(
-			&summary.TotalPanenLahanHa,
-			&summary.TotalPanenLahanTon,
-		)
+		Where("l.deletestatus = ?", "2")
+		
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		queryPanen = queryPanen.Where("l.id_tingkat LIKE ?", user.IDTugas+"%")
+	}
+	queryPanen.Select(`
+			COALESCE(SUM(p.luas_panen),0) as panen_ha,
+			COALESCE(SUM(p.total_panen),0) as panen_ton
+		`).Row().Scan(&summary.TotalPanenLahanHa, &summary.TotalPanenLahanTon)
 
 	// ================= SERAPAN =================
 
-	initializers.DB.Table("distribusi d").
-		Select(`
-			COALESCE(SUM(d.totaldistribusi),0) as total
-		`).
-		Joins("JOIN lahan l ON l.idlahan = d.idlahan").
+	querySerapan := initializers.DB.Table("distribusi d").
+		Joins("JOIN lahan l ON l.id_lahan = d.id_lahan").
 		Where("d.deletestatus = ?", "2").
-		Where("l.deletestatus = ?", "2").
-		Scan(&summary.TotalSerapanTon)
+		Where("l.deletestatus = ?", "2")
+		
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		querySerapan = querySerapan.Where("l.id_tingkat LIKE ?", user.IDTugas+"%")
+	}
+	querySerapan.Select("COALESCE(SUM(d.total_distribusi),0) as total").Scan(&summary.TotalSerapanTon)
 
 	c.JSON(http.StatusOK, summary)
 }
 
 func GetRiwayatList(c *gin.Context) {
 	var result []models.RiwayatLahanItem
+	
+	var user models.User
+	if val, exists := c.Get("user"); exists {
+		if u, ok := val.(models.User); ok {
+			user = u
+		}
+	}
+	
 	search := c.Query("search")
 	polres := c.Query("polres")
 	polsek := c.Query("polsek")
@@ -77,14 +94,14 @@ func GetRiwayatList(c *gin.Context) {
 
 	query := initializers.DB.Table("lahan").
 		Select(`
-			lahan.idlahan as id,
-			CONCAT('KAB. ', UPPER(w_kab.nama), ' KEC. ', UPPER(w_kec.nama), ' DESA ', UPPER(w_desa.nama)) as region_group,
-			UPPER(lahan.alamat) as sub_region_group,
-			lahan.cppolisi as police_name,
-			lahan.hppolisi as police_phone,
-			lahan.cp as pic_name,
-			lahan.hp as pic_phone,
-			lahan.luaslahan as land_area,
+			lahan.id_lahan as id,
+			CONCAT('KAB. ', UPPER(w_kab.nama_wilayah), ' KEC. ', UPPER(w_kec.nama_wilayah), ' DESA ', UPPER(w_desa.nama_wilayah)) as region_group,
+			UPPER(lahan.alamat_lahan) as sub_region_group,
+			lahan.cp_polisi as police_name,
+			lahan.no_cp_polisi as police_phone,
+			lahan.cp_lahan as pic_name,
+			lahan.no_cp_lahan as pic_phone,
+			lahan.luas_lahan as land_area,
 
 			COALESCE(t_sum.tanam_ha,0) as tanam_ha,
 			'-' as est_panen,
@@ -98,65 +115,69 @@ func GetRiwayatList(c *gin.Context) {
 			'SELESAI PANEN' as status,
 			'#4CAF50' as status_color
 		`).
-		Joins("LEFT JOIN wilayah w_desa ON w_desa.kode = lahan.idwilayah").
-		Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = LEFT(lahan.idwilayah,8)").
-		Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = LEFT(lahan.idwilayah,5)").
+		Joins("LEFT JOIN wilayah w_desa ON w_desa.id_wilayah = lahan.id_wilayah").
+		Joins("LEFT JOIN wilayah w_kec ON w_kec.id_wilayah = LEFT(lahan.id_wilayah,8)").
+		Joins("LEFT JOIN wilayah w_kab ON w_kab.id_wilayah = LEFT(lahan.id_wilayah,5)").
 
 		// agregasi tanam
 		Joins(`
 		LEFT JOIN (
-			SELECT idlahan, SUM(luastanam) as tanam_ha
+			SELECT id_lahan, SUM(luas_tanam) as tanam_ha
 			FROM tanam
 			WHERE deletestatus='2'
-			GROUP BY idlahan
-		) t_sum ON t_sum.idlahan = lahan.idlahan
+			GROUP BY id_lahan
+		) t_sum ON t_sum.id_lahan = lahan.id_lahan
 		`).
 
 		// agregasi panen
 		Joins(`
 		LEFT JOIN (
-			SELECT idlahan,
-			SUM(luaspanen) as panen_ha,
-			SUM(totalpanen) as panen_ton
+			SELECT id_lahan,
+			SUM(luas_panen) as panen_ha,
+			SUM(total_panen) as panen_ton
 			FROM panen
 			WHERE deletestatus='2'
-			GROUP BY idlahan
-		) p_sum ON p_sum.idlahan = lahan.idlahan
+			GROUP BY id_lahan
+		) p_sum ON p_sum.id_lahan = lahan.id_lahan
 		`).
 
 		// agregasi distribusi
 		Joins(`
 		LEFT JOIN (
-			SELECT idlahan,
-			SUM(totaldistribusi) as serapan_ton
+			SELECT id_lahan,
+			SUM(total_distribusi) as serapan_ton
 			FROM distribusi
 			WHERE deletestatus='2'
-			GROUP BY idlahan
-		) d_sum ON d_sum.idlahan = lahan.idlahan
+			GROUP BY id_lahan
+		) d_sum ON d_sum.id_lahan = lahan.id_lahan
 		`)
+		
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		query = query.Where("lahan.id_tingkat LIKE ?", user.IDTugas+"%")
+	}
 
 	if search != "" {
 		s := "%" + strings.ToUpper(search) + "%"
-		query = query.Where("lahan.alamat LIKE ? OR w_desa.nama LIKE ? OR lahan.cppolisi LIKE ?", s, s, s)
+		query = query.Where("lahan.alamat_lahan LIKE ? OR w_desa.nama_wilayah LIKE ? OR lahan.cp_polisi LIKE ?", s, s, s)
 	}
 
 	if polres != "" {
 		p := "%" + strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polres), "POLRES", "")) + "%"
-		query = query.Where("UPPER(w_kab.nama) LIKE ?", p)
+		query = query.Where("UPPER(w_kab.nama_wilayah) LIKE ?", p)
 	}
 
 	if polsek != "" {
 		pk := "%" + strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polsek), "POLSEK", "")) + "%"
-		query = query.Where("UPPER(w_kec.nama) LIKE ?", pk)
+		query = query.Where("UPPER(w_kec.nama_wilayah) LIKE ?", pk)
 	}
 
 	if jenis != "" {
-		query = query.Where("lahan.idjenislahan = ?", jenis)
+		query = query.Where("lahan.id_jenis_lahan = ?", jenis)
 	}
 
 	if komoditi != "" {
-		query = query.Joins("JOIN komoditi k ON k.idkomoditi = lahan.idkomoditi").
-			Where("UPPER(k.namakomoditi) = ?", strings.ToUpper(komoditi))
+		query = query.Joins("JOIN komoditi k ON k.id_komoditi = lahan.id_komoditi").
+			Where("UPPER(k.nama_komoditi) = ?", strings.ToUpper(komoditi))
 	}
 
 	query.Scan(&result)
@@ -172,6 +193,12 @@ func normalizeWilayahName(name string) string {
 }
 
 func GetRiwayatFilterOptions(c *gin.Context) {
+	var user models.User
+	if val, exists := c.Get("user"); exists {
+		if u, ok := val.(models.User); ok {
+			user = u
+		}
+	}
 
 	var rawPolres []string
 	var rawPolsek []string
@@ -179,12 +206,21 @@ func GetRiwayatFilterOptions(c *gin.Context) {
 	polresParam := strings.TrimSpace(c.Query("polres"))
 	searchCity := strings.TrimSpace(strings.ReplaceAll(strings.ToUpper(polresParam), "POLRES", ""))
 
-	initializers.DB.Table("lahan").
-		Select("DISTINCT UPPER(w_kab.nama) as nama_kab").
-		Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = LEFT(lahan.idwilayah,5)").
-		Where("w_kab.nama IS NOT NULL").
-		Order("nama_kab ASC").
-		Pluck("nama_kab", &rawPolres)
+	queryPolres := initializers.DB.Table("wilayah").
+		Select("DISTINCT UPPER(nama_wilayah) as nama_kab").
+		Where("nama_wilayah IS NOT NULL").
+		Where("CHAR_LENGTH(id_wilayah) = 5 AND id_wilayah LIKE '35%'")
+		
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		bpsPolres := resolveTingkatToWilayah(user.IDTugas)
+		if len(bpsPolres) >= 5 {
+			queryPolres = queryPolres.Where("id_wilayah = ?", bpsPolres[:5])
+		} else {
+			queryPolres = queryPolres.Where("id_wilayah LIKE ?", bpsPolres+"%")
+		}
+	}
+	
+	queryPolres.Order("nama_kab ASC").Pluck("nama_kab", &rawPolres)
 
 	var listPolres []string
 	for _, v := range rawPolres {
@@ -192,14 +228,23 @@ func GetRiwayatFilterOptions(c *gin.Context) {
 		listPolres = append(listPolres, fmt.Sprintf("POLRES %s", cleanName))
 	}
 
-	queryPolsek := initializers.DB.Table("lahan").
-		Select("DISTINCT UPPER(w_kec.nama) as nama_kec").
-		Joins("LEFT JOIN wilayah w_kec ON w_kec.kode = LEFT(lahan.idwilayah,8)").
-		Joins("LEFT JOIN wilayah w_kab ON w_kab.kode = LEFT(lahan.idwilayah,5)").
-		Where("w_kec.nama IS NOT NULL")
+	queryPolsek := initializers.DB.Table("wilayah w_kec").
+		Select("DISTINCT UPPER(w_kec.nama_wilayah) as nama_kec").
+		Joins("LEFT JOIN wilayah w_kab ON w_kab.id_wilayah = SUBSTR(w_kec.id_wilayah,1,5)").
+		Where("w_kec.nama_wilayah IS NOT NULL").
+		Where("CHAR_LENGTH(w_kec.id_wilayah) = 8 AND w_kec.id_wilayah LIKE '35%'")
 
 	if searchCity != "" {
-		queryPolsek = queryPolsek.Where("UPPER(w_kab.nama) LIKE ?", "%"+searchCity+"%")
+		queryPolsek = queryPolsek.Where("UPPER(w_kab.nama_wilayah) LIKE ?", "%"+searchCity+"%")
+	}
+	
+	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
+		bpsPolsek := resolveTingkatToWilayah(user.IDTugas)
+		if len(bpsPolsek) >= 8 {
+			queryPolsek = queryPolsek.Where("w_kec.id_wilayah = ?", bpsPolsek[:8])
+		} else {
+			queryPolsek = queryPolsek.Where("w_kec.id_wilayah LIKE ?", bpsPolsek+"%")
+		}
 	}
 
 	queryPolsek.Order("nama_kec ASC").Pluck("nama_kec", &rawPolsek)
@@ -222,9 +267,9 @@ func GetRiwayatFilterOptions(c *gin.Context) {
 
 	var rawJenis []int
 	initializers.DB.Table("lahan").
-		Select("DISTINCT idjenislahan").
-		Order("idjenislahan ASC").
-		Pluck("idjenislahan", &rawJenis)
+		Select("DISTINCT id_jenis_lahan").
+		Order("id_jenis_lahan ASC").
+		Pluck("id_jenis_lahan", &rawJenis)
 
 	var listJenis []string
 	for _, id := range rawJenis {
@@ -238,10 +283,10 @@ func GetRiwayatFilterOptions(c *gin.Context) {
 	var rawKomoditi []string
 
 	initializers.DB.Table("komoditi").
-		Select("DISTINCT namakomoditi").
-		Where("namakomoditi IS NOT NULL AND namakomoditi <> ''").
-		Order("namakomoditi ASC").
-		Pluck("namakomoditi", &rawKomoditi)
+		Select("DISTINCT nama_komoditi").
+		Where("nama_komoditi IS NOT NULL AND nama_komoditi <> ''").
+		Order("nama_komoditi ASC").
+		Pluck("nama_komoditi", &rawKomoditi)
 
 	var listkomoditi []string
 	for _, v := range rawKomoditi {
