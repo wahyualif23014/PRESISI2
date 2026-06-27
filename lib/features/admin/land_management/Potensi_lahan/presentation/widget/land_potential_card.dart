@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import '../../data/model/land_potential_model.dart';
 import 'land_detail_dialog.dart';
 
@@ -17,7 +18,7 @@ class LandPotentialCard extends StatelessWidget {
   });
 
   // Sesuaikan Base URL dengan route /uploads/ yang terdaftar di backend
-  static const String _imageBaseUrl = "http://192.168.100.195:8080/uploads/";
+  static final String _imageBaseUrl = ApiConfig.imageBaseUrl;
 
   @override
   Widget build(BuildContext context) {

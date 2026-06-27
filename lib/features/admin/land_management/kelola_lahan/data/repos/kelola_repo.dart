@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/kelola_mode.dart';
 
 class LandManagementRepository {
-  final String baseUrl = "http://192.168.1.76:8080/api/kelola-lahan";
+  final String baseUrl = "${ApiConfig.apiBaseUrl}/kelola-lahan";
   final _storage = const FlutterSecureStorage();
 
   // Mendapatkan token JWT dari storage lokal

@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AdminService {
 
-  final String baseUrl = 'http://192.168.1.76:8080'; 
+  final String baseUrl = ApiConfig.baseUrl; 
   final _storage = const FlutterSecureStorage();
 
   // ===============================

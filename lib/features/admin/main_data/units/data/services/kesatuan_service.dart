@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Pakai ini, bukan SharedPreferences
 import 'package:shared_preferences/shared_preferences.dart'; // Buat jaga-jaga
 import '../models/kesatuan_model.dart';
 
 class KesatuanService {
-  final String baseUrl = "http://192.168.100.195:8080/api/admin/tingkat";
+  final String baseUrl = "${ApiConfig.apiBaseUrl}/admin/tingkat";
   Future<List<KesatuanModel>> getKesatuan() async {
     String? token;
 

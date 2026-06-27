@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/position_model.dart' show JabatanModel;
 
 class JabatanService {
-  static const String baseUrl = "http://192.168.100.195:8080/api/admin/jabatan";
+  final String baseUrl = "${ApiConfig.apiBaseUrl}/admin/jabatan";
   final _storage = const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {

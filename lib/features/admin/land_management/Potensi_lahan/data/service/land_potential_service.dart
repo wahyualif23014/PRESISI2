@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -9,7 +9,7 @@ import '../model/land_summary_model.dart';
 import '../model/no_land_potential_model.dart';
 
 class LandPotentialService {
-  final String baseUrl = "http://192.168.1.76:8080/api/potensi-lahan";
+  final String baseUrl = "${ApiConfig.apiBaseUrl}/potensi-lahan";
   final _storage = const FlutterSecureStorage();
 
   // Mendapatkan token JWT dari storage lokal

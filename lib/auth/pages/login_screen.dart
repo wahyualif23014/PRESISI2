@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart'; 
 import '../../router/route_names.dart';
 import '../provider/auth_provider.dart';
+import 'package:KETAHANANPANGAN/core/widgets/custom_error_dialog.dart';
 // import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -61,12 +62,17 @@ class _LoginScreenState extends State<LoginScreen> {
       context.go(RouteNames.dashboard); 
     } else {
       // --- GAGAL ---
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage), // Pesan error dari backend
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      final bool isNetError = errorMessage.toLowerCase().contains('koneksi') ||
+          errorMessage.toLowerCase().contains('tidak bisa dijangkau') ||
+          errorMessage.toLowerCase().contains('socketexception') ||
+          errorMessage.toLowerCase().contains('connection') ||
+          errorMessage.toLowerCase().contains('server tidak');
+
+      showCustomErrorDialog(
+        context,
+        title: isNetError ? 'Masalah Koneksi' : 'Login Gagal',
+        message: errorMessage,
+        isNetworkError: isNetError,
       );
     }
   }

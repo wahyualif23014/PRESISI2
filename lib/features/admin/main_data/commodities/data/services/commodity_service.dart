@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/commodity_category_model.dart';
@@ -13,7 +13,7 @@ class CategoryFetchResult {
 }
 
 class CommodityService {
-  static const String baseUrl = "http://10.107.144.231:8080/api/admin";
+  final String baseUrl = "${ApiConfig.apiBaseUrl}/admin";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {

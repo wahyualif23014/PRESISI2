@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/region_model.dart';
 
 class RegionService {
-  static const String _baseUrl =
-      'http://192.168.100.195:8080/api/admin/wilayah';
+  final String _baseUrl = "${ApiConfig.apiBaseUrl}/admin/wilayah";
   final _storage = const FlutterSecureStorage();
 
   Future<List<WilayahModel>> fetchRegions() async {

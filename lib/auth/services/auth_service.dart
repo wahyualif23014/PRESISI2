@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  final String baseUrl = 'http://192.168.1.76:8080';
+  final String baseUrl = ApiConfig.baseUrl;
   
   // Instance Storage (Brankas Token)
   final _storage = const FlutterSecureStorage();

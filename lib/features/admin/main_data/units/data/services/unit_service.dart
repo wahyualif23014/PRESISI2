@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/polres_model.dart';
@@ -7,7 +7,7 @@ import '../models/polsek_model.dart';
 import '../models/wilayah_model.dart';
 
 class UnitService {
-  final String baseUrl = 'http://192.168.100.195:8080';
+  final String baseUrl = ApiConfig.baseUrl;
 
   
   final _storage = const FlutterSecureStorage();

@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../model/recap_model.dart';
 
 class RecapRepo {
-  final String baseUrl = "http://192.168.1.76:8080/api/rekapitulasi";
+  final String baseUrl = "${ApiConfig.apiBaseUrl}/rekapitulasi";
   final String filterUrl =
-      "http://192.168.1.76:8080/api/riwayat-lahan/filter-options";
+      "${ApiConfig.apiBaseUrl}/riwayat-lahan/filter-options";
   final _storage = const FlutterSecureStorage();
 
   Future<String> _getToken() async {

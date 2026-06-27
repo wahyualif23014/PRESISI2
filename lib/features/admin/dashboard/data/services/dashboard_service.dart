@@ -5,8 +5,9 @@ import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/wilayah_dist
     show WilayahDistributionModel;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import 'package:KETAHANANPANGAN/core/api/api_client.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:KETAHANANPANGAN/features/admin/dashboard/data/model/resapan_model.dart'
     show ResapanModel;
@@ -27,7 +28,7 @@ class KomoditiOption {
 }
 
 class DashboardService {
-  final String apiBaseUrl = "http://192.168.1.76:8080/api";
+  final String apiBaseUrl = ApiConfig.apiBaseUrl;
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final http.Client _client = http.Client();

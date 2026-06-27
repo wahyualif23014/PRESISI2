@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import '../../data/model/land_potential_model.dart';
 import '../../data/service/land_potential_service.dart';
 
@@ -382,7 +383,7 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
         photoData.toLowerCase().endsWith('.png') ||
         photoData.toLowerCase().endsWith('.jpeg')) {
       String fullUrl =
-          "http://192.168.100.195:8080/uploads/${Uri.encodeComponent(photoData)}";
+          "${ApiConfig.imageBaseUrl}${Uri.encodeComponent(photoData)}";
 
       return Image.network(
         fullUrl,
