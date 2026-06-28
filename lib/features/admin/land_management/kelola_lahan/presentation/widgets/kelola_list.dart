@@ -157,6 +157,32 @@ class KelolaItemDetailCard extends StatelessWidget {
                             isLast: true,
                           ),
                         ]),
+                        _buildDetailSection("Data Panen", Icons.eco, [
+                          _dataRow("Luas Panen", "${item.luasPanen} Ha"),
+                          _dataRow("Total Panen", "${item.hasilPanen} Ton"),
+                          _dataRow("Tanggal Panen", item.tglPanen.isEmpty ? "-" : item.tglPanen),
+                          _dataRow("Catatan Panen", item.keteranganPanen.isEmpty ? "-" : item.keteranganPanen),
+                          _dataRow(
+                            "Dokumen Pendukung",
+                            item.dokumenPanen.isEmpty
+                                ? "Tidak ada file"
+                                : item.dokumenPanen,
+                            isLast: true,
+                          ),
+                        ]),
+                        _buildDetailSection("Data Serapan (Distribusi)", Icons.local_shipping, [
+                          _dataRow("Distribusi Ke", item.distribusiKe.isEmpty ? "-" : item.distribusiKe),
+                          _dataRow("Total Distribusi", "${item.totalDistribusi} Ton"),
+                          _dataRow("Tanggal Distribusi", item.tglDistribusi.isEmpty ? "-" : item.tglDistribusi),
+                          _dataRow("Catatan Distribusi", item.keteranganDistribusi.isEmpty ? "-" : item.keteranganDistribusi),
+                          _dataRow(
+                            "Dokumen Pendukung",
+                            item.dokumenDistribusi.isEmpty
+                                ? "Tidak ada file"
+                                : item.dokumenDistribusi,
+                            isLast: true,
+                          ),
+                        ]),
                       ],
                     ),
                   ),

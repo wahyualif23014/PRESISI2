@@ -307,7 +307,7 @@ func getTransactionSummary(
 ) models.LahanSummaryModel {
 
 	type result struct {
-		IDJenis int     `gorm:"column:idjenislahan"`
+		IDJenis int     `gorm:"column:id_jenis_lahan"`
 		Area    float64 `gorm:"column:area"`
 		Count   int64   `gorm:"column:count"`
 	}
@@ -1074,7 +1074,8 @@ func getWilayahDistribution(db *gorm.DB, idTingkat string, idKomoditi string, je
 }
 func GetWilayahDistribution(c *gin.Context) {
 
-	idTingkat := c.Query("resor")
+	resor := c.Query("resor")
+	sektor := c.Query("sektor")
 	idKomoditi := c.Query("id_komoditi")
 	jenisKomoditi := c.Query("jenis_komoditi")
 
@@ -1086,13 +1087,36 @@ func GetWilayahDistribution(c *gin.Context) {
 		}
 	}
 
+	distIdTingkat := ""
 	if user.Role != "admin" && user.Role != "1" && user.Role != "Admin" && user.IDTugas != "" {
-		idTingkat = user.IDTugas
+		distIdTingkat = user.IDTugas
+	} else if sektor != "" {
+		sName := strings.ReplaceAll(strings.ToUpper(sektor), "POLSEK ", "")
+		var code string
+		initializers.DB.Table("wilayah").
+			Select("id_wilayah").
+			Where("UPPER(nama_wilayah) LIKE ?", "%"+sName+"%").
+			Where("CHAR_LENGTH(id_wilayah) = 8").
+			Limit(1).
+			Row().
+			Scan(&code)
+		distIdTingkat = code
+	} else if resor != "" {
+		rName := strings.ReplaceAll(strings.ToUpper(resor), "POLRES ", "")
+		var code string
+		initializers.DB.Table("wilayah").
+			Select("id_wilayah").
+			Where("UPPER(nama_wilayah) LIKE ?", "%"+rName+"%").
+			Where("CHAR_LENGTH(id_wilayah) = 5").
+			Limit(1).
+			Row().
+			Scan(&code)
+		distIdTingkat = code
 	}
 
 	data := getWilayahDistribution(
 		initializers.DB.Session(&gorm.Session{}),
-		idTingkat,
+		distIdTingkat,
 		idKomoditi,
 		jenisKomoditi,
 	)

@@ -51,7 +51,15 @@ type KelolaLahanItem struct {
 
 	IdPanen          string  `json:"id_panen"`
 	StatusPanen      string  `json:"status_panen"`
+	TglPanen         string  `json:"tgl_panen"`
+	KeteranganPanen  string  `json:"keterangan_panen"`
+	DokumenPanen     string  `json:"dokumen_panen"`
 
-	IdSerapan        string  `json:"id_serapan"`
-	StatusSerapan    string  `json:"status_serapan"`
+	IdSerapan            string  `json:"id_serapan"`
+	StatusSerapan        string  `json:"status_serapan"`
+	DistribusiKe         string  `json:"distribusi_ke"`
+	TglDistribusi        string  `json:"tgl_distribusi"`
+	TotalDistribusi      float64 `json:"total_distribusi"`
+	KeteranganDistribusi string  `json:"keterangan_distribusi"`
+	DokumenDistribusi    string  `json:"dokumen_distribusi"`
 }

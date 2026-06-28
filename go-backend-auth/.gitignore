@@ -11,3 +11,8 @@
 sdmapps*
 *.sql
 sdmapps.sql
+
+# docker
+docker-compose.yml
+Dockerfile
+init.sql

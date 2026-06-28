@@ -98,7 +98,7 @@ func GetUserByID(c *gin.Context) {
 	err := initializers.DB.
 		Preload("JabatanDetail").
 		Preload("TingkatDetail").
-		Where("idanggota = ? AND deletestatus = ?", id, models.StatusActive).
+		Where("id_anggota = ? AND deletestatus = ?", id, models.StatusActive).
 		First(&user).Error
 
 	if err != nil {

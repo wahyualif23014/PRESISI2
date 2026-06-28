@@ -40,7 +40,7 @@ func RequireAuth(c *gin.Context) {
 	}
 
 	var user models.User
-	initializers.DB.Preload("Jabatan").First(&user, claims["sub"])
+	initializers.DB.Preload("JabatanDetail").First(&user, claims["sub"])
 
 	if user.ID == 0 || user.DeleteStatus == models.StatusDeleted {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found or inactive"})

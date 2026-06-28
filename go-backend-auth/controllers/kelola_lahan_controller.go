@@ -206,6 +206,7 @@ func GetKelolaList(c *gin.Context) {
 			COALESCE(NULLIF(lahan.no_cp_polisi,''), '-') as pic_phone,
 			COALESCE(lahan.luas_lahan, 0) as land_area,
 			COALESCE(t_latest.luas_tanam, 0) as luas_tanam,
+			COALESCE(t_latest.luas_tanam, 0) as luas_tanam_detail,
 			COALESCE(CONCAT(DATE_FORMAT(t_latest.est_awal_panen, '%d/%m/%Y'), ' - ', DATE_FORMAT(t_latest.est_akhir_panen, '%d/%m/%Y')), '-') as est_panen,
 			COALESCE(p_latest.luas_panen, 0) as luas_panen,
 			COALESCE(p_latest.total_panen, 0) as berat_panen,
@@ -237,13 +238,23 @@ func GetKelolaList(c *gin.Context) {
 			COALESCE(CAST(t_latest.id_tanam AS CHAR), '') as id_tanam,
 			COALESCE(t_latest.nama_bibit, '') as jenis_bibit,
 			COALESCE(t_latest.kebutuhan_bibit, 0) as kebutuhan_bibit,
+			COALESCE(DATE_FORMAT(t_latest.est_awal_panen, '%Y-%m-%d'), '') as est_awal_panen,
+			COALESCE(DATE_FORMAT(t_latest.est_akhir_panen, '%Y-%m-%d'), '') as est_akhir_panen,
 			COALESCE(t_latest.surat_edit, '') as dokumen_pendukung,
 			COALESCE(t_latest.keterangan_tanam, '') as keterangan_tanam,
 			CASE WHEN t_latest.valid_oleh IS NOT NULL AND t_latest.valid_oleh != 0 THEN '3' ELSE '1' END as status_tanam,
 			COALESCE(CAST(p_latest.id_panen AS CHAR), '') as id_panen,
 			COALESCE(p_latest.status_panen, '1') as status_panen,
+			COALESCE(DATE_FORMAT(p_latest.tgl_panen, '%Y-%m-%d'), '') as tgl_panen,
+			COALESCE(p_latest.ket_panen, '') as keterangan_panen,
+			COALESCE(p_latest.surat_edit, '') as dokumen_panen,
 			COALESCE(CAST(d_latest.id_distribusi AS CHAR), '') as id_serapan,
-			CASE WHEN d_latest.valid_oleh IS NOT NULL AND d_latest.valid_oleh != 0 THEN '3' ELSE '1' END as status_serapan
+			CASE WHEN d_latest.valid_oleh IS NOT NULL AND d_latest.valid_oleh != 0 THEN '3' ELSE '1' END as status_serapan,
+			COALESCE(d_latest.distribusi_ke, '') as distribusi_ke,
+			COALESCE(DATE_FORMAT(d_latest.tgl_distribusi, '%Y-%m-%d'), '') as tgl_distribusi,
+			COALESCE(d_latest.total_distribusi, 0) as total_distribusi,
+			COALESCE(d_latest.keterangan_distribusi, '') as keterangan_distribusi,
+			COALESCE(d_latest.surat_edit, '') as dokumen_distribusi
 		`).
 		Joins("LEFT JOIN wilayah w_desa ON w_desa.id_wilayah = lahan.id_wilayah").
 		Joins("LEFT JOIN wilayah w_kec ON w_kec.id_wilayah = LEFT(lahan.id_wilayah, 8)").
@@ -337,6 +348,14 @@ func UpdateTanamLahan(c *gin.Context) {
 		return
 	}
 
+	// Helper: convert empty string to nil for datetime columns (MySQL 8 strict mode)
+	nullIfEmpty := func(s string) interface{} {
+		if strings.TrimSpace(s) == "" {
+			return nil
+		}
+		return s
+	}
+
 	tx := initializers.DB.Begin()
 
 	var idTanam int
@@ -350,15 +369,15 @@ func UpdateTanamLahan(c *gin.Context) {
 			    keterangan_tanam = ?, datetransaction = ? 
 			WHERE id_tanam = ?
 		`, req.LuasTanam, req.JenisBibit, req.KebutuhanBibit,
-			req.EstAwalPanen, req.EstAkhirPanen, req.DokumenPendukung,
-			req.Keterangan, req.TglTanam, idTanam).Error; err != nil {
+			nullIfEmpty(req.EstAwalPanen), nullIfEmpty(req.EstAkhirPanen), req.DokumenPendukung,
+			req.Keterangan, nullIfEmpty(req.TglTanam), idTanam).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		tx.Exec(`UPDATE panen SET luas_panen = ?, datetransaction = ? WHERE id_tanam = ?`,
-			req.LuasTanam, req.TglTanam, idTanam)
+			req.LuasTanam, nullIfEmpty(req.TglTanam), idTanam)
 
 	} else {
 		if err := tx.Exec(`
@@ -366,7 +385,7 @@ func UpdateTanamLahan(c *gin.Context) {
 			                  est_awal_panen, est_akhir_panen, surat_edit, keterangan_tanam, datetransaction)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, idLahan, req.LuasTanam, req.JenisBibit, req.KebutuhanBibit,
-			req.EstAwalPanen, req.EstAkhirPanen, req.DokumenPendukung, req.Keterangan, req.TglTanam).Error; err != nil {
+			nullIfEmpty(req.EstAwalPanen), nullIfEmpty(req.EstAkhirPanen), req.DokumenPendukung, req.Keterangan, nullIfEmpty(req.TglTanam)).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -376,6 +395,7 @@ func UpdateTanamLahan(c *gin.Context) {
 	tx.Commit()
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Data berhasil diperbarui"})
 }
+
 
 func DeleteKelolaLahan(c *gin.Context) {
 	idLahan := c.Param("id")
@@ -452,7 +472,14 @@ func UpdatePanenLahan(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
 		return
 	}
-	
+
+	nullIfEmpty := func(s string) interface{} {
+		if strings.TrimSpace(s) == "" {
+			return nil
+		}
+		return s
+	}
+
 	tx := initializers.DB.Begin()
 	var idPanen int
 	tx.Table("panen").Select("id_panen").Where("id_lahan = ? AND id_tanam = ?", idLahan, req.IdTanam).Order("id_panen DESC").Limit(1).Scan(&idPanen)
@@ -462,7 +489,7 @@ func UpdatePanenLahan(c *gin.Context) {
 			UPDATE panen 
 			SET luas_panen = ?, total_panen = ?, tgl_panen = ?, ket_panen = ?, surat_edit = ?, status_panen = '1' 
 			WHERE id_panen = ?
-		`, req.LuasPanen, req.TotalPanen, req.TglPanen, req.Keterangan, req.SuratEdit, idPanen).Error; err != nil {
+		`, req.LuasPanen, req.TotalPanen, nullIfEmpty(req.TglPanen), req.Keterangan, req.SuratEdit, idPanen).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -471,7 +498,7 @@ func UpdatePanenLahan(c *gin.Context) {
 		if err := tx.Exec(`
 			INSERT INTO panen (id_lahan, id_tanam, luas_panen, total_panen, tgl_panen, ket_panen, surat_edit, status_panen)
 			VALUES (?, ?, ?, ?, ?, ?, ?, '1')
-		`, idLahan, req.IdTanam, req.LuasPanen, req.TotalPanen, req.TglPanen, req.Keterangan, req.SuratEdit).Error; err != nil {
+		`, idLahan, req.IdTanam, req.LuasPanen, req.TotalPanen, nullIfEmpty(req.TglPanen), req.Keterangan, req.SuratEdit).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -497,7 +524,14 @@ func UpdateSerapanLahan(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
 		return
 	}
-	
+
+	nullIfEmpty := func(s string) interface{} {
+		if strings.TrimSpace(s) == "" {
+			return nil
+		}
+		return s
+	}
+
 	tx := initializers.DB.Begin()
 	var idDistribusi int
 	tx.Table("distribusi").Select("id_distribusi").Where("id_lahan = ? AND id_panen = ?", idLahan, req.IdPanen).Order("id_distribusi DESC").Limit(1).Scan(&idDistribusi)
@@ -507,7 +541,7 @@ func UpdateSerapanLahan(c *gin.Context) {
 			UPDATE distribusi 
 			SET distribusi_ke = ?, tgl_distribusi = ?, total_distribusi = ?, keterangan_distribusi = ?, surat_edit = ? 
 			WHERE id_distribusi = ?
-		`, req.DistribusiKe, req.TglDistribusi, req.TotalDistribusi, req.Keterangan, req.SuratEdit, idDistribusi).Error; err != nil {
+		`, req.DistribusiKe, nullIfEmpty(req.TglDistribusi), req.TotalDistribusi, req.Keterangan, req.SuratEdit, idDistribusi).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -520,7 +554,7 @@ func UpdateSerapanLahan(c *gin.Context) {
 		if err := tx.Exec(`
 			INSERT INTO distribusi (id_lahan, id_panen, id_tanam, distribusi_ke, tgl_distribusi, total_distribusi, keterangan_distribusi, surat_edit)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		`, idLahan, req.IdPanen, idTanam, req.DistribusiKe, req.TglDistribusi, req.TotalDistribusi, req.Keterangan, req.SuratEdit).Error; err != nil {
+		`, idLahan, req.IdPanen, idTanam, req.DistribusiKe, nullIfEmpty(req.TglDistribusi), req.TotalDistribusi, req.Keterangan, req.SuratEdit).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

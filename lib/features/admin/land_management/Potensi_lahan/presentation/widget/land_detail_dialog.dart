@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
+import 'package:KETAHANANPANGAN/auth/provider/auth_provider.dart';
 import 'package:KETAHANANPANGAN/core/config/api_config.dart';
 import '../../data/model/land_potential_model.dart';
 import '../../data/service/land_potential_service.dart';
@@ -42,7 +44,7 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
     // Memeriksa status validasi berdasarkan nama validator dari model
     final v = widget.data.namaValidator.trim();
     setState(() {
-      isValidated = v != "" && v != "null" && v != "-" && v != "0";
+      isValidated = (v != "" && v != "null" && v != "-" && v != "0") || widget.data.statusValidasi == '2';
     });
   }
 
@@ -329,41 +331,50 @@ class _LandDetailDialogState extends State<LandDetailDialog> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            _isProcessing
-                                ? Colors.grey
-                                : (isValidated ? Colors.orange : Colors.green),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  Builder(builder: (context) {
+                    final auth = context.watch<AuthProvider>();
+                    final isPolsek = (auth.user?.tingkatDetail?.nama ?? '').toUpperCase().contains('POLSEK');
+                    
+                    if (isPolsek) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              _isProcessing
+                                  ? Colors.grey
+                                  : (isValidated ? Colors.orange : Colors.green),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        onPressed: _isProcessing ? null : _handleValidation,
+                        child:
+                            _isProcessing
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                                : Text(
+                                  isValidated
+                                      ? "BATALKAN VALIDASI"
+                                      : "VALIDASI DATA SEKARANG",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                       ),
-                      onPressed: _isProcessing ? null : _handleValidation,
-                      child:
-                          _isProcessing
-                              ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                              : Text(
-                                isValidated
-                                    ? "BATALKAN VALIDASI"
-                                    : "VALIDASI DATA SEKARANG",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                    ),
-                  ),
+                    );
+                  }),
                 ],
               ),
             ),

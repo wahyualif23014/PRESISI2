@@ -28,11 +28,15 @@ class _UpdatePanenDialogState extends State<UpdatePanenDialog> {
   @override
   void initState() {
     super.initState();
-    luasPanenController = TextEditingController();
-    totalPanenController = TextEditingController();
-    tglPanenController = TextEditingController();
-    keteranganController = TextEditingController();
-    dokumenController = TextEditingController();
+    luasPanenController = TextEditingController(
+      text: widget.item.luasPanen > 0 ? widget.item.luasPanen.toString() : '',
+    );
+    totalPanenController = TextEditingController(
+      text: widget.item.hasilPanen > 0 ? widget.item.hasilPanen.toString() : '',
+    );
+    tglPanenController = TextEditingController(text: widget.item.tglPanen);
+    keteranganController = TextEditingController(text: widget.item.keteranganPanen);
+    dokumenController = TextEditingController(text: widget.item.dokumenPanen);
   }
 
   Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
@@ -211,11 +215,13 @@ class _UpdateSerapanDialogState extends State<UpdateSerapanDialog> {
   @override
   void initState() {
     super.initState();
-    distribusiKeController = TextEditingController();
-    totalDistribusiController = TextEditingController();
-    tglDistribusiController = TextEditingController();
-    keteranganController = TextEditingController();
-    dokumenController = TextEditingController();
+    distribusiKeController = TextEditingController(text: widget.item.distribusiKe);
+    totalDistribusiController = TextEditingController(
+      text: widget.item.totalDistribusi > 0 ? widget.item.totalDistribusi.toString() : '',
+    );
+    tglDistribusiController = TextEditingController(text: widget.item.tglDistribusi);
+    keteranganController = TextEditingController(text: widget.item.keteranganDistribusi);
+    dokumenController = TextEditingController(text: widget.item.dokumenDistribusi);
     _fetchResapanList();
   }
 
@@ -225,6 +231,9 @@ class _UpdateSerapanDialogState extends State<UpdateSerapanDialog> {
       setState(() {
         _resapanList = list;
         isLoadingResapan = false;
+        if (list.contains(widget.item.distribusiKe)) {
+          _selectedResapan = widget.item.distribusiKe;
+        }
       });
     }
   }

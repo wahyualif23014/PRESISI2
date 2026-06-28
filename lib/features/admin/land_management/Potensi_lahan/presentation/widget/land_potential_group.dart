@@ -25,15 +25,24 @@ class KabupatenExpansionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Group by Kecamatan (Polsek)
+    Map<String, List<LandPotentialModel>> groupedByKecamatan = {};
+    for (var item in itemsInKabupaten) {
+      String kecName = item.kecamatan.isEmpty || item.kecamatan == '-' 
+          ? "KECAMATAN TIDAK TERDATA" 
+          : "KECAMATAN ${item.kecamatan.toUpperCase()}";
+      groupedByKecamatan.putIfAbsent(kecName, () => []).add(item);
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 0),
+      margin: const EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
         initiallyExpanded: true,
         collapsedBackgroundColor: const Color(0xFF9FA8DA),
         backgroundColor: const Color(0xFFC5CAE9),
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         title: Text(
-          kabupatenName,
+          kabupatenName.toUpperCase(),
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
@@ -43,15 +52,110 @@ class KabupatenExpansionTile extends StatelessWidget {
         ),
         iconColor: Colors.black54,
         collapsedIconColor: Colors.black54,
-        children:
-            itemsInKabupaten.map((data) {
-              return LandPotentialCard(
-                data: data,
-                onEdit: () => onEdit(data),
-                onDelete: () => onDelete(data),
-                onRefresh: onRefresh,
-              );
-            }).toList(),
+        children: groupedByKecamatan.entries.map((kecEntry) {
+          return KecamatanExpansionGroup(
+            kecamatanName: kecEntry.key,
+            items: kecEntry.value,
+            onEdit: onEdit,
+            onDelete: onDelete,
+            onRefresh: onRefresh,
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class KecamatanExpansionGroup extends StatelessWidget {
+  final String kecamatanName;
+  final List<LandPotentialModel> items;
+  final Function(LandPotentialModel) onEdit;
+  final Function(LandPotentialModel) onDelete;
+  final VoidCallback onRefresh;
+
+  const KecamatanExpansionGroup({
+    super.key,
+    required this.kecamatanName,
+    required this.items,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Group by Desa
+    Map<String, List<LandPotentialModel>> groupedByDesa = {};
+    for (var item in items) {
+      String desaName = item.desa.isEmpty || item.desa == '-' 
+          ? "DESA TIDAK TERDATA" 
+          : "DESA ${item.desa.toUpperCase()}";
+      groupedByDesa.putIfAbsent(desaName, () => []).add(item);
+    }
+
+    return Container(
+      color: Colors.white,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        backgroundColor: Colors.white,
+        collapsedBackgroundColor: Colors.grey.shade50,
+        title: Text(
+          kecamatanName,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            color: Color(0xFF1A237E),
+          ),
+        ),
+        children: groupedByDesa.entries.map((desaEntry) {
+          double totalLuas = 0;
+          for (var item in desaEntry.value) {
+            totalLuas += item.luasLahan;
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      desaEntry.key,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    Text(
+                      "Total Potensi: ${totalLuas.toStringAsFixed(2)} Ha",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                children: desaEntry.value.map((data) {
+                  return LandPotentialCard(
+                    data: data,
+                    onEdit: () => onEdit(data),
+                    onDelete: () => onDelete(data),
+                    onRefresh: onRefresh,
+                  );
+                }).toList(),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -193,7 +297,8 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isValidated = _checkIsValidated();
+    final bool isValidated = _checkIsValidated() || widget.data.statusValidasi == '2';
+    final bool isRejected = widget.data.statusValidasi == '3' || widget.data.statusValidasi.toLowerCase().contains('tolak');
 
     return InkWell(
       onTap: () => _showDetail(context),
@@ -283,20 +388,20 @@ class _LandPotentialCardState extends State<LandPotentialCard> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(
-                        color: isValidated ? Colors.green : Colors.orange,
+                        color: isValidated ? Colors.green : (isRejected ? Colors.red : Colors.orange),
                       ),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      isValidated ? 'TERVALIDASI' : (widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2' ? 'DITOLAK' : 'BELUM TERVALIDASI'),
+                      isValidated ? 'TERVALIDASI' : (isRejected ? 'DITOLAK' : 'BELUM TERVALIDASI'),
                       style: TextStyle(
-                        color: isValidated ? Colors.green : (widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2' ? Colors.red : Colors.orange),
+                        color: isValidated ? Colors.green : (isRejected ? Colors.red : Colors.orange),
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  if (isValidated || widget.data.statusValidasi.toLowerCase().contains('tolak') || widget.data.statusValidasi == '2')
+                  if (isValidated || isRejected)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(

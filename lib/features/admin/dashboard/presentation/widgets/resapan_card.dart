@@ -41,7 +41,7 @@ class _ResapanCardState extends State<ResapanCard> with SingleTickerProviderStat
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: const Color(0xFF64748B).withOpacity(0.08), blurRadius: 24, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: const Color(0xFF64748B).withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 8))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min, // Biar gak makan tempat berlebih

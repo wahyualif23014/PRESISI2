@@ -65,6 +65,14 @@ class LandManagementItemModel {
   final String statusPanen;
   final String statusSerapan;
   final String idSerapan;
+  final String tglPanen;
+  final String keteranganPanen;
+  final String dokumenPanen;
+  final String distribusiKe;
+  final String tglDistribusi;
+  final double totalDistribusi;
+  final String keteranganDistribusi;
+  final String dokumenDistribusi;
 
   LandManagementItemModel({
     required this.id,
@@ -107,6 +115,14 @@ class LandManagementItemModel {
     required this.statusPanen,
     required this.statusSerapan,
     required this.idSerapan,
+    required this.tglPanen,
+    required this.keteranganPanen,
+    required this.dokumenPanen,
+    required this.distribusiKe,
+    required this.tglDistribusi,
+    required this.totalDistribusi,
+    required this.keteranganDistribusi,
+    required this.dokumenDistribusi,
   });
 
   factory LandManagementItemModel.fromJson(Map<String, dynamic> json) {
@@ -150,6 +166,14 @@ class LandManagementItemModel {
       statusPanen: json['status_panen']?.toString() ?? '1',
       statusSerapan: json['status_serapan']?.toString() ?? '1',
       idSerapan: json['id_serapan']?.toString() ?? '',
+      tglPanen: json['tgl_panen'] ?? '',
+      keteranganPanen: json['keterangan_panen'] ?? '',
+      dokumenPanen: json['dokumen_panen'] ?? '',
+      distribusiKe: json['distribusi_ke'] ?? '',
+      tglDistribusi: json['tgl_distribusi'] ?? '',
+      totalDistribusi: (json['total_distribusi'] as num?)?.toDouble() ?? 0.0,
+      keteranganDistribusi: json['keterangan_distribusi'] ?? '',
+      dokumenDistribusi: json['dokumen_distribusi'] ?? '',
     );
   }
 }

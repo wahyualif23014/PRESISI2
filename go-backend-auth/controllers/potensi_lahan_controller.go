@@ -27,7 +27,7 @@ func GetImageFromDB(c *gin.Context) {
 	var lahan models.PotensiLahan
 	err = initializers.DB.
 		Table("lahan").
-		Where("dokumentasi = ?", filename).
+		Where("dokumentasi_lahan = ?", filename).
 		First(&lahan).Error
 
 	if err != nil {
@@ -357,7 +357,7 @@ func GetFilterOptions(c *gin.Context) {
 	}
 
 	var listJenis []string
-	rows, err := initializers.DB.Table("lahan").Select("idjenislahan").Group("idjenislahan").Order("idjenislahan ASC").Rows()
+	rows, err := initializers.DB.Table("lahan").Select("id_jenis_lahan").Group("id_jenis_lahan").Order("id_jenis_lahan ASC").Rows()
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
